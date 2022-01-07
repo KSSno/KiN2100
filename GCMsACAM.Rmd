@@ -61,14 +61,14 @@ decipher <- function(x) {
 EOF.GCMsAC <- function(x,lon=NULL,lat=NULL,...) {
   ## This function combines the annual cycles from different GCMs and performs a
   ## common EOF on the joint data
-  print('EOF.GCMsAC')
+  #print('EOF.GCMsAC')
   runs <- names(x)
   runs <- runs[-grep('era5',runs)]
-  print(runs)
+  #print(runs)
   if (length(grep('era5',names(x)))>0) X <- subset(x[['era5']],is=list(lon=lon,lat=lat))
   n <- length(runs)
   for (i in 1:n) {
-    print(runs[i])
+    #print(runs[i])
     z <- subset(x[[runs[i]]],is=list(lon=lon,lat=lat))
     X <- combine(X,z)
   }
@@ -81,10 +81,10 @@ EOF.GCMsAC <- function(x,lon=NULL,lat=NULL,...) {
 EOF.GCMsAM <- function(x,lon=NULL,lat=NULL,...) {
   ## This function combines the annual means from different GCMs and performs a
   ## common EOF on the joint data
-  print('EOF.GCMsAM')
+  #print('EOF.GCMsAM')
   runs <- names(x)
   runs <- runs[-grep('era5',runs)]
-  print(runs)
+  #print(runs)
   if (length(grep('era5',names(x)))>0) X <- subset(x[['era5']],is=list(lon=lon,lat=lat))
   X <- regrid(X,is=list(lon=seq(min(lon(X)),max(lon(X)),by=1),lat=seq(min(lat(X)),max(lat(X)),by=1)))
   n <- length(runs); print(n)
@@ -100,7 +100,7 @@ EOF.GCMsAM <- function(x,lon=NULL,lat=NULL,...) {
 ## Convert the list with trend maps into a field object to speed up the analysis and to 
 ## enable EOFs for reducing the data volume.
 list2field <- function(x,it='annual',lon=NULL,lat=NULL,plot=TRUE,...) {
-  print('list2field')
+  #print('list2field')
   cn <- names(x)
   if (!is.null(it)) if (is.character(it)) cn <- names(x)[grep(it,names(x))]
   n <- length(cn)
@@ -131,7 +131,7 @@ The following chunk of code is used for initialising the calculations.
 
 ```{r settings}
 par0 <- par()
-plot <- FALSE
+plot <- TRUE
 reprocess <- FALSE
 outpath <- '~/R/'
 lon <- c(-5,40); lat <- c(55,72)
@@ -152,17 +152,17 @@ for (path in paths) {
     print(rcp)
     for (param in c('tas', 'pr', 'psl')) {
       if (param=='pr') {
-        gcmfiles <- list.files(path=paste0(path,rcp),pattern='pr_Amon',full.names = TRUE)
+        gcmfiles <- list.files(path=paste0(path,rcp),pattern='pr_Amon',full.nams = TRUE)
         gcmfiles <- gcmfiles[grep(run,gcmfiles)]
         gcmfiles <- gcmfiles[grep('_1850-|_1860-|_1861-',gcmfiles)]
         reanalysis <- '~/data/ERA5/ERA5_tp_mon.nc'
       } else if (param=='tas') {
-        gcmfiles <- list.files(path=paste0(path,rcp),pattern='tas_Amon',full.names = TRUE)
+        gcmfiles <- list.files(path=paste0(path,rcp),pattern='tas_Amon',full.naes = TRUE)
         gcmfiles <- gcmfiles[grep(run,gcmfiles)]
         gcmfiles <- gcmfiles[grep('_1850-|_1860-|_1861-',gcmfiles)]
         reanalysis <- '~/data/ERA5/ERA5_t2m_mon.nc'
       } else if (param=='psl') {
-        gcmfiles <- list.files(path=paste0(path,rcp),pattern='psl_Amon',full.names = TRUE)
+        gcmfiles <- list.files(path=paste0(path,rcp),pattern='psl_Amon',full.naes = TRUE)
         gcmfiles <- gcmfiles[grep(run,gcmfiles)]
         gcmfiles <- gcmfiles[grep('_1850-|_1860-|_1861-',gcmfiles)]
         reanalysis <- '~/data/ERA5/ERA5_slp_mon.nc'
@@ -253,7 +253,7 @@ for (path in paths) {
 
 The diagnostics involve calculating and plotting the common EOFs of the postprocessed data. 
 
-```{r diagnostics-TAS,fig.height=8}
+```{r diagnostics-TAS,fig.height=7}
 ##--------------------------------------------------------------
 ## Diagnostics
 
@@ -273,13 +273,6 @@ for (param in c('tas', 'pr', 'psl')[1]) {
   GCMs.trend.all -> GCMs.trend; rm('GCMs.trend.all')
   GCMs.AM.all -> GCMs.AM; rm('GCMs.AM.all')
   print(names(GCMs.AC))
-  ## Remove problematic data - technical problems that causes workflow hick-ups: 
-  ## TAS:
-  #[1] "combine.field detected scale issues - sx= -4.12022464118101 sy= 646586.489561817 degC degC CMIP6"
-  #[2] "combine.field detected scale issues - sx= -4.12022464118101 sy= 646586.489561817 degC degC CMIP" 
-  # GCMs.AC[['IPSL-CM6A-LR.r1i1p1f1']] <- NULL
-  # GCMs.AC[["AWI-CM-1-1-MR.r1i1p1f1"]] <- NULL
-  # GCMs.AC[["E3SM-1-1.r1i1p1f1"]] <- NULL
   
   ## Fix problems
   n <- length(GCMs.AC)
@@ -305,39 +298,31 @@ for (param in c('tas', 'pr', 'psl')[1]) {
   ceof.ac <- EOF.GCMsAC(GCMs.AC)
   if (plot) { 
     par(par0)
-    plot(ceof.ac,col=col,alpha=0.3)
+    plot(ceof.ac,col=col,alpha=0.3,new=FALSE)
     par(par0)
-    plot(ceof.ac,col=col,alpha=0.3,ip=2)
+    plot(ceof.ac,col=col,alpha=0.3,ip=2,new=FALSE)
   }
-  
-  ## Check the data for technical difficulties
-  # era5 -> GCMs.AM$era5; GCMs.AM$era5 <- NULL
-  # chk <- lapply(GCMs.AM,function(x) print(round(c(dim(x),mean(x),sd(x),range(index(x))),2)))
-  # GCMs.AM$era5 <- era5; rm('era5')
   
   ## Use common EOFs of annually aggregated data to compare theinterannual variability 
   ## simulated by GCMs with the ERA5 reanalysis
   ceof.am <- EOF.GCMsAM(GCMs.AM)
   if (plot) {
     par(par0)
-    plot(ceof.am,col=col,alpha=0.3)
+    plot(ceof.am,col=col,alpha=0.3,new=FALSE)
     par(par0)
-    plot(ceof.am,col=col,alpha=0.3,ip=2)
+    plot(ceof.am,col=col,alpha=0.3,ip=2,new=FALSE)
   }
   
   ## Use EOFs of trend maps to assess the trends in the GCMs:
-  GCMs.trend[['IPSL-CM6A-LR.r1i1p1f1.tas.trend.annual']] <- NULL
-  #GCMs.trend[["AWI-CM-1-1-MR.r1i1p1f1.tas.trend.annual"]] <- NULL
-  #GCMs.trend[["E3SM-1-1.r1i1p1f1.tas.trend.annual"]] <- NULL
   if (plot) par(par0)
   Z <- list2field(GCMs.trend,plot=plot)
   Z <- subset(Z,is=list(lon=c(5,35),lat=c(58,72)))
   teof <- EOF(Z,anomaly=FALSE)
   if (plot) {
     par(par0)
-    plot(teof)
+    plot(teof,new=FALSE)
     par(par0)
-    plot(teof,ip=2)
+    plot(teof,ip=2,new=FALSE)
   }
   
   ## Another way to evaluate is with a scatterplot of the PCs of the two leading modes:
@@ -347,7 +332,7 @@ for (param in c('tas', 'pr', 'psl')[1]) {
   icmip5 <- grep('rcp',tnms)
   icmip6 <- grep('ssp',tnms)
   if (plot) {
-    plot(teof[,1],teof[,2],xlab='Mode 1',ylab='Mode2' ); 
+    plot(teof[,1],teof[,2],xlab='Mode 1',ylab='Mode2'); 
     points(teof[n,1],teof[n,2],pch=19,col='black',cex=1.5);
     points(teof[icmip5,1],teof[icmip5,2],col='red',lwd=2)
     points(teof[icmip6,1],teof[icmip6,2],col='blue',lwd=2)
@@ -355,6 +340,7 @@ for (param in c('tas', 'pr', 'psl')[1]) {
   }
 }
 ```
+
 
 The plots of the common EOFs show the spatial pattern (upper left), the variance (based on the eigenvalues) associated with each pattern and the principal components (PCs) representing each GCM (red curves) and the ERA5 reanalysis (black curve). 
 
@@ -372,11 +358,12 @@ The second annual mean TAS mode (9% of the variance) exhibits a northwest-southe
 
 The standard deviation ($\sigma$) of the 1950-2020 annual mean TAS linear trend estimates suggests greatest scatter in the eastern part of the domain, and an EOF analysis of the trend patterns (carried out on the absolute values) suggests that most GCMs reproduced the observed historical trend with strongest amplitude in the northeast (98% variance for the leading mode). The end point of the PC represents the ERA5 reanalysis. The model results exhibited a scatter around the observations. The second EOF suggested that the simulated trends also varied in terms of a northwest-southeast temperature gradient. These anomalies may possibly be connected to internal variations and the position of the jetstream.
 
+
 A scatter plot of the PCs of the two leading modes suggested that most of the GCM results for TAS were consistent with those for the leading mode based on ERA5 (black symbol in the scatter plot), albeit with most GCMs shifted towards lower values for the second mode (gradient TAS structure). The red symbols mark the CMIP5 and the blue CMIP6 PC weights for the trend maps. The number shown near the symbols indicate the model associated with the data point. 
 
 ### Total precipitation (TP) 
 
-```{r diagnostics-TP,fig.height=8}
+```{r diagnostics-TP,fig.height=7}
 for (param in c('tas', 'pr', 'psl')[2]) {
   GCMs.AC.all <- NULL; GCMs.trend.all <- NULL; GCMs.AM.all <- NULL
   for (rcp in c('rcp45','ssp245')) { 
@@ -393,13 +380,6 @@ for (param in c('tas', 'pr', 'psl')[2]) {
   GCMs.trend.all -> GCMs.trend; rm('GCMs.trend.all')
   GCMs.AM.all -> GCMs.AM; rm('GCMs.AM.all')
   print(names(GCMs.AC))
-  ## Remove problematic data - technical problems that causes workflow hick-ups: 
-  ## TAS:
-  #[1] "combine.field detected scale issues - sx= -4.12022464118101 sy= 646586.489561817 degC degC CMIP6"
-  #[2] "combine.field detected scale issues - sx= -4.12022464118101 sy= 646586.489561817 degC degC CMIP" 
-  # GCMs.AC[['IPSL-CM6A-LR.r1i1p1f1']] <- NULL
-  # GCMs.AC[["AWI-CM-1-1-MR.r1i1p1f1"]] <- NULL
-  # GCMs.AC[["E3SM-1-1.r1i1p1f1"]] <- NULL
   
   ## Fix problems
   n <- length(GCMs.AC)
@@ -430,11 +410,6 @@ for (param in c('tas', 'pr', 'psl')[2]) {
     plot(ceof.ac,col=col,alpha=0.3,ip=2)
   }
   
-  ## Check the data for technical difficulties
-  # era5 -> GCMs.AM$era5; GCMs.AM$era5 <- NULL
-  # chk <- lapply(GCMs.AM,function(x) print(round(c(dim(x),mean(x),sd(x),range(index(x))),2)))
-  # GCMs.AM$era5 <- era5; rm('era5')
-  
   ## Use common EOFs of annually aggregated data to compare theinterannual variability 
   ## simulated by GCMs with the ERA5 reanalysis
   ceof.am <- EOF.GCMsAM(GCMs.AM)
@@ -446,9 +421,6 @@ for (param in c('tas', 'pr', 'psl')[2]) {
   }
   
   ## Use EOFs of trend maps to assess the trends in the GCMs:
-  GCMs.trend[['IPSL-CM6A-LR.r1i1p1f1.tas.trend.annual']] <- NULL
-  #GCMs.trend[["AWI-CM-1-1-MR.r1i1p1f1.tas.trend.annual"]] <- NULL
-  #GCMs.trend[["E3SM-1-1.r1i1p1f1.tas.trend.annual"]] <- NULL
   if (plot) par(par0)
   Z <- list2field(GCMs.trend,plot=plot)
   Z <- subset(Z,is=list(lon=c(5,35),lat=c(58,72)))
@@ -493,7 +465,7 @@ A scatter plot of the PCs of the two leading modes suggested that the GCM result
 
 ## Mean sea-level pressure
 
-```{r}
+```{r diagnostics-SLP,fig.height=7}
 ##--------------------------------------------------------------
 ## Diagnostics
 
@@ -513,13 +485,6 @@ for (param in c('tas', 'pr', 'psl')[3]) {
   GCMs.trend.all -> GCMs.trend; rm('GCMs.trend.all')
   GCMs.AM.all -> GCMs.AM; rm('GCMs.AM.all')
   print(names(GCMs.AC))
-  ## Remove problematic data - technical problems that causes workflow hick-ups: 
-  ## TAS:
-  #[1] "combine.field detected scale issues - sx= -4.12022464118101 sy= 646586.489561817 degC degC CMIP6"
-  #[2] "combine.field detected scale issues - sx= -4.12022464118101 sy= 646586.489561817 degC degC CMIP" 
-  # GCMs.AC[['IPSL-CM6A-LR.r1i1p1f1']] <- NULL
-  # GCMs.AC[["AWI-CM-1-1-MR.r1i1p1f1"]] <- NULL
-  # GCMs.AC[["E3SM-1-1.r1i1p1f1"]] <- NULL
   
   ## Fix problems
   n <- length(GCMs.AC)
@@ -550,11 +515,6 @@ for (param in c('tas', 'pr', 'psl')[3]) {
     plot(ceof.ac,col=col,alpha=0.3,ip=2)
   }
   
-  ## Check the data for technical difficulties
-  # era5 -> GCMs.AM$era5; GCMs.AM$era5 <- NULL
-  # chk <- lapply(GCMs.AM,function(x) print(round(c(dim(x),mean(x),sd(x),range(index(x))),2)))
-  # GCMs.AM$era5 <- era5; rm('era5')
-  
   ## Use common EOFs of annually aggregated data to compare theinterannual variability 
   ## simulated by GCMs with the ERA5 reanalysis
   ceof.am <- EOF.GCMsAM(GCMs.AM)
@@ -566,9 +526,6 @@ for (param in c('tas', 'pr', 'psl')[3]) {
   }
   
   ## Use EOFs of trend maps to assess the trends in the GCMs:
-  GCMs.trend[['IPSL-CM6A-LR.r1i1p1f1.tas.trend.annual']] <- NULL
-  #GCMs.trend[["AWI-CM-1-1-MR.r1i1p1f1.tas.trend.annual"]] <- NULL
-  #GCMs.trend[["E3SM-1-1.r1i1p1f1.tas.trend.annual"]] <- NULL
   if (plot) par(par0)
   Z <- list2field(GCMs.trend,plot=plot)
   Z <- subset(Z,is=list(lon=c(5,35),lat=c(58,72)))
