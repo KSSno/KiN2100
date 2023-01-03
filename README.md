@@ -10,3 +10,5 @@ Filer er organisert i forskjellige undermapper:
 
 Notér at dette området kun skal brukes til script og mindre datafiler, mens større datafiler skal deles på ekstern PPI (LustreC).
 
+For deg som ønsker å bidra med flere analysescript, vennligst ta kontakt med oskar.landgren@met.no
+
