@@ -16,7 +16,6 @@
 # /hdata/hmdata/KiN2100/analyses/indicators/temperature_indices/*_projections
 # Remember to run from a screen terminal. This may take a while...
 # Copied from testfolder "eqm" 2022-12-09. Last edited by IBNI 19-12-2022. 
-
 set -e # denne stopper scriptet hvis det kommer en feilmelding.
 
 echo "This program calculates temperature indicators from Tmean (tas; TG) from ONE 3dBC-model. This progam has two hard-coded arguments, on the form 'ecearth-r3i1p1-hirham' and '1'. Consider adding a third agrument '3dbc_projections' which can be swapped with 'eqm_projections', and a fourth: 'hist/rcp45/rcp85'. For the historical period, double-check that years cover 1960-2020."
