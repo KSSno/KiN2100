@@ -14,9 +14,9 @@ For deg som ønsker å bidra med flere analysescript, vennligst ta kontakt med o
 
 ## Skal du analysere RCM-framskrivninger?
 
-Referanseperiode: 1991–2020
-Midten av århundret: 2041–2070
-Slutten av århundret: 2071–2100
+- Referanseperiode: 1991–2020
+- Midten av århundret: 2041–2070
+- Slutten av århundret: 2071–2100
 
 CMIP5-hist går fram til og med 2014. For 2015–2020, bruk data fra rcp45.
 
