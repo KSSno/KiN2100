@@ -28,7 +28,7 @@ CMIP5-hist går fram til og med 2014. For 2015–2020, bruk data fra rcp45.
 
 Modellene hadgem-r1i1p1-rca og hadgem-r1i1p1-remo mangler årene 2099–2100. Analysene for slutten av århundret gjøres derfor for 2069–2098.
 
-Modeller: 
+Modeller, CMIP5 (rcp2.6 og rcp4.5): 
 - cnrm-r1i1p1-aladin
 - ecearth-r12i1p1-rca
 - ecearth-r12i1p1-cclm
