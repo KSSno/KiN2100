@@ -6,8 +6,7 @@
 # Kartplotting for nedbørindekser i KiN2100
 #
 # Modifisert av IBN 2023-01-17 for å plotte snow, avrenning og fordampning
-# Kjør fra app02, for der er ncdf4 installert. (Filene er kopiert til input-stien)
-# NB! Det betyr at jeg ikke kan kjøre fra github-mappa, for den er på 05.
+#
 # Call:
 # source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "runoff")
 # source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "swe")
