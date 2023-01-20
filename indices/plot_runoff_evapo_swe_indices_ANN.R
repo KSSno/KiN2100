@@ -5,13 +5,13 @@
 #
 # Kartplotting for nedbørindekser i KiN2100
 #
-# Modifisert av IBN 2023-01-17 for å plotte snow, avrenning og fordampning
-#
+# Modifisert av IBN 2023-01-20 for å plotte snow, avrenning og fordampning
+
 # Call:
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "runoff")
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "swe")
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "swedogn")
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "evapo")
+# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "runoff", TRUE)
+# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "swe", TRUE)
+# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "swedogn", TRUE)
+# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "evapo", TRUE)
 #################################################################
 
 rm(list=ls())
@@ -25,6 +25,10 @@ library(rgdal)
 # hvis de ikke finnes: install.packages("rgdal", repos="http://cran.r-project.org", type="source")
 
 #setEPS()
+
+
+print("This function takes 4 arguments: startyear (fra_aar), endyear (til_aar), variable (variabel) and show_upper_and_lower_limit. If you set argument 4 to FALSE, you will not plot the upper and lower numbers on the legend.")
+
 
 #input <- "/lustre/storeB/project/KSS/kin2100_2024/Indices/Precipitation/1991-2020/"
 #output <- "~/Documents/results/KIN_indicators/"
@@ -45,12 +49,13 @@ maskpath  <- c("/felles/ibni/KiN/temperature_indices/senorge/")
 ############################## Plotting function ####################################
   #################################################################################
 
-plotting_inds  <- function(fra_aar, til_aar, variabel){
+plotting_inds  <- function(fra_aar, til_aar, variabel, show_upper_and_lower_limit=FALSE){
 
 
    # fra_aar <- 1991; til_aar <- 2020
    # fra_aar <- 1961; til_aar <- 1990
    # variabel <- "runoff"                # "evapo"  # "swe" # "swedogn"
+   
 
    print("This function takes three arguments: startyear (1961 or 1991), endyear (1991 or 2020) and variable ('runoff', 'evapo', 'swe', 'swedogn'")
 
@@ -110,117 +115,128 @@ plotting_inds  <- function(fra_aar, til_aar, variabel){
    ################################# Runoff/avrenning
    if(variabel=="runoff"){ 
 
-         rand <- c(0,5000)	# range in the original data
-	 legend_tics <- c(0,500,1000,1500,2000,2500) # Hvis cols(6), bruk 6 tall
-	 zlimval <- c(0,2500)   # range that you want to plot
-	 legendunit <- "[mm/år]"
-	 variabel_cols <- cols(length(legend_tics))   # cols(6)
+         # These data are skewed, so instead of trying to force the  legend  to cover c(0,100,1000,3000,5000), I plot all values larger than 2500 at 2501.
+         kart_til_plot[kart_til_plot>2500] <- 2500
 
-	 # These data are skewed, so instead of trying to force the  legend  to cover c(0,100,1000,3000,5000), I plot all values larger than 2500 at 2501.
-	 kart_til_plot[kart_til_plot>2500] <- 2501
+
+         rand <- c(0, 2500)  # range in the original data: c(0,5000)
+         legend_interval <- 500
+	 legendunit <- "mm/år"
+
 
    ################################# Evapotranspiration/fordampning
      } else if(variabel=="evapo"){
 
     	 rand <- c(0,500) # c(65,225)
-	 legend_tics <- c(0,100,200,300,400,500)
-	 zlimval <- c(0,max(legend_tics))
-       	 legendunit <- "[mm/år]"
-       	 variabel_cols <- cols(length(legend_tics))   # cols(6)
+         legend_interval <- 100
+       	 legendunit <- "mm/år"
+
 
    ################################# Snowdays/antall snødager
      } else if(variabel=="swedogn"){
 
-    	 rand <- c(0,365) 
-	 legend_tics <- c(0,50,100,150,200,250,300,350)   #0,30,60,90,120,150,180,210)
-       	 zlimval <- c(0,max(legend_tics))
+    	 rand <- c(0,360)
+	 legend_interval <- 60
        	 legendunit <- "Dager"
-         col_senorge <-  rev(c("#000099", "#0019ff", "#0099ff", "#40ccff", "#80ecff", "#d9ffff", "#ccf57a"))  # senorge-paletten. Grønn til høyre.
-         cols <- colorRampPalette(col_senorge)
- 	 variabel_cols <- cols(length(legend_tics))   # cols(8)
 
-   ################################# SWE/snøens vannekvivalen
+         col_senorge <-  rev(c("#000099", "#0019ff", "#0099ff", "#40ccff", "#80ecff", "#d9ffff"))
+         #, "#ccf57a"))  # senorge-paletten. Hvis du vil ha grønn, legg inn #ccf57a til høyre.
+         cols <- colorRampPalette(col_senorge)
+
+
+   ################################# SWE/snøens vannekvivalent
      } else if(variabel=="swe"){
 
-    	 rand <- c(-200,1500)  # range in the original data
-	 legend_tics <- c(-200,0,200,400,600,800,1000)  # Hvis cols(7), bruk 7 tall
-         zlimval <- c(-200,max(legend_tics))            # range you want to plot.
-	 legendunit <- "mm SWE"
-	 col_senorge <-  rev(c("#000099", "#0019ff", "#0099ff", "#40ccff", "#80ecff", "#d9ffff", "#ccf57a"))  # senorge-paletten. Grønn til høyre.
-	 cols <- colorRampPalette(col_senorge)
-	 variabel_cols <- cols(length(legend_tics))   # cols(7)
- 
+     print("entering swe")
+     
          # These data are skewed, so instead of trying to force the  legend  to cover a wide range, I plot all values larger than 1200 at 1201.
- 	 # And to get bare ground, I plot all values exactly 0 at -1. 
-	 kart_til_plot[kart_til_plot>1000] <- 1001
-	 kart_til_plot[kart_til_plot==0] <- -1
+         # And to get bare ground, I plot all values exactly 0 at -1.
+         kart_til_plot[kart_til_plot>1000] <- 1000
+         kart_til_plot[kart_til_plot==0] <- -100
 
+	 print("entering rand")
+	 
+    	 rand <- c(0,1000)  # range in the original data: c(0,1500)
+         legend_interval <- 250
+	 legendunit <- "mm SWE"
+	 col_senorge <-  rev(c("#000099", "#0019ff", "#0099ff", "#40ccff", "#80ecff", "#d9ffff"))
+	 #, "#ccf57a"))  # senorge-paletten. Hvis du vil ha grønn, legg inn #ccf57a til høyre.
+	 cols <- colorRampPalette(col_senorge)
+
+	 print("exiting swe")
+	 
    ################################# Wet days
      } else if(variabel=="wet_days"){
 
     	 rand <-  c(65,225)
-	 legend_tics <- c(85,105,125,145,165,185,205)
-       	 zlimval <- c(75,215)
+#	 legend_tics <- c(85,105,125,145,165,185,205)
 	 legendunit <- "Dager"
 	 #col_new <- rev(c("#3484c9","#1aa0ed","#6abbd8","#9cd6c1","#b5de9f","#c7e07b","#ffecbf","#e6c991"))
          cols <- colorRampPalette(col_new)
-       	 variabel_cols <- cols(length(legend_tics))   # cols(8)
+
 
    ################################# simple_daily_intensity_index, sdii
      } else if(variabel=="simple_daily_intensity_index"){
 
     	 rand <-  c(0,30)
-	 legend_tics <- c(5,10,15,20,25)
-       	 zlimval <- c(2.5,27.5)
+#	 legend_tics <- c(5,10,15,20,25)
 	 legendunit <- "[mm/dag]"
 	 #col_new <- rev(c("#3484c9","#1aa0ed","#6abbd8","#b5de9f","#c7e07b","#ffecbf"))
          cols <- colorRampPalette(col_new)
-       	 variabel_cols <- cols(length(legend_tics))   # cols(6)
+
 
    ################################# 99.7 percentile 
      } else if(variabel=="perc997"){
 
     	 rand <-  c(0,200)
-	 legend_tics <- c(20,40,60,80,100,120,140,160,180)
-       	 zlimval <- c(10,190)
+#	 legend_tics <- c(20,40,60,80,100,120,140,160,180)
 	 legendunit <- "mm"
 	 #col_new <- rev(c("#45508a","#406aa8","#3484c9","#1aa0ed","#6abbd8","#9cd6c1","#b5de9f","#c7e07b","#ffecbf",
          cols <- colorRampPalette(col_new)
-	 variabel_cols <- cols(length(legend_tics))   # cols(10)
 
    ############################### Days with prec > 20 mm 
      } else if(variabel=="days_gt_20mm"){
 
     	 rand <-  c(0,100)
 	 legend_tics <- c(10,20,30,40,50,60,70,80,90)
-       	 zlimval <- c(5,95)
 	 legendunit <- "Dager"
 	 #col_new <- rev(c("#45508a","#406aa8","#3484c9","#1aa0ed","#6abbd8","#9cd6c1","#b5de9f","#c7e07b","#ffecbf","#e6c991"))
          cols <- colorRampPalette(col_new)
-       	 variabel_cols <- cols(length(legend_tics))   # cols(10)
+
 
    ############################ Consecutive precipitation sum 
      } else if(variabel=="rr_max5day"){
 
     	 rand <-  c(0,450)
 	 legend_tics <- seq(50,400,50)
-       	 zlimval <- c(25,425)
 	 legendunit <- "mm/5 dager"
-       	 variabel_cols <- cols(length(legend_tics))   # cols(8)
 
 
    }   # end if(variabel)
 
 
-   print(legend_tics)
+   if(show_upper_and_lower_limit==TRUE){
+      legend_tics <- seq(rand[1], rand[2], legend_interval)
+      variabel_cols <- cols(length(legend_tics)-1)
+      zlimval <- c(min(legend_tics)+legend_interval/2,max(legend_tics)-legend_interval/2) 
+      print("You have chosen to show the upper and lower limit on the legend.")
+      print("Set argument 4 to FALSE if you want to change it.")
+      print(paste(rand[1], " ", rand[2]))
+      
+   } else {
+   
+      legend_tics <- seq((rand[1]+legend_interval), (rand[2]-legend_interval), legend_interval)
+      variabel_cols <- cols(length(legend_tics)+1)
+      #print(legend_tics)
+      zlimval <- c(min(legend_tics)-legend_interval/2,max(legend_tics)+legend_interval/2)
+      print(paste(rand[1]+legend_interval, " ", rand[2]-legend_interval))
+      print("You have chosen to HIDE the upper and lower limit on the legend (argument 4 = FALSE by default).")
+      print("")
+   }
 
-  # nc <- nc_open(fil)
-  # kart_til_plot <- ncvar_get(nc,variabel)    #Dette funker, men jeg skjønner ikke hvor verdiene ligger. # Fant bare dimensjonene: YC=nc$var$runoff$dim[[1]]$vals Xc=nc$var$runoff$dim[[2]]$vals
-  # nc_close(nc)
-  #               #print("maksverdi prior to division =", max(kart_til_plot))
-  # kart_til_plot <- kart_til_plot/Norge_mask  # hva gjør denne? Fjerner hav og Sverige?
-  #               #print("maksverdi etter divisjon =", max(kart_til_plot))
-  # kart_til_plot <- kart_til_plot[,1550:1]
+   print(paste("Legend tics = ", legend_tics))
+   print(paste("Number of colors = ", length(variabel_cols))
+
 
 
    png(paste0(output,"map_30yr_mean_", variabel, "_", fra_aar, "-", til_aar, "_ANN.png"), width=2000, height=2500, pointsize=20,res=300)
