@@ -5,17 +5,16 @@
 #
 # Kartplotting for nedbørindekser i KiN2100
 #
-# Modifisert av IBN 2023-01-20 for å plotte snow, avrenning og fordampning
-# Kjør fra app02, for der er ncdf4 installert. (Filene er kopiert til input-stien)
-# NB! Det betyr at jeg ikke kan kjøre fra github-mappa, for den er på 05.
+# Modifisert av IBN 2023-01-23 for å plotte snow, avrenning og fordampning
+
 # Call:
 # source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "runoff", TRUE)
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "swe", TRUE)
+# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "swemax", TRUE)
 # source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "swedogn", TRUE)
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "evapo", TRUE)
+# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "eva", TRUE)
 #################################################################
 
-rm(list=ls())
+# rm(list=ls())
 
 library(ncdf4)
 library(fields)
@@ -36,7 +35,7 @@ input <- c("/felles/ibni/KiN/IHA-analyser/hist/")    # fra app05 heter denne /ap
 # Kopiert til app-02 fra /hdata/hmdata/KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/evapo_1991-2020.nc
 # Kopiert til app-02 fra /hdata/hmdata/KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/swedogn_1991-2020.nc
 
-output  <- input
+#output  <- input
 maskpath  <- c("/felles/ibni/KiN/temperature_indices/senorge/")
 
 #plotpath <- input
@@ -77,7 +76,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
     Norge_mask[is.na(Norge_mask)]=0 # setter alle NA til 0
     # mask <- ncvar_get(nc, "mask")
 
-    # jeg vet ikke hva disse to linjene under gjør, kanskje de også snur kartet? (Se tre linjer ned)  - IBN
+    # jeg vet ikke hva disse to linjene under gjør... - IBN
     lf <- Norge_mask
     lf[is.na(lf)] <- 0
 
@@ -106,31 +105,37 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
        kart_til_plot <- kart_til_plot[,1550:1]
 
     } else {   # reading in files saved in .txt formats
-    
+
+       seNorge_inds <- read.delim(paste(input, "elevation_norway.txt", sep=""), sep="", header=FALSE)
+       print(length(seNorge_inds$V2+1))
+       
        fil=paste0("eva_grid_", fra_aar, "_", til_aar, ".txt") # eva_grid_1991_2020.txt NB! Underscore.
        print(fil)
        stiogfil <- paste(input,fil,sep="")
        print(paste0("Input file (stiogfil) = ", input,fil))
 
-       kart_til_plot <- read.delim(stiogfil)
-       class(kart_til_plot)
-       dim(kart_til_plot)		# 1D:     324423  1  -> må gjøres om til 1195  1550
+       textarray <- read.delim(stiogfil, header=FALSE, sep=" ")
+       #print(head(textarray)); 		 	       	     print(tail(textarray))
+       #print(length(textarray$V3))		# 1D:     324423  7  -> må gjøres om til 1195  1550
+       print(paste("Length = ", length(textarray$V3)))
        
-       kart_til_plot <- kart_til_plot/Norge_mask 
-       kart_til_plot <- kart_til_plot[,1550:1]
+       kart_til_plot <- matrix(rep(NA,1195*1550),nrow=1195)  # Allocate space
+      #kart_til_plot[index+1] <- V3
+      length(kart_til_plot[seNorge_inds$V2[1:324424]])       # Denne er 324423 lang! 
+      kart_til_plot[seNorge_inds$V1[2:324424]] <- textarray$V3[1:324423]    # because it counts from 0
+      
+      #  kart_til_plot <- rasterFromXYZ(kart_til_plot)   # With the method above, you don't need this one.
+
+
+        print(dim(kart_til_plot))   
+	print(dim(Norge_mask))
+	
+        kart_til_plot <- kart_til_plot/Norge_mask 
+        kart_til_plot <- kart_til_plot[,1550:1]
+      
 
     }   # end if variabel!="eva", fordi fordampningen er lagret som .txt, ikke .nc
    
-
-#    nc <- nc_open(fil)
-#    kart_til_plot <- ncvar_get(nc,variabel)    #Dette funker, men jeg skjønner ikke hvor verdiene ligger. # Fant bare dimensjonene: YC=nc$var$runoff$dim[[1]]$vals Xc=nc$var$runoff$dim[[2]]$vals
-#    nc_close(nc)
-                 #print("maksverdi prior to division =", max(kart_til_plot))
-#    kart_til_plot <- kart_til_plot/Norge_mask  # hva gjør denne? Fjerner hav og Sverige?
-                 #print("maksverdi etter divisjon =", max(kart_til_plot))
-#    kart_til_plot <- kart_til_plot[,1550:1]
-
-
 
    # Fargepalett, nedbør
 
@@ -336,6 +341,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
 
    if(show_upper_and_lower_limit==TRUE){
+   
       legend_tics <- seq(rand[1], rand[2], legend_interval)
       variabel_cols <- cols(length(legend_tics)-1)
       zlimval <- c(min(legend_tics)+legend_interval/2,max(legend_tics)-legend_interval/2) 
@@ -356,17 +362,21 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
    print(paste("Legend tics = ", legend_tics))
    print(paste("Number of colors = ", length(variabel_cols)))
-
+   zlim=rand
+   print(zlimval[1])
+   print(zlimval[2])
 
 
    png(paste0(output,"map_30yr_mean_", variabel, "_", fra_aar, "-", til_aar, "_ANN.png"), width=2000, height=2500, pointsize=20,res=300)
 	par(mar=c(0.5,0.2,0,0.3))
 
-	image(kart_til_plot, xlab="",ylab="",xaxt="n",yaxt="n",zlim=rand,col=variabel_cols,bty="n")
+
+	image(kart_til_plot, xlab="",ylab="",xaxt="n",yaxt="n",zlim=rand,col=variabel_cols,bty="n", main="")
 	contour(lf[,1550:1],add=T,levels = 0.5,drawlabels = FALSE,lwd=1,col="grey20")
-	image.plot(kart_til_plot, legend.lab="",legend.line=2.7,axis.args=list(tick=FALSE,at=legend_tics),  
+	image.plot(kart_til_plot, legend.lab="",legend.line=2.7 ,axis.args=list(tick=FALSE,at=legend_tics),  
            legend.shrink=0.6,legend.only = TRUE,zlim=zlimval,col=variabel_cols,smallplot=c(0.7,0.75,0.1,0.6))
 	text(0.77,0.63, legendunit, font=1)
+        
 
    dev.off()
 
