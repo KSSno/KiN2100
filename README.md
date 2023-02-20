@@ -44,3 +44,12 @@ Modeller, CMIP5 (rcp2.6 og rcp4.5):
 
 
 Mye informasjon er også nedfelt i modelleringsprotokollen [https://docs.google.com/document/d/1hoZLle4HIcaEWp4OatRD7pxGqy1CkESc/]
+
+## Landmasker
+
+Fila geoinfo/NorwayMaskOnSeNorgeGrid.nc viser landmasken til seNorge-griddet.
+Den er laget slik 
+cdo gtc,-Inf kss2023_dem1km_norway.nc4 NorwayMaskOnSeNorgeGrid.nc
+
+NorwayMaskOnSeNorgeGrid.nc er identisk med fila kss2023_mask1km_norway.nc4 
+cdo gec,0 kss2023_dem1km_norway.nc4 kss2023_mask1km_norway.nc4
