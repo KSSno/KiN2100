@@ -48,13 +48,21 @@ Mye informasjon er også nedfelt i modelleringsprotokollen [https://docs.google.
 ## Landmasker
 
 Husk å bruke ifthen (ikke mul) 
+
  cdo ifthen NorwayMaskOnSeNorgeGrid.nc infile-med-naboland.nc outfile-uten-naboland.nc
+
 Hvis du bruker cdo mul med 0/1 mask og har 0 verdier, får du 0 over havet og 0 over land. Hvis du bruker ifthen, får du NA over havet og 0 over land.
 
+
 Fila geoinfo/NorwayMaskOnSeNorgeGrid.nc viser landmasken til seNorge-griddet.
+
 Den er laget slik: 
- cdo gtc,-Inf kss2023_dem1km_norway.nc4 NorwayMaskOnSeNorgeGrid.nc
+
+cdo gtc,-Inf kss2023_dem1km_norway.nc4 NorwayMaskOnSeNorgeGrid.nc
+
 
 NorwayMaskOnSeNorgeGrid.nc er identisk med fila kss2023_mask1km_norway.nc4 
+
 Den er laget slik:
- cdo gec,0 kss2023_dem1km_norway.nc4 kss2023_mask1km_norway.nc4
+
+cdo gec,0 kss2023_dem1km_norway.nc4 kss2023_mask1km_norway.nc4
