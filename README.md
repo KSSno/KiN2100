@@ -19,14 +19,16 @@ Perioder:
 - Midten av århundret: 2041–2070
 - Slutten av århundret: 2071–2100
 
+Modellene hadgem-r1i1p1-rca og hadgem-r1i1p1-remo mangler årene 2099–2100. Analysene for slutten av århundret gjøres derfor for 2069–2098. Analysene for slutten av århundret gjøres for 2039–2068. Tidsserier håndteres ved å putte inn 2021 og 2022 i starten av framskrivningsperioden.
+
+
 Utslippsscenario:
 - rcp2.6 fra CMIP5
 - rcp4.5 fra CMIP5
 - SSP-3 7.0 fra CMIP6 (ikke tilgjengelig ennå)
 
-CMIP5-hist går fram til og med 2014. For 2015–2020, bruk data fra rcp45.
+CMIP5-hist går fram til og med 2006. Bruk data fra rcp45 fram til 2020 fordi det er nærmest de faktiske utslippene.
 
-Modellene hadgem-r1i1p1-rca og hadgem-r1i1p1-remo mangler årene 2099–2100. Analysene for slutten av århundret gjøres derfor for 2069–2098.
 
 Modeller, CMIP5 (rcp2.6 og rcp4.5): 
 - cnrm-r1i1p1-aladin
@@ -42,3 +44,25 @@ Modeller, CMIP5 (rcp2.6 og rcp4.5):
 
 
 Mye informasjon er også nedfelt i modelleringsprotokollen [https://docs.google.com/document/d/1hoZLle4HIcaEWp4OatRD7pxGqy1CkESc/]
+
+## Landmasker
+
+Husk å bruke ifthen (ikke mul) 
+
+ cdo ifthen NorwayMaskOnSeNorgeGrid.nc infile-med-naboland.nc outfile-uten-naboland.nc
+
+Hvis du bruker cdo mul med 0/1 mask og har 0 verdier, får du 0 over havet og 0 over land. Hvis du bruker ifthen, får du NA over havet og 0 over land.
+
+
+Fila geoinfo/NorwayMaskOnSeNorgeGrid.nc viser landmasken til seNorge-griddet.
+
+Den er laget slik: 
+
+cdo gtc,-Inf kss2023_dem1km_norway.nc4 NorwayMaskOnSeNorgeGrid.nc
+
+
+NorwayMaskOnSeNorgeGrid.nc er identisk med fila kss2023_mask1km_norway.nc4 
+
+Den er laget slik:
+
+cdo gec,0 kss2023_dem1km_norway.nc4 kss2023_mask1km_norway.nc4
