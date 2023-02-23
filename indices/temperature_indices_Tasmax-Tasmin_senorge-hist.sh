@@ -406,28 +406,6 @@ done      # end for years
  # I terminalen:
  # ln -s /hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc landmask.nc
  # cdo ifthen landmask.nc -timmean mergetime_TAN_ANN.nc    land_mrgtim_TAN_ANN.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAX_ANN.nc    land_mrgtim_TAX_ANN.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAN_DJF.nc    land_mrgtim_TAN_DJF.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAX_DJF.nc    land_mrgtim_TAX_DJF.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAN_MAM.nc    land_mrgtim_TAN_MAM.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAX_MAM.nc    land_mrgtim_TAX_MAM.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAN_JJA.nc    land_mrgtim_TAN_JJA.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAX_JJA.nc    land_mrgtim_TAX_JJA.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAN_SON.nc    land_mrgtim_TAN_SON.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAX_SON.nc    land_mrgtim_TAX_SON.nc
- # cdo ifthen landmask.nc -timmean mergetime_DTR_ANN.nc    land_mrgtim_DTR_ANN.nc
- # cdo ifthen landmask.nc -timmean mergetime_DTR_DJF.nc    land_mrgtim_DTR_DJF.nc
- # cdo ifthen landmask.nc -timmean mergetime_DTR_MAM.nc    land_mrgtim_DTR_MAM.nc
- # cdo ifthen landmask.nc -timmean mergetime_DTR_JJA.nc    land_mrgtim_DTR_JJA.nc
- # cdo ifthen landmask.nc -timmean mergetime_DTR_SON.nc    land_mrgtim_DTR_SON.nc
- # cdo ifthen landmask.nc -timmean mergetime_zerodeg_DJF.nc        land_mrgtim_zerodeg_DJF.nc
- # cdo ifthen landmask.nc -timmean mergetime_zerodeg_MAM.nc        land_mrgtim_zerodeg_MAM.nc
- # cdo ifthen landmask.nc -timmean mergetime_zerodeg_JJA.nc        land_mrgtim_zerodeg_JJA.nc
- # cdo ifthen landmask.nc -timmean mergetime_zerodeg_SON.nc        land_mrgtim_zerodeg_SON.nc
- # cdo ifthen landmask.nc -timmean mergetime_zerodeg_days.nc        land_mrgtim_zerodeg_ANN.nc
- # cdo ifthen landmask.nc -timmean ../temp_1991_2020/mergetime_tropenatt_days.nc land_mrgtim_tropenatt.nc
- # cdo ifthen landmask.nc -timmean ../temp_1991_2020/mergetime_frost_days.nc land_mrgtim_frostdager.nc
- # cdo ifthen landmask.nc -timmean mergetime_sommerdag_days.nc land_mrgtim_sommerdag.nc
 
 
   
@@ -526,29 +504,8 @@ done      # end for years
  ncatted -O -a long_name,tn,o,c,"frost days" 	$savedir'/land_mrgtim_frostdager.nc' 		
  ncatted -O -a long_name,tx,o,c,"summer days" 	$savedir'/land_mrgtim_sommerdag.nc' 	
  
+ # I terminalen:
  # ncatted -O -a long_name,tn,o,c,"average of TAN" 	land_mrgtim_TAN_ANN.nc 		
- # ncatted -O -a long_name,tx,o,c,"average of TAX" 	land_mrgtim_TAX_ANN.nc 		
- # ncatted -O -a long_name,tn,o,c,"average of TAN" 	land_mrgtim_TAN_DJF.nc 		
- # ncatted -O -a long_name,tx,o,c,"average of TAX" 	land_mrgtim_TAX_DJF.nc 		
- # ncatted -O -a long_name,tn,o,c,"average of TAN" 	land_mrgtim_TAN_MAM.nc 		
- # ncatted -O -a long_name,tx,o,c,"average of TAX" 	land_mrgtim_TAX_MAM.nc 		
- # ncatted -O -a long_name,tn,o,c,"average of TAN" 	land_mrgtim_TAN_JJA.nc 		
- # ncatted -O -a long_name,tx,o,c,"average of TAX" 	land_mrgtim_TAX_JJA.nc 		
- # ncatted -O -a long_name,tn,o,c,"average of TAN" 	land_mrgtim_TAN_SON.nc 		
- # ncatted -O -a long_name,tx,o,c,"average of TAX" 	land_mrgtim_TAX_SON.nc 		
- # ncatted -O -a long_name,tx,o,c,"diurnal temperature range" 	land_mrgtim_DTR_ANN.nc 		
- # ncatted -O -a long_name,tx,o,c,"diurnal temperature range" 	land_mrgtim_DTR_DJF.nc 		
- # ncatted -O -a long_name,tx,o,c,"diurnal temperature range" 	land_mrgtim_DTR_MAM.nc 		
- # ncatted -O -a long_name,tx,o,c,"diurnal temperature range" 	land_mrgtim_DTR_JJA.nc 		
- # ncatted -O -a long_name,tx,o,c,"diurnal temperature range" 	land_mrgtim_DTR_SON.nc 		
- # ncatted -O -a long_name,tn,o,c,"days with zero-crossings" 	land_mrgtim_zerodeg_DJF.nc 		
- # ncatted -O -a long_name,tn,o,c,"days with zero-crossings" 	land_mrgtim_zerodeg_MAM.nc 		
- # ncatted -O -a long_name,tn,o,c,"days with zero-crossings" 	land_mrgtim_zerodeg_JJA.nc 		
- # ncatted -O -a long_name,tn,o,c,"days with zero-crossings" 	land_mrgtim_zerodeg_SON.nc 		
- # ncatted -O -a long_name,tn,o,c,"days with zero-crossings" 	land_mrgtim_zerodeg_ANN.nc 		
- # ncatted -O -a long_name,tn,o,c,"number of tropical nights" 	land_mrgtim_tropenatt.nc 		
- # ncatted -O -a long_name,tn,o,c,"frost days" 	land_mrgtim_frostdager.nc 		
- # ncatted -O -a long_name,tx,o,c,"summer days" 	land_mrgtim_sommerdag.nc 		
 							
 							
  ncatted -O -a short_name,tx,o,c,"heatwave" 	$savedir'/land_mrgtim_heatwave_index28X-16N-5days.nc'	
@@ -577,30 +534,10 @@ done      # end for years
  ncatted -O -a short_name,tn,o,c,"tropicalnights" 	$savedir'/land_mrgtim_tropenatt.nc' 		
  ncatted -O -a short_name,tn,o,c,"frostdays" 	$savedir'/land_mrgtim_frostdager.nc' 		
  ncatted -O -a short_name,tx,o,c,"summerdays" 	$savedir'/land_mrgtim_sommerdag.nc' 	
- 
+
+ # I terminalen: 
  # ncatted -O -a short_name,tn,o,c,"tasmin" 	land_mrgtim_TAN_ANN.nc 		
- # ncatted -O -a short_name,tx,o,c,"tasmax" 	land_mrgtim_TAX_ANN.nc 		
- # ncatted -O -a short_name,tn,o,c,"tasmin" 	land_mrgtim_TAN_DJF.nc 		
- # ncatted -O -a short_name,tx,o,c,"tasmax" 	land_mrgtim_TAX_DJF.nc 		
- # ncatted -O -a short_name,tn,o,c,"tasmin" 	land_mrgtim_TAN_MAM.nc 		
- # ncatted -O -a short_name,tx,o,c,"tasmax" 	land_mrgtim_TAX_MAM.nc 		
- # ncatted -O -a short_name,tn,o,c,"tasmin" 	land_mrgtim_TAN_JJA.nc 		
- # ncatted -O -a short_name,tx,o,c,"tasmax" 	land_mrgtim_TAX_JJA.nc 		
- # ncatted -O -a short_name,tn,o,c,"tasmin" 	land_mrgtim_TAN_SON.nc 		
- # ncatted -O -a short_name,tx,o,c,"tasmax" 	land_mrgtim_TAX_SON.nc 		
- # ncatted -O -a short_name,tx,o,c,"dtr" 	land_mrgtim_DTR_ANN.nc 		
- # ncatted -O -a short_name,tx,o,c,"dtr" 	land_mrgtim_DTR_DJF.nc 		
- # ncatted -O -a short_name,tx,o,c,"dtr" 	land_mrgtim_DTR_MAM.nc 		
- # ncatted -O -a short_name,tx,o,c,"dtr" 	land_mrgtim_DTR_JJA.nc 		
- # ncatted -O -a short_name,tx,o,c,"dtr" 	land_mrgtim_DTR_SON.nc 		
- # ncatted -O -a short_name,tn,o,c,"dzc" 	land_mrgtim_zerodeg_DJF.nc 		
- # ncatted -O -a short_name,tn,o,c,"dzc" 	land_mrgtim_zerodeg_MAM.nc 		
- # ncatted -O -a short_name,tn,o,c,"dzc" 	land_mrgtim_zerodeg_JJA.nc 		
- # ncatted -O -a short_name,tn,o,c,"dzc" 	land_mrgtim_zerodeg_SON.nc 		
- # ncatted -O -a short_name,tn,o,c,"dzc" 	land_mrgtim_zerodeg_ANN.nc 		
- # ncatted -O -a short_name,tn,o,c,"tropicalnights" 	land_mrgtim_tropenatt.nc 		
- # ncatted -O -a short_name,tn,o,c,"frostdays" 	land_mrgtim_frostdager.nc 		
- # ncatted -O -a short_name,tx,o,c,"summerdays" 	land_mrgtim_sommerdag.nc 		
+
 							
  ncatted -O -a units,tx,o,c,"number of events"  $savedir'/land_mrgtim_heatwave_index28X-16N-5days.nc'		
  ncatted -O -a units,tx,o,c,"number of events"  $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'	
@@ -629,29 +566,9 @@ done      # end for years
  ncatted -O -a units,tn,o,c,"days" 	$savedir'/land_mrgtim_frostdager.nc' 		
  ncatted -O -a units,tx,o,c,"days" 	$savedir'/land_mrgtim_sommerdag.nc' 		
 
+ # I terminalen:
  # ncatted -O -a units,tn,o,c,"C" 	land_mrgtim_TAN_ANN.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_TAX_ANN.nc 		
- # ncatted -O -a units,tn,o,c,"C" 	land_mrgtim_TAN_DJF.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_TAX_DJF.nc 		
- # ncatted -O -a units,tn,o,c,"C" 	land_mrgtim_TAN_MAM.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_TAX_MAM.nc 		
- # ncatted -O -a units,tn,o,c,"C" 	land_mrgtim_TAN_JJA.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_TAX_JJA.nc 		
- # ncatted -O -a units,tn,o,c,"C" 	land_mrgtim_TAN_SON.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_TAX_SON.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_DTR_ANN.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_DTR_DJF.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_DTR_MAM.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_DTR_JJA.nc 		
- # ncatted -O -a units,tx,o,c,"C" 	land_mrgtim_DTR_SON.nc 		
- # ncatted -O -a units,tn,o,c,"days" 	land_mrgtim_zerodeg_DJF.nc 		
- # ncatted -O -a units,tn,o,c,"days" 	land_mrgtim_zerodeg_MAM.nc 		
- # ncatted -O -a units,tn,o,c,"days" 	land_mrgtim_zerodeg_JJA.nc 		
- # ncatted -O -a units,tn,o,c,"days" 	land_mrgtim_zerodeg_SON.nc 		
- # ncatted -O -a units,tn,o,c,"days" 	land_mrgtim_zerodeg_ANN.nc 		
- # ncatted -O -a units,tn,o,c,"days" 	land_mrgtim_tropenatt.nc 		
- # ncatted -O -a units,tn,o,c,"days" 	land_mrgtim_frostdager.nc 		
- # ncatted -O -a units,tx,o,c,"days" 	land_mrgtim_sommerdag.nc 		
+
 							
 							
 ncrename -v tx,heatwave  $savedir'/land_mrgtim_heatwave_index28X-16N-5days.nc'   $savedir'/sn2018v2005_hist_none_none_norway_1km_heatwave28X-16N-5days_annual-mean_'$startyear'-'$endyear'.nc4'
@@ -683,92 +600,7 @@ ncrename -v tx,summerdays	$savedir'/land_mrgtim_sommerdag.nc' 	 	$savedir'/sn201
 
 							
 							
-# ncrename -v tx,heatwave land_mrgtim_heatwave_index28X-16N-5days.nc sn2018v2005_hist_none_none_norway_1km_heatwave28X-16N-5days_annual-mean_1991-2020.nc4
-# ncrename -v tx,heatwave land_mrgtim_heatwave_index28X-16N-3days.nc sn2018v2005_hist_none_none_norway_1km_heatwave28X-16N-3days_annual-mean_1991-2020.nc4
-# ncrename -v tx,heatwave land_mrgtim_heatwave_index28X-3days.nc sn2018v2005_hist_none_none_norway_1km_heatwave28X-3days_annual-mean_1991-2020.nc4
-# ncrename -v tn,tasmin	 	land_mrgtim_TAN_ANN.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmin_annual-mean_1991-2020.nc4
-# ncrename -v tx,tasmax	 	land_mrgtim_TAX_ANN.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmax_annual-mean_1991-2020.nc4
-# ncrename -v tn,tasmin	 	land_mrgtim_TAN_DJF.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmin_winter-mean_1991-2020.nc4
-# ncrename -v tx,tasmax	 	land_mrgtim_TAX_DJF.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmax_winter-mean_1991-2020.nc4
-# ncrename -v tn,tasmin	 	land_mrgtim_TAN_MAM.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmin_spring-mean_1991-2020.nc4
-# ncrename -v tx,tasmax	 	land_mrgtim_TAX_MAM.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmax_spring-mean_1991-2020.nc4
-# ncrename -v tn,tasmin	 	land_mrgtim_TAN_JJA.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmin_summer-mean_1991-2020.nc4
-# ncrename -v tx,tasmax	 	land_mrgtim_TAX_JJA.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmax_summer-mean_1991-2020.nc4
-# ncrename -v tn,tasmin	 	land_mrgtim_TAN_SON.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmin_autumn-mean_1991-2020.nc4
-# ncrename -v tx,tasmax	 	land_mrgtim_TAX_SON.nc 	 	sn2018v2005_hist_none_none_norway_1km_tasmax_autumn-mean_1991-2020.nc4
-# ncrename -v tx,dtr	 	land_mrgtim_DTR_ANN.nc 	 	sn2018v2005_hist_none_none_norway_1km_dtr_annual-mean_1991-2020.nc4
-# ncrename -v tx,dtr	 	land_mrgtim_DTR_DJF.nc 	 	sn2018v2005_hist_none_none_norway_1km_dtr_winter-mean_1991-2020.nc4
-# ncrename -v tx,dtr	 	land_mrgtim_DTR_MAM.nc 	 	sn2018v2005_hist_none_none_norway_1km_dtr_spring-mean_1991-2020.nc4
-# ncrename -v tx,dtr	 	land_mrgtim_DTR_JJA.nc 	 	sn2018v2005_hist_none_none_norway_1km_dtr_summer-mean_1991-2020.nc4
-# ncrename -v tx,dtr	 	land_mrgtim_DTR_SON.nc 	 	sn2018v2005_hist_none_none_norway_1km_dtr_autumn-mean_1991-2020.nc4
-# ncrename -v tn,dzc	 	land_mrgtim_zerodeg_DJF.nc 	 	sn2018v2005_hist_none_none_norway_1km_dzc_winter-mean_1991-2020.nc4
-# ncrename -v tn,dzc	 	land_mrgtim_zerodeg_MAM.nc 	 	sn2018v2005_hist_none_none_norway_1km_dzc_spring-mean_1991-2020.nc4
-# ncrename -v tn,dzc	 	land_mrgtim_zerodeg_JJA.nc 	 	sn2018v2005_hist_none_none_norway_1km_dzc_summer-mean_1991-2020.nc4
-# ncrename -v tn,dzc	 	land_mrgtim_zerodeg_SON.nc 	 	sn2018v2005_hist_none_none_norway_1km_dzc_autumn-mean_1991-2020.nc4
-# ncrename -v tn,dzc	 	land_mrgtim_zerodeg_ANN.nc 	 	sn2018v2005_hist_none_none_norway_1km_dzc_annual-mean_1991-2020.nc4
-# ncrename -v tn,tropicalnights	land_mrgtim_tropenatt.nc 	 	sn2018v2005_hist_none_none_norway_1km_tropicalnights_annual-mean_1991-2020.nc4
-# ncrename -v tn,frostdays	land_mrgtim_frostdager.nc 	 	sn2018v2005_hist_none_none_norway_1km_frostdays_annual-mean_1991-2020.nc4
-# ncrename -v tx,summerdays	land_mrgtim_sommerdag.nc 	 	sn2018v2005_hist_none_none_norway_1km_summerdays_annual-mean_1991-2020.nc4
-
-
-# # #    cdo setparam,'days with zero crossings' $savedir'/seno_SEASONAL_noNam
-# # # e.nc' temp2.nc
-# # #    cdo setunit,'average_over_'$yearStart'-'$yearEnd temp2.nc tem
-# # # p3.nc
-# # #    cdo setname,'average_number_of_zero-crossings_30_years' temp3
-# # # .nc $savedir'/seno_SEASONAL.nc'
-# # #    rm temp2.nc
-# # #    rm temp3.nc
-
-      
-
   
-#  cdo timmean $savedir'/mergetime_zero-crossings_days.nc' $savedir'/timmean_zero-crossings_'$startyear'-'$endyear'.sh'
-#  cdo timmean $savedir'/mergetime_sommerdag_days.nc' $savedir'/timmean_summerdag_days_'$startyear'-'$endyear'.sh'
-#  cdo timmean $savedir'/mergetime_frost_days.nc' $savedir'/timmean_frost_days_'$startyear'-'$endyear'.sh'
-#  cdo timmean $savedir'/mergetime_tropenatt_days.nc' $savedir'/timmean_tropenatt_days_'$startyear'-'$endyear'.sh' #_1991-2020.sh'
-#  cdo timmean $savedir'/mergetime_DTR_ANN.nc' $savedir'/timmean_DTR_'$startyear'-'$endyear'.sh' #_1991-2020.sh'
-
-# # cdo timmean -seltimestep,4/28  -yearsum $savedir'/DZC_mergetime_monsum_1957-2020.nc' $savedir'/DZC_timmean_yrsum_mgtim_msum_1960-1984.nc'
-# # cdo timmean -seltimestep,29/58 -yearsum $savedir'/DZC_mergetime_monsum_1957-2020.nc' $savedir'/DZC_timmean_yrsum_mgtim_msum_1985-2014.nc'
-# # cdo timmean -seltimestep,15/44 -yearsum $savedir'/DZC_mergetime_monsum_1957-2020.nc' $savedir'/DZC_timmean_yrsum_mgtim_msum_1971-2000.nc'
-# # cdo timmean -seltimestep,35/64 -yearsum $savedir'/DZC_mergetime_monsum_1957-2020.nc' $savedir'/DZC_timmean_yrsum_mgtim_msum_1991-2020.nc'
-
-# # cdo timmean -seltimestep,4/28  DTR_yearsum_mergtim_mmean_1957-2020.nc DTR_timmean_yrsum_mgtim_mmean_1960-1984.nc
-# # cdo timmean -seltimestep,29/58 DTR_yearsum_mergtim_mmean_1957-2020.nc DTR_timmean_yrsum_mgtim_mmean_1985-2014.nc
-# # cdo timmean -seltimestep,4/28  heat20_yearsum_mergtim_msum_1957-2020.nc heat20_timmean_yrsum_mgtim_msum_1960-1984.nc
-# # cdo timmean -seltimestep,29/58 heat20_yearsum_mergtim_msum_1957-2020.nc heat20_timmean_yrsum_mgtim_msum_1985-2014.nc
-
- 
-# # cdo timmean -seltimestep,4/28  -yearsum $savedir'/frostinGrow_mergetime_monsum_1957-2020.nc' $savedir'/frostinGrow_timmean_yrsum_mgtim_msum_1960-1984.nc'
-# # cdo timmean -seltimestep,29/58 -yearsum $savedir'/frostinGrow_mergetime_monsum_1957-2020.nc' $savedir'/frostinGrow_timmean_yrsum_mgtim_msum_1985-2014.nc'
-# # cdo timmean -seltimestep,15/44 -yearsum $savedir'/frostinGrow_mergetime_monsum_1957-2020.nc' $savedir'/frostinGrow_timmean_yrsum_mgtim_msum_1971-2000.nc'
-# # cdo timmean -seltimestep,35/64 -yearsum $savedir'/frostinGrow_mergetime_monsum_1957-2020.nc' $savedir'/frostinGrow_timmean_yrsum_mgtim_msum _1991-2020.nc'
-
-
-# #cdo timmean -seltimestep,4/28 -yearmean DTR_mergetime_monmean_1957-2020.nc DTR_timmean_yrmean_mgtim_mmean_1960-1984.nc
-# #cdo timmean -seltimestep,29/58 -yearmean DTR_mergetime_monmean_1957-2020.nc DTR_timmean_yrmean_mgtim_mmean_1985-2014.nc
-# #cdo timmean -seltimestep,15/44 -yearmean DTR_mergetime_monmean_1957-2020.nc DTR_timmean_yrmean_mgtim_mmean_1971-2000.nc
-# #cdo timmean -seltimestep,35/64 -yearmean DTR_mergetime_monmean_1957-2020.nc DTR_timmean_yrmean_mgtim_mmean_1991-2020.nc
-
-# #cdo timmean -seltimestep,4/28 -yearsum frostinGrow_mergetime_monsum_1957-2020.nc frostinGrow_timmean_yrsum_mgtim_msum_1960-1984.nc
-# #cdo timmean -seltimestep,29/58 -yearsum frostinGrow_mergetime_monsum_1957-2020.nc frostinGrow_timmean_yrsum_mgtim_msum_1985-2014.nc
-# #cdo timmean -seltimestep,15/44 -yearsum frostinGrow_mergetime_monsum_1957-2020.nc frostinGrow_timmean_yrsum_mgtim_msum_1971-2000.nc
-# #cdo timmean -seltimestep,35/64 -yearsum frostinGrow_mergetime_monsum_1957-2020.nc frostinGrow_timmean_yrsum_mgtim_msum_1991-2020.nc
- 
-
-#  # cdo timmean -seltimestep,35/64 -yearmean DTR_mergetime_monmean_1957-2020.nc DTR_timmean_yrmean_mgtim_msum_1991-2020.nc
-#  # cdo timmean -seltimestep,15/44 -yearmean DTR_mergetime_monmean_1957-2020.nc DTR_timmean_yrmean_mgtim_msum_1971-2000.nc
-#  # cdo timmean -seltimestep,35/64 -yearsum DZC_mergetime_monsum_1957-2020.nc DZC_timmean_yrsum_mgtim_msum_1991-2020.nc
-#  # cdo timmean -seltimestep,15/44 -yearsum DZC_mergetime_monsum_1957-2020.nc DZC_timmean_yrsum_mgtim_msum_1971-2000.nc
-#  # cdo timmean -seltimestep,35/64 -yearsum heat20_mergetime_monsum_1957-2020.nc heat20_timmean_yrsum_mgtim_msum_1991-2020.nc
-#  # cdo timmean -seltimestep,15/44 -yearsum heat20_mergetime_monsum_1957-2020.nc heat20_timmean_yrsum_mgtim_msum_1971-2000.nc
-#  # cdo timmean -seltimestep,35/64 -yearsum heat28_mergetime_monsum_1957-2020.nc heat28_timmean_yrsum_mgtim_msum_1991-2020.nc
-#  # cdo timmean -seltimestep,15/44 -yearsum heat28_mergetime_monsum_1957-2020.nc heat28_timmean_yrsum_mgtim_msum_1971-2000.nc
-#  # cdo timmean -seltimestep,35/64 -yearsum frostinGrow_mergetime_monsum_1957-2020.nc frostinGrow_timmean_yrsum_mgtim_msum_1991-2020.nc
-#  # cdo timmean -seltimestep,15/44 -yearsum frostinGrow_mergetime_monsum_1957-2020.nc frostinGrow_timmean_yrsum_mgtim_msum_1971-2000.nc
-
-
  
  
 echo "End of script. Now, move to R to plot."  # see scripts in https://github.com/KSSno/KiN2100/tree/main/indices
