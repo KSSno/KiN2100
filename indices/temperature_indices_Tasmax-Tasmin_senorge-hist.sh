@@ -3,8 +3,9 @@
 
 # CALL: ../temperature_indices_Tasmax-Tasmin_senorge-hist.sh 1 1961 
 # (0 if you want to skip processing (meaning it starts after mergetime), otherwise 1)
-# Remember to log into a screen terminal before running.
-# 
+# Remember to log into a screen terminal before running. (Processing takes > 3 hours)
+#
+# Output is saved on the external PPI:
 # ibni@ppi-ext-login.met.no:/lustre/storeC-ext/users/kin2100/NVE/analyses/temperature_inds/
 # Last edited by IBNI 9-03-2023.
 
@@ -22,7 +23,7 @@ set -e # denne stopper scriptet hvis det kommer en feilmelding.
 
 startyear=$2
 
-echo "This program calculates temperature indicators from TmaxTmin (heatwave index, zero-degree crossings). This progam takes one argument."
+echo "This program calculates temperature indicators from TmaxTmin (heatwave index, zero-degree crossings). This progam takes two arguments, the second is the startyear."
 # Double check that years cover the intended period!"# and months cover 1 12
 echo "Argument 1 = 0 if you want to skip the processing, else 1. Now it is = " $1
 
