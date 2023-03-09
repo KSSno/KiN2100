@@ -9,7 +9,7 @@
 # Last edited by IBNI 9-03-2023.
 
 # This script computes:
-# hetebølgeindeks (hdwi-nor)
+# norsk hetebølgeindeks (hdwi-nor)
 # gjennomsnitt av TAX (tasmax) annual, seasonal
 # gjennomsnitt av TAN (tasmin) annual, seasonal
 # DTR (dtr) annual, seasonal
