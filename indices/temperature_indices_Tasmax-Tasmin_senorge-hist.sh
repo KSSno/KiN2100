@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# CALL: ./temperature_indices_Tasmax-Tasmin_senorge-hist.sh 0
-# (0 if you want to skip processing, otherwise 1)
+
+# CALL: ../temperature_indices_Tasmax-Tasmin_senorge-hist.sh 1 1961 
+# (0 if you want to skip processing (meaning it starts after mergetime), otherwise 1)
 # Remember to log into a screen terminal before running.
 # 
 # ibni@ppi-ext-login.met.no:/lustre/storeC-ext/users/kin2100/NVE/analyses/temperature_inds/
-# Last edited by IBNI 23-02-2023, before that, the last edit was 04-03-2022 (DP1)
+# Last edited by IBNI 9-03-2023.
 
 # This script computes:
 # hetebølgeindeks (hdwi-nor)
@@ -17,37 +18,39 @@
 # tropenetter (tropnight)
 # frostnetter (fd)
 
-
-
 set -e # denne stopper scriptet hvis det kommer en feilmelding.
 
-echo "This program calculates temperature indicators from TmaxTmin (heatwave index, zero-degree crossings). This progam takes one argument.
-Double check that years cover the intended period!" # and months cover 1 12
+startyear=$2
+
+echo "This program calculates temperature indicators from TmaxTmin (heatwave index, zero-degree crossings). This progam takes one argument."
+# Double check that years cover the intended period!"# and months cover 1 12
 echo "Argument 1 = 0 if you want to skip the processing, else 1. Now it is = " $1
-#seas=$1
-#echo "Argument 1 = $1"
-startyear=1961  #1991
-endyear=1990    #2020
 
 
 # filedir='/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05' # På lustre
 filedir='/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf/' #NVE
 
-
 # savedir='/lustre/storeC-ext/users/kin2100/NVE/analyses/indicators/temperature_inds'
 # savedir='/hdata/hmdata/KiN2100/analyses/indicators/temperature_indices/senorge/months' #NVE
 # savedir='/hdata/hmdata/KiN2100/analyses/indicators/temperature_indices/senorge/seasonal61-90/' #NVE
+
 if [ $startyear = "1961" ]; then
+    endyear=1990
+    echo "Startyear = " $startyear ". Double-check your endyear = " $endyear
     savedir='/hdata/hmdata/KiN2100/analyses/indicators/temperature_indices/senorge/seasonal61-90/' #NVE
-else
+elif [ $startyear = "1991" ]; then
+    endyear=2020
+    echo "Startyear = " $startyear ". Double-check your endyear = " $endyear
     savedir='/hdata/hmdata/KiN2100/analyses/indicators/temperature_indices/senorge/seasonal91-20/' #NVE
+else
+    echo "Double-check your chosen startyear = " $startyear
 fi
 
 
 
 
 ################
-## Loop over each year and Calculate indicators per year
+## Loop over each year and calculate indices per year
 ################
 
   years=$(seq $startyear $endyear)             # $(seq 1990 2020)
@@ -80,7 +83,6 @@ fi
 #    # First time, this gave the following error on fillValues: (solution here: https://github.com/metno/seNorge_docs/issues/3)
 #    # Error (cdf_put_att_double): NetCDF: Not a valid data type or _FillValue type mismatch
 
-#    if [ $1 = "1" ]; then          # Continue to reading in files and processing indices only if argument 1 = 1. Otherwise, skip processing.
 
      ################
      # Compute indices 
@@ -100,12 +102,8 @@ fi
      #     cdo yearsum -mul -gec,28 -runmean,3 $ifileX -gec,16 -runmean,3 $ifileN  $savedir'/'$y'_heatwave_index28X-16N-3days.nc'
      #     cdo yearsum -gec,28 -runmean,3 $ifileX $savedir'/'$y'_heatwave_index28X-3days.nc' 
      
+     # cdo yearsum -mul -gec,28 -runmean,5  /hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf/tx_senorge2018_1991.nc  -gec,16 -runmean,5 /hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf/tn_senorge2018_1991.nc  ./1991_hdwi-nor.nc
      
-# #      cdo monsum -gtc,20 $savedir'/runmean3_Tmax_'$y'.nc' $savedir'/tmp1.nc' 
-# #      cdo setname,'heat20C' -setunit,'number of heatdays over 20 C, running_mean3' $savedir'/tmp1.nc' $savedir'/'$y'_heat20_monsum.nc'
-# #      cdo monsum -gtc,28 $savedir'/runmean3_Tmax_'$y'.nc' $savedir'/tmp1.nc' 
-# #      cdo setname,'heat28C' -setunit,'number of heatwave days, over 28 C, running_mean3' $savedir'/tmp1.nc' $savedir'/'$y'_heat28_monsum.nc'
-
 
       ## DTR, diurnal temperature range
 
@@ -119,81 +117,24 @@ fi
 
       cdo timmean -sub $ifileX $ifileN  $savedir'/'$y'_DTR_ANN.nc'  #-abs er fjernet
 
-# # # Select season. Assume that it is okay to take jan, feb and december from the same year.
-# # #     cdo selseason,$mon $yfileG $savedir'/'$y'_tmean_'$mon'.nc'
-# # #     cdo selseason,$mon $ifileX $savedir'/'$y'_tmax_'$mon'.nc'
-# # #     cdo selseason,$mon $ifileN $savedir'/'$y'_tmin_'$mon'.nc'
+      ## Frost days      # TRENGS ikke for sesong!
+      # pipe:cdo timsum -ltc,0 -selmon,1 ../../tn_senorge2018_1957.nc 1957_1_frostnumberPIP.nc
 
-      
-
-# #     # pipe: cdo timmean -sub -selmon,1 ../../tx_senorge2018_1957.nc -selmon,1 ../../tn_senorge2018_1957.nc 1957_1_DTRPIP.nc
-# #     cdo monmean -sub $ifileX $ifileN $savedir'/tmp1.nc'
-# #     cdo setname,'dtr' -setunit,'Celcius' $savedir'/tmp1.nc' $savedir'/'$y'_DTR_monmean.nc'
-# #     # # longname=diurnal temperature range
-# #     #echo "Done calculating DTR"
-    
-# # # Note that the setname commands are not run yet! Do it next time...
-# # #    cdo setname,'dtr' -setunit,'Celcius' $savedir'/'tmp1.nc' $savedir'/'$y'_'$mon'_DTR.nc' # longname=diurnal temperature range
-# # ##### cdo setname,'dtr' -setunit,'Celcius' $savedir'/'$y'_'$mon'_DTR.nc' 
-
-# #     ### Jeg gjorde dette i terminalen:
-# # #for y in {1957..2020}; do echo cdo setname,'dtr' -setunit,'Celcius' ANN_DTR_$y.nc ANN_DTRs_$y.nc; done
-# # #echo rm ANN_DTR_*
-# # # for y in {1957..2020}; do  cdo setname,'frost' -setunit,'number of days with frost'  ANN_frostnumber_$y.nc ANN_frostdays.nc; done
-# # #for y in {1957..2020}; do  cdo setname,'dzc' -setunit,'number of zero crossings' ANN_crossings_$y.nc ANN_zerocrossings_$y.nc; done
-# # #for y in {1957..2020}; do   cdo setname,'heat20C' -setunit,'number of heat days, over 20 C, running_mean3' ANN_heatwavenumber20_$y.nc ANN_heatwave-20_$y.nc; done
-# # #for y in {1957..2020}; do   cdo setname,'heat28C' -setunit,'number of heatwave days, over 28 C, running_mean3' ANN_heatwavenumber28_$y.nc  ANN_heatwave-28_$y.nc; done
-   
+      cdo timsum -ltc,0 $ifileN  $savedir'/'$y'_fd.nc' #frost_days.nc'
 
 
-     
-#      ## Frost days
-# #     # pipe:cdo timsum -ltc,0 -selmon,1 ../../tn_senorge2018_1957.nc 1957_1_frostnumberPIP.nc
-# # #    cdo timsum -ltc,0 -selmon,$mon $ifileN $savedir'/'tmp1.nc' # $savedir'/'$y'_'$mon'_frostnumber.nc'
-# # #    cdo setname,'frost' -setunit,'number of days with frost' ' $savedir'/'tmp1.nc' $savedir'/'$y'_'$mon'_frostnumber.nc' 
-
-# #     cdo lec,0 $ifileN  $savedir'/'$y'_'$mon'_frostnumber.nc'
-      cdo timsum -ltc,0 $ifileN  $savedir'/'$y'_fd.nc ' #frost_days.nc'
-
-     # TRENGS ikke for sesong!
-     
-#      cdo timsum -ltc,0 -selmon,12,1,2 $ifileN $savedir'/'$y'_'$mon'_frost_days_monthly.nc'
-#      cdo timsum -ltc,0 -selmon,3/5 $ifileN $savedir'/'$y'_'$mon'_frost_days_monthly.nc'
-#      cdo timsum -ltc,0 -selmon,6/8 $ifileN $savedir'/'$y'_'$mon'_frost_days_monthly.nc'
-#      cdo timsum -ltc,0 -selmon,9/11 $ifileN $savedir'/'$y'_'$mon'_frost_days_monthly.nc'
-
-     
-# #     cdo monsum -ltc,0 $ifileN $savedir'/tmp1.nc'
-# #     cdo setname,'frost' -setunit,'number of days with frost' $savedir'/tmp1.nc' $savedir'/'$y'_frostnum_monsum.nc'
-
-#      ## Frost days in growing season
-#      # 
-# #     cdo monsum -mul -ltc,0 $ifileN -gtc,5 $ifileG $savedir'/tmp1.nc' 
-# #     cdo setname,'frostinGrow' -setunit,'number of frostdays in the growing season' $savedir'/tmp1.nc' $savedir'/'$y'_frostinGrow_monsum.nc' 
-
-
-
-#      # Tropnightdøgn
-
+      ## Tropnightdøgn
 
       cdo timsum -gec,20 $ifileN  $savedir'/'$y'_tropnight.nc'
-
-#      cdo timsum -gec,20 -selmon,$mon $ifileN $savedir'/'$y'_'$mon'_tropnight_days_monthly.nc'
-
+      #      cdo timsum -gec,20 -selmon,$mon $ifileN $savedir'/'$y'_'$mon'_tropnight_days_monthly.nc'
      
-      #      # Sommerger
-      ## Fra Helga: .. Vi har brukt TAX>=25 som er sommerdager. Men det er vanligere at vi bruker nordiske sommerdager (typisk i media) og det er TAX>=20'C. Har du mulighet til å kjøre sommerdager med -gec, 20 i shellskriptet? 
-
+      ## Sommerger
+      ## Her brukes 20 grader for å beregne nordiske sommerdøgn, ikke 25. Fra Helga: .. Vi har brukt TAX>=25 som er sommerdager. Men det er vanligere at vi bruker nordiske sommerdager (typisk i media) og det er TAX>=20'C. 
 
        cdo timsum -gec,20 $ifileX  $savedir'/'$y'_summerd-nor.nc'
+      # cdo timsum -gec,20 -selmon,$mon $ifileX $savedir'/'$y'_'$mon'_sommerdag_days_monthly.nc'
 
-#      cdo timsum -gec,20 -selmon,$mon $ifileX $savedir'/'$y'_'$mon'_sommerdag_days_monthly.nc'
-
-
-
-
-     # Gjennomsnitt av TAX og TAN
-     
+     ## Gjennomsnitt av TAX og TAN
      
       cdo timmean $ifileX  $savedir'/'$y'_TAX_timmean_ANN.nc'
       cdo timmean $ifileN  $savedir'/'$y'_TAN_timmean_ANN.nc'
@@ -207,55 +148,36 @@ fi
       cdo timmean  -selmon,3/5    $ifileN $savedir'/'$y'_TAN_timmean_MAM.nc'
       cdo timmean  -selmon,6/8    $ifileN $savedir'/'$y'_TAN_timmean_JJA.nc'
       cdo timmean  -selmon,9/11   $ifileN $savedir'/'$y'_TAN_timmean_SON.nc'
-
      
+      ## Zero-degree crossings
+      #     # pipe: cdo timsum -mul -ltc,0 -selmon,1 ../../tn_senorge2018_1957.nc -gtc,0 -selmon,1 ../../tx_senorge2018_1957.nc 1957_1_crossingnumberPIP.nc
+      #  cdo timsum -mul -ltc,0 -selmon,$mon $ifileN -gtc,0 -selmon,$mon $ifileX $savedir'/'$y'_'$mon'_'zero-crossings_days_monthly.nc'
 
-     
-# #     ## Zero-degree crossings
-#      #     # pipe: cdo timsum -mul -ltc,0 -selmon,1 ../../tn_senorge2018_1957.nc -gtc,0 -selmon,1 ../../tx_senorge2018_1957.nc 1957_1_crossingnumberPIP.nc
-     
-    #  cdo timsum -mul -ltc,0 -selmon,$mon $ifileN -gtc,0 -selmon,$mon $ifileX $savedir'/'$y'_'$mon'_'zero-crossings_days_monthly.nc'
-
- 
       cdo timsum -mul -ltc,0 -selmon,12,1,2 $ifileN -gtc,0 -selmon,12,1,2 $ifileX $savedir'/'$y'_zerodeg_DJF.nc'
       cdo timsum -mul -ltc,0 -selmon,3/5 $ifileN    -gtc,0 -selmon,3/5 $ifileX $savedir'/'$y'_zerodeg_MAM.nc'
       cdo timsum -mul -ltc,0 -selmon,6/8 $ifileN    -gtc,0 -selmon,6/8 $ifileX $savedir'/'$y'_zerodeg_JJA.nc'
       cdo timsum -mul -ltc,0 -selmon,9/11 $ifileN   -gtc,0 -selmon,9/11 $ifileX $savedir'/'$y'_zerodeg_SON.nc'
-
      
       cdo timsum -mul -ltc,0 $ifileN -gtc,0 $ifileX  $savedir'/'$y'_zerodeg_ANN.nc'
+      # echo 'done calculating monthly sums of indices. Now combine into annual values.'
 
-
-# # #    cdo setname,'dzc' -setunit,'number of days with zero-crossings' $savedir'/'tmp1.nc' $savedir'/'$y'_'$mon'_crossingnumber.nc' # longname=days with zero-crossings
-
-# #     cdo monsum -mul -ltc,0 $ifileN -gtc,0 $ifileX $savedir'/tmp1.nc' 
-# #     cdo setname,'dzc' -setunit,'number of days with zero-crossings' $savedir'/tmp1.nc' $savedir'/'$y'_DZC_monsum.nc'
-# #     # longname=days with zero-crossings
-
-     
-
-# #     echo 'done calculating monthly sums of indices. Now combine into annual values.'
-
-          fi      # end testing-if-sentencene  if[ $1 = "1" ]; then
-          # The script reads in files and process indices only if argument 1 = 1. Otherwise, skip processing.
-
-
-    
-done      # end for years
+      fi      # end testing-if-sentencene  if[ $1 = "1" ]; then
+              # The script reads in files and process indices only if argument 1 = 1. Otherwise, skip processing.
+  done      # end for years
 
 
   if [ $1 = "1" ]; then          # Continue to reading in files and processing indices only if argument 1 = 1. Otherwise, skip processing.
 
   echo 'Done looping over years. The years processed were:' $years
       
-# # # Then combine files into one large file with mergetime and calculate the sum for each year
+  # # Then combine files into one large file with mergetime and calculate the sum for each year
   # # Ran these in the terminal (replacing "$savedir" with "." and "#" with "echo"):
   # # cdo mergetime *_zerodeg_ANN.nc mergetime_zerodeg_ANN.nc
   echo 'Now, copy the uncommented mergetime statements into the terminal if these lines fail:'
 
-  cdo mergetime $savedir'/'*'_hdwi-nor.nc' $savedir'/mergetime_hdwi-nor.nc'    # heatwave_index28X-16N-5days.nc'
+  cdo mergetime $savedir'/'*'_hdwi-nor.nc' $savedir'/mergetime_hdwi-nor_'$startyear'-'$endyear'.nc4'    # heatwave_index28X-16N-5days.nc'
   # cdo mergetime $savedir'/'*'_heatwave_index28X-16N-3days.nc' $savedir'/mergetime_heatwave_index28X-16N-3days.nc'
-  # cdo mergetime $savedir'/'*'_heatwave_index28X-3days.nc' $savedir'/mergetime_heatwave_index28X-3days.nc'
+  # cdo mergetime $savedir'/'*'_heatwave_index28X-3days.nc' $savedir'/mer'$startyear'-'$endyeagetime_heatwave_index28X-3days.nc'
   cdo mergetime $savedir'/'*'_TAN_timmean_ANN.nc' $savedir'/mergetime_TAN_ANN_'$startyear'-'$endyear'.nc4'
   cdo mergetime $savedir'/'*'_TAX_timmean_ANN.nc' $savedir'/mergetime_TAX_ANN_'$startyear'-'$endyear'.nc4'
   cdo mergetime $savedir'/'*'_TAN_timmean_DJF.nc' $savedir'/mergetime_TAN_DJF_'$startyear'-'$endyear'.nc4'
@@ -283,18 +205,18 @@ done      # end for years
   echo 'Resist the urge to remove, but rather KEEP the mergetime files.' 
  fi      # end testing-if-sentencene  if[ $1 = "1" ]; then
  
-################
-# USE /hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc
-# or norgeDEM=/lustre/storeC-ext/users/kin2100/NVE/analyses/indicators/kss2023_dem1km_norway.nc4 # PPI
-# I originally used created a landmask from IHA's /app01-felles/iha/KiN2023/misc/kss2023_dem1km_norway.nc4 (this shows elevation, not just "1" for land cells)
-# IHA generated a landmask generated this way:
-# By masking all values greater than or equal to 0
-# cdo gec,0 /app01-felles/iha/KiN2023/misc/kss2023_dem1km_norway.nc4 kss2023_mask1km_norway.nc4
-#
-# NorwayMaskOnSeNorgeGrid.nc is generated this way:
-# By masking all positve values (which is equivalent):
-# cdo gtc,-Inf kss2023_dem1km_norway.nc4 NorwayMaskOnSeNorgeGrid.nc
-################
+ ################ 
+ # USE /hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc
+ # or norgeDEM=/lustre/storeC-ext/users/kin2100/NVE/analyses/indicators/kss2023_dem1km_norway.nc4 # PPI
+ # I originally used created a landmask from IHA's /app01-felles/iha/KiN2023/misc/kss2023_dem1km_norway.nc4 (this shows elevation, not just "1" for land cells)
+ # IHA generated a landmask generated this way:
+ # By masking all values greater than or equal to 0
+ # cdo gec,0 /app01-felles/iha/KiN2023/misc/kss2023_dem1km_norway.nc4 kss2023_mask1km_norway.nc4
+ #
+ # NorwayMaskOnSeNorgeGrid.nc is generated this way:
+ # By masking all positve values (which is equivalent):
+ # cdo gtc,-Inf kss2023_dem1km_norway.nc4 NorwayMaskOnSeNorgeGrid.nc
+ ################
 
   landMask=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc
 
@@ -302,6 +224,7 @@ done      # end for years
   echo 
   
   # And create 30-year means (-timmean on the mergetime files)
+  cdo ifthen $landMask -timmean $savedir'/mergetime_hdwi-nor_'$startyear'-'$endyear'.nc4'     $savedir'/land_mrgtim_hdwi-nor'
   cdo ifthen $landMask -timmean $savedir'/mergetime_TAX_DJF_'$startyear'-'$endyear'.nc4'      $savedir'/land_mrgtim_TAX_DJF.nc'
   cdo ifthen $landMask -timmean $savedir'/mergetime_TAX_MAM_'$startyear'-'$endyear'.nc4'      $savedir'/land_mrgtim_TAX_MAM.nc'
   cdo ifthen $landMask -timmean $savedir'/mergetime_TAX_JJA_'$startyear'-'$endyear'.nc4'      $savedir'/land_mrgtim_TAX_JJA.nc'
@@ -326,18 +249,14 @@ done      # end for years
   cdo ifthen $landMask -timmean $savedir'/mergetime_DTR_SON_'$startyear'-'$endyear'.nc4'      $savedir'/land_mrgtim_DTR_SON.nc'
   cdo ifthen $landMask -timmean $savedir'/mergetime_DTR_ANN_'$startyear'-'$endyear'.nc4'      $savedir'/land_mrgtim_DTR_ANN.nc'
 
-  cdo ifthen $landMask -timmean $savedir'/mergetime_heatwave_index_'$startyear'-'$endyear'.nc4'    $savedir'/land_mrgtim_hdwi-nor'
-#  cdo ifthen $landMask -timmean $savedir'/mergetime_heatwave_index28X-16N-5days_'$startyear'-'$endyear'.nc4'    $savedir'/land_mrgtim_hdwi-nor'
-#  cdo ifthen $landMask -timmean $savedir'/mergetime_heatwave_index28X-16N-3days_'$startyear'-'$endyear'.nc4' $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'
-  cdo ifthen $landMask -timmean $savedir'/mergetime_heatwave_index28X-3days_'$startyear'-'$endyear'.nc4' $savedir'/land_mrgtim_heatwave_index28X-3days.nc'
+  ##  cdo ifthen $landMask -timmean $savedir'/mergetime_heatwave_index28X-16N-5days_'$startyear'-'$endyear'.nc4'    $savedir'/land_mrgtim_hdwi-nor'
+  ##  cdo ifthen $landMask -timmean $savedir'/mergetime_heatwave_index28X-16N-3days_'$startyear'-'$endyear'.nc4' $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'
+  #  cdo ifthen $landMask -timmean $savedir'/mergetime_heatwave_index28X-3days_'$startyear'-'$endyear'.nc4' $savedir'/land_mrgtim_heatwave_index28X-3days.nc'
 
   cdo ifthen $landMask -timmean $savedir'/mergetime_tropnight_'$startyear'-'$endyear'.nc4' $savedir'/land_mrgtim_tropnight.nc'
   cdo ifthen $landMask -timmean $savedir'/mergetime_fd_'$startyear'-'$endyear'.nc4' $savedir'/land_mrgtim_fd.nc'
   cdo ifthen $landMask -timmean $savedir'/mergetime_summerd-nor_'$startyear'-'$endyear'.nc4' $savedir'/land_mrgtim_summerd-nor.nc'
 
- #  # And create 30-year means (in case older mergetime files -- without start- and endyears -- exist)
- #  cdo ifthen $landMask -timmean $savedir'/mergetime_TAX_DJF.nc'      $savedir'/land_mrgtim_TAX_DJF.nc'
-  
  # I terminalen:
  # ln -s /hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc landmask.nc
  # cdo ifthen landmask.nc -timmean mergetime_TAN_ANN.nc    land_mrgtim_TAN_ANN.nc
@@ -383,10 +302,10 @@ done      # end for years
      uuid26=$(python -c 'import uuid; print(uuid.uuid4())')
      # uuid27=$(python -c 'import uuid; print(uuid.uuid4())')
      # echo $uuid1
-     
+                                      
  ncatted -O -a id,global,o,c,$uuid1   $savedir'/land_mrgtim_hdwi-nor'
- ncatted -O -a id,global,o,c,$uuid2   $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'
- ncatted -O -a id,global,o,c,$uuid3   $savedir'/land_mrgtim_heatwave_index28X-3days.nc'
+# ncatted -O -a id,global,o,c,$uuid2   $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'
+# ncatted -O -a id,global,o,c,$uuid3   $savedir'/land_mrgtim_heatwave_index28X-3days.nc'
  ncatted -O -a id,global,o,c,$uuid4   $savedir'/land_mrgtim_TAN_ANN.nc'
  ncatted -O -a id,global,o,c,$uuid5   $savedir'/land_mrgtim_TAX_ANN.nc'
  ncatted -O -a id,global,o,c,$uuid6   $savedir'/land_mrgtim_TAN_DJF.nc'
@@ -413,8 +332,8 @@ done      # end for years
 
 
  ncatted -O -a long_name,tx,o,c,"Norwegian_heat_wave_duration_index" 	$savedir'/land_mrgtim_hdwi-nor'        #   heatwave_index_Tmax>28 Tmin>16 running mean 5 days" 	$savedir'/land_mrgtim_hdwi-nor'
- ncatted -O -a long_name,tx,o,c,"heatwave_index_Tmax>28 Tmin>16 running mean 3 days"   	$savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'
- ncatted -O -a long_name,tx,o,c,"heatwave_index_Tmax>28 running mean 3 days" 	$savedir'/land_mrgtim_heatwave_index28X-3days.nc'
+# ncatted -O -a long_name,tx,o,c,"heatwave_index_Tmax>28 Tmin>16 running mean 3 days"   	$savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'
+# ncatted -O -a long_name,tx,o,c,"heatwave_index_Tmax>28 running mean 3 days" 	$savedir'/land_mrgtim_heatwave_index28X-3days.nc'
  ncatted -O -a long_name,tn,o,c,"average_of_minimum_air_temperature" 	$savedir'/land_mrgtim_TAN_ANN.nc' 		
  ncatted -O -a long_name,tx,o,c,"average_of_maximum_air_temperature" 	$savedir'/land_mrgtim_TAX_ANN.nc' 		
  ncatted -O -a long_name,tn,o,c,"average_of_minimum_air_temperature" 	$savedir'/land_mrgtim_TAN_DJF.nc' 		
@@ -444,8 +363,8 @@ done      # end for years
 							
 							
  ncatted -O -a short_name,tx,o,c,"hdwi-nor" 	$savedir'/land_mrgtim_hdwi-nor'	
- ncatted -O -a short_name,tx,o,c,"heatwave" 	$savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'
- ncatted -O -a short_name,tx,o,c,"heatwave" 	$savedir'/land_mrgtim_heatwave_index28X-3days.nc'
+# ncatted -O -a short_name,tx,o,c,"heatwave" 	$savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'
+# ncatted -O -a short_name,tx,o,c,"heatwave" 	$savedir'/land_mrgtim_heatwave_index28X-3days.nc'
  ncatted -O -a short_name,tn,o,c,"tasmin" 	$savedir'/land_mrgtim_TAN_ANN.nc' 		
  ncatted -O -a short_name,tx,o,c,"tasmax" 	$savedir'/land_mrgtim_TAX_ANN.nc' 		
  ncatted -O -a short_name,tn,o,c,"tasmin" 	$savedir'/land_mrgtim_TAN_DJF.nc' 		
@@ -475,8 +394,8 @@ done      # end for years
 
 							
  ncatted -O -a units,tx,o,c,"number of events"  $savedir'/land_mrgtim_hdwi-nor'		
- ncatted -O -a units,tx,o,c,"number of events"  $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'	
- ncatted -O -a units,tx,o,c,"number of events"  $savedir'/land_mrgtim_heatwave_index28X-3days.nc'
+# ncatted -O -a units,tx,o,c,"number of events"  $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'	
+# ncatted -O -a units,tx,o,c,"number of events"  $savedir'/land_mrgtim_heatwave_index28X-3days.nc'
  ncatted -O -a units,tn,o,c,"C" 	$savedir'/land_mrgtim_TAN_ANN.nc' 		
  ncatted -O -a units,tx,o,c,"C" 	$savedir'/land_mrgtim_TAX_ANN.nc'		
  ncatted -O -a units,tn,o,c,"C" 	$savedir'/land_mrgtim_TAN_DJF.nc' 		
@@ -507,8 +426,8 @@ done      # end for years
 							
 							
 ncrename -v tx,hdwi-nor  $savedir'/land_mrgtim_hdwi-nor'   $savedir'/sn2018v2005_hist_none_none_norway_1km_hdwi-nor_annual-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,heatwave  $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'   $savedir'/sn2018v2005_hist_none_none_norway_1km_heatwave28X-16N-3days_annual-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,heatwave  $savedir'/land_mrgtim_heatwave_index28X-3days.nc'       $savedir'/sn2018v2005_hist_none_none_norway_1km_heatwave28X-3days_annual-mean_'$startyear'-'$endyear'.nc4'
+#ncrename -v tx,heatwave  $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'   $savedir'/sn2018v2005_hist_none_none_norway_1km_heatwave28X-16N-3days_annual-mean_'$startyear'-'$endyear'.nc4'
+#ncrename -v tx,heatwave  $savedir'/land_mrgtim_heatwave_index28X-3days.nc'       $savedir'/sn2018v2005_hist_none_none_norway_1km_heatwave28X-3days_annual-mean_'$startyear'-'$endyear'.nc4'
 ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_annual-mean_'$startyear'-'$endyear'.nc4'
 ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_annual-mean_'$startyear'-'$endyear'.nc4'
 ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_DJF.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_winter-mean_'$startyear'-'$endyear'.nc4'
@@ -532,10 +451,6 @@ ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_ANN.nc' 	 	$savedir'/sn2018v2
 ncrename -v tn,tropnight	$savedir'/land_mrgtim_tropnight.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tropnight_annual-mean_'$startyear'-'$endyear'.nc4'
 ncrename -v tn,fd	        $savedir'/land_mrgtim_fd.nc' 	 	        $savedir'/sn2018v2005_hist_none_none_norway_1km_fd_annual-mean_'$startyear'-'$endyear'.nc4'
 ncrename -v tx,summerd-nor	$savedir'/land_mrgtim_summerd-nor.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_summerd-nor_annual-mean_'$startyear'-'$endyear'.nc4'
-
-							
-							
-  
  
  
 echo "End of script. Now, move to R to plot."  # see scripts in https://github.com/KSSno/KiN2100/tree/main/indices
