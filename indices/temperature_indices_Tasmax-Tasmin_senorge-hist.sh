@@ -77,11 +77,11 @@ fi
      # otherwise the script will stop prematurely and you will have to type this in the terminal:. 
      # cdo mergetime *_zerodeg_ANN.nc mergetime_zerodeg_ANN.nc
      
-#    # Note that these fields have been extracted from original seNorge files.  
-#    # cdo selvar,'tx' $ynfile $savedir'/SeNorge2018/tx_'$y'.nc' # maximum temperature
-#    # cdo selvar,'tn' $ynfile $savedir'/SeNorge2018/tn_'$y'.nc' # minimum temperature
-#    # First time, this gave the following error on fillValues: (solution here: https://github.com/metno/seNorge_docs/issues/3)
-#    # Error (cdf_put_att_double): NetCDF: Not a valid data type or _FillValue type mismatch
+     ## Note that these fields have been extracted from original seNorge files.  
+     ## cdo selvar,'tx' $ynfile $savedir'/SeNorge2018/tx_'$y'.nc' # maximum temperature
+     ## cdo selvar,'tn' $ynfile $savedir'/SeNorge2018/tn_'$y'.nc' # minimum temperature
+     ## First time, this gave the following error on fillValues: (solution here: https://github.com/metno/seNorge_docs/issues/3)
+     ## Error (cdf_put_att_double): NetCDF: Not a valid data type or _FillValue type mismatch
 
 
      ################
@@ -105,68 +105,67 @@ fi
      # cdo yearsum -mul -gec,28 -runmean,5  /hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf/tx_senorge2018_1991.nc  -gec,16 -runmean,5 /hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf/tn_senorge2018_1991.nc  ./1991_hdwi-nor.nc
      
 
-      ## DTR, diurnal temperature range
+     ## DTR, diurnal temperature range
 
-      #     # pipe: cdo timmean -sub -selmon,1 ../../tx_senorge2018_1957.nc -selmon,1 ../../tn_senorge2018_1957.nc 1957_1_DTRPIP.nc
+     #     # pipe: cdo timmean -sub -selmon,1 ../../tx_senorge2018_1957.nc -selmon,1 ../../tn_senorge2018_1957.nc 1957_1_DTRPIP.nc
+
+     cdo timmean -sub -selmon,12,1,2 $ifileX -selmon,12,1,2 $ifileN $savedir'/'$y'_DTR_DJF.nc'
+     cdo timmean -sub -selmon,3/5    $ifileX -selmon,3/5    $ifileN $savedir'/'$y'_DTR_MAM.nc'
+     cdo timmean -sub -selmon,6/8    $ifileX -selmon,6/8    $ifileN $savedir'/'$y'_DTR_JJA.nc'
+     cdo timmean -sub -selmon,9/11   $ifileX -selmon,9/11   $ifileN $savedir'/'$y'_DTR_SON.nc'
+
+     cdo timmean -sub $ifileX $ifileN  $savedir'/'$y'_DTR_ANN.nc'  #-abs er fjernet
+
+     ## Frost days      # TRENGS ikke for sesong!
+     # pipe:cdo timsum -ltc,0 -selmon,1 ../../tn_senorge2018_1957.nc 1957_1_frostnumberPIP.nc
+
+     cdo timsum -ltc,0 $ifileN  $savedir'/'$y'_fd.nc' #frost_days.nc'
 
 
-      cdo timmean -sub -selmon,12,1,2 $ifileX -selmon,12,1,2 $ifileN $savedir'/'$y'_DTR_DJF.nc'
-      cdo timmean -sub -selmon,3/5    $ifileX -selmon,3/5    $ifileN $savedir'/'$y'_DTR_MAM.nc'
-      cdo timmean -sub -selmon,6/8    $ifileX -selmon,6/8    $ifileN $savedir'/'$y'_DTR_JJA.nc'
-      cdo timmean -sub -selmon,9/11   $ifileX -selmon,9/11   $ifileN $savedir'/'$y'_DTR_SON.nc'
+     ## Tropnightdøgn
 
-      cdo timmean -sub $ifileX $ifileN  $savedir'/'$y'_DTR_ANN.nc'  #-abs er fjernet
-
-      ## Frost days      # TRENGS ikke for sesong!
-      # pipe:cdo timsum -ltc,0 -selmon,1 ../../tn_senorge2018_1957.nc 1957_1_frostnumberPIP.nc
-
-      cdo timsum -ltc,0 $ifileN  $savedir'/'$y'_fd.nc' #frost_days.nc'
-
-
-      ## Tropnightdøgn
-
-      cdo timsum -gec,20 $ifileN  $savedir'/'$y'_tropnight.nc'
-      #      cdo timsum -gec,20 -selmon,$mon $ifileN $savedir'/'$y'_'$mon'_tropnight_days_monthly.nc'
+     cdo timsum -gec,20 $ifileN  $savedir'/'$y'_tropnight.nc'
+     #      cdo timsum -gec,20 -selmon,$mon $ifileN $savedir'/'$y'_'$mon'_tropnight_days_monthly.nc'
      
-      ## Sommerger
-      ## Her brukes 20 grader for å beregne nordiske sommerdøgn, ikke 25. Fra Helga: .. Vi har brukt TAX>=25 som er sommerdager. Men det er vanligere at vi bruker nordiske sommerdager (typisk i media) og det er TAX>=20'C. 
+     ## Sommerdager
+     ## Her brukes 20 grader for å beregne nordiske sommerdager, ikke 25. Fra Helga: .. Vi har brukt TAX>=25 som er sommerdager. Men det er vanligere at vi bruker nordiske sommerdager (typisk i media) og det er TAX>=20'C. 
 
-       cdo timsum -gec,20 $ifileX  $savedir'/'$y'_summerd-nor.nc'
-      # cdo timsum -gec,20 -selmon,$mon $ifileX $savedir'/'$y'_'$mon'_sommerdag_days_monthly.nc'
+     cdo timsum -gec,20 $ifileX  $savedir'/'$y'_summerd-nor.nc'
+     # cdo timsum -gec,20 -selmon,$mon $ifileX $savedir'/'$y'_'$mon'_sommerdag_days_monthly.nc'
 
      ## Gjennomsnitt av TAX og TAN
      
-      cdo timmean $ifileX  $savedir'/'$y'_TAX_timmean_ANN.nc'
-      cdo timmean $ifileN  $savedir'/'$y'_TAN_timmean_ANN.nc'
+     cdo timmean $ifileX  $savedir'/'$y'_TAX_timmean_ANN.nc'
+     cdo timmean $ifileN  $savedir'/'$y'_TAN_timmean_ANN.nc'
     
-      cdo timmean  -selmon,12,1,2 $ifileX $savedir'/'$y'_TAX_timmean_DJF.nc'
-      cdo timmean  -selmon,3/5    $ifileX $savedir'/'$y'_TAX_timmean_MAM.nc'
-      cdo timmean  -selmon,6/8    $ifileX $savedir'/'$y'_TAX_timmean_JJA.nc'
-      cdo timmean  -selmon,9/11   $ifileX $savedir'/'$y'_TAX_timmean_SON.nc'
+     cdo timmean  -selmon,12,1,2 $ifileX $savedir'/'$y'_TAX_timmean_DJF.nc'
+     cdo timmean  -selmon,3/5    $ifileX $savedir'/'$y'_TAX_timmean_MAM.nc'
+     cdo timmean  -selmon,6/8    $ifileX $savedir'/'$y'_TAX_timmean_JJA.nc'
+     cdo timmean  -selmon,9/11   $ifileX $savedir'/'$y'_TAX_timmean_SON.nc'
 
-      cdo timmean  -selmon,12,1,2 $ifileN $savedir'/'$y'_TAN_timmean_DJF.nc'
-      cdo timmean  -selmon,3/5    $ifileN $savedir'/'$y'_TAN_timmean_MAM.nc'
-      cdo timmean  -selmon,6/8    $ifileN $savedir'/'$y'_TAN_timmean_JJA.nc'
-      cdo timmean  -selmon,9/11   $ifileN $savedir'/'$y'_TAN_timmean_SON.nc'
+     cdo timmean  -selmon,12,1,2 $ifileN $savedir'/'$y'_TAN_timmean_DJF.nc'
+     cdo timmean  -selmon,3/5    $ifileN $savedir'/'$y'_TAN_timmean_MAM.nc'
+     cdo timmean  -selmon,6/8    $ifileN $savedir'/'$y'_TAN_timmean_JJA.nc'
+     cdo timmean  -selmon,9/11   $ifileN $savedir'/'$y'_TAN_timmean_SON.nc'
      
-      ## Zero-degree crossings
-      #     # pipe: cdo timsum -mul -ltc,0 -selmon,1 ../../tn_senorge2018_1957.nc -gtc,0 -selmon,1 ../../tx_senorge2018_1957.nc 1957_1_crossingnumberPIP.nc
-      #  cdo timsum -mul -ltc,0 -selmon,$mon $ifileN -gtc,0 -selmon,$mon $ifileX $savedir'/'$y'_'$mon'_'zero-crossings_days_monthly.nc'
+     ## Zero-degree crossings
+     #     # pipe: cdo timsum -mul -ltc,0 -selmon,1 ../../tn_senorge2018_1957.nc -gtc,0 -selmon,1 ../../tx_senorge2018_1957.nc 1957_1_crossingnumberPIP.nc
+     #  cdo timsum -mul -ltc,0 -selmon,$mon $ifileN -gtc,0 -selmon,$mon $ifileX $savedir'/'$y'_'$mon'_'zero-crossings_days_monthly.nc'
 
-      cdo timsum -mul -ltc,0 -selmon,12,1,2 $ifileN -gtc,0 -selmon,12,1,2 $ifileX $savedir'/'$y'_zerodeg_DJF.nc'
-      cdo timsum -mul -ltc,0 -selmon,3/5 $ifileN    -gtc,0 -selmon,3/5 $ifileX $savedir'/'$y'_zerodeg_MAM.nc'
-      cdo timsum -mul -ltc,0 -selmon,6/8 $ifileN    -gtc,0 -selmon,6/8 $ifileX $savedir'/'$y'_zerodeg_JJA.nc'
-      cdo timsum -mul -ltc,0 -selmon,9/11 $ifileN   -gtc,0 -selmon,9/11 $ifileX $savedir'/'$y'_zerodeg_SON.nc'
+     cdo timsum -mul -ltc,0 -selmon,12,1,2 $ifileN -gtc,0 -selmon,12,1,2 $ifileX $savedir'/'$y'_zerodeg_DJF.nc'
+     cdo timsum -mul -ltc,0 -selmon,3/5 $ifileN    -gtc,0 -selmon,3/5 $ifileX $savedir'/'$y'_zerodeg_MAM.nc'
+     cdo timsum -mul -ltc,0 -selmon,6/8 $ifileN    -gtc,0 -selmon,6/8 $ifileX $savedir'/'$y'_zerodeg_JJA.nc'
+     cdo timsum -mul -ltc,0 -selmon,9/11 $ifileN   -gtc,0 -selmon,9/11 $ifileX $savedir'/'$y'_zerodeg_SON.nc'
      
-      cdo timsum -mul -ltc,0 $ifileN -gtc,0 $ifileX  $savedir'/'$y'_zerodeg_ANN.nc'
-      # echo 'done calculating monthly sums of indices. Now combine into annual values.'
+     cdo timsum -mul -ltc,0 $ifileN -gtc,0 $ifileX  $savedir'/'$y'_zerodeg_ANN.nc'
+     # echo 'done calculating monthly sums of indices. Now combine into annual values.'
 
-      fi      # end testing-if-sentencene  if[ $1 = "1" ]; then
+     fi      # end testing-if-sentencene  if[ $1 = "1" ]; then
               # The script reads in files and process indices only if argument 1 = 1. Otherwise, skip processing.
   done      # end for years
 
 
-  if [ $1 = "1" ]; then          # Continue to reading in files and processing indices only if argument 1 = 1. Otherwise, skip processing.
+ if [ $1 = "1" ]; then          # Continue to reading in files and processing indices only if argument 1 = 1. Otherwise, skip processing.
 
   echo 'Done looping over years. The years processed were:' $years
       
@@ -257,9 +256,9 @@ fi
   cdo ifthen $landMask -timmean $savedir'/mergetime_fd_'$startyear'-'$endyear'.nc4' $savedir'/land_mrgtim_fd.nc'
   cdo ifthen $landMask -timmean $savedir'/mergetime_summerd-nor_'$startyear'-'$endyear'.nc4' $savedir'/land_mrgtim_summerd-nor.nc'
 
- # I terminalen:
- # ln -s /hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc landmask.nc
- # cdo ifthen landmask.nc -timmean mergetime_TAN_ANN.nc    land_mrgtim_TAN_ANN.nc
+  # I terminalen:
+  # ln -s /hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc landmask.nc
+  # cdo ifthen landmask.nc -timmean mergetime_TAN_ANN.nc    land_mrgtim_TAN_ANN.nc
 
 
   
@@ -273,35 +272,35 @@ fi
  # NOTE: these lines will fail if they contain spaces. 
  ########################
  
-     # Generate UUID
-      uuid1=$(python -c 'import uuid; print(uuid.uuid4())')
-      uuid2=$(python -c 'import uuid; print(uuid.uuid4())')
-      uuid3=$(python -c 'import uuid; print(uuid.uuid4())')
-      uuid4=$(python -c 'import uuid; print(uuid.uuid4())')
-      uuid5=$(python -c 'import uuid; print(uuid.uuid4())')
-      uuid6=$(python -c 'import uuid; print(uuid.uuid4())')
-      uuid7=$(python -c 'import uuid; print(uuid.uuid4())')
-      uuid8=$(python -c 'import uuid; print(uuid.uuid4())')
-      uuid9=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid10=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid11=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid12=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid13=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid14=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid15=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid16=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid17=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid18=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid19=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid20=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid21=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid22=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid23=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid24=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid25=$(python -c 'import uuid; print(uuid.uuid4())')
-     uuid26=$(python -c 'import uuid; print(uuid.uuid4())')
-     # uuid27=$(python -c 'import uuid; print(uuid.uuid4())')
-     # echo $uuid1
+ # Generate UUID
+ uuid1=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid2=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid3=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid4=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid5=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid6=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid7=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid8=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid9=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid10=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid11=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid12=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid13=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid14=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid15=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid16=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid17=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid18=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid19=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid20=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid21=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid22=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid23=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid24=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid25=$(python -c 'import uuid; print(uuid.uuid4())')
+ uuid26=$(python -c 'import uuid; print(uuid.uuid4())')
+ # uuid27=$(python -c 'import uuid; print(uuid.uuid4())')
+ # echo $uuid1
                                       
  ncatted -O -a id,global,o,c,$uuid1   $savedir'/land_mrgtim_hdwi-nor'
 # ncatted -O -a id,global,o,c,$uuid2   $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'
@@ -422,35 +421,34 @@ fi
 
  # I terminalen:
  # ncatted -O -a units,tn,o,c,"C" 	land_mrgtim_TAN_ANN.nc 		
-
+						
 							
-							
-ncrename -v tx,hdwi-nor  $savedir'/land_mrgtim_hdwi-nor'   $savedir'/sn2018v2005_hist_none_none_norway_1km_hdwi-nor_annual-mean_'$startyear'-'$endyear'.nc4'
-#ncrename -v tx,heatwave  $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'   $savedir'/sn2018v2005_hist_none_none_norway_1km_heatwave28X-16N-3days_annual-mean_'$startyear'-'$endyear'.nc4'
-#ncrename -v tx,heatwave  $savedir'/land_mrgtim_heatwave_index28X-3days.nc'       $savedir'/sn2018v2005_hist_none_none_norway_1km_heatwave28X-3days_annual-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_annual-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_annual-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_DJF.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_winter-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_DJF.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_winter-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_MAM.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_spring-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_MAM.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_spring-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_JJA.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_summer-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_JJA.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_summer-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_SON.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_autumn-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_SON.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_autumn-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_annual-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_DJF.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_winter-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_MAM.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_spring-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_JJA.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_summer-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_SON.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_autumn-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_DJF.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_winter-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_MAM.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_spring-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_JJA.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_summer-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_SON.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_autumn-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_annual-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,tropnight	$savedir'/land_mrgtim_tropnight.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tropnight_annual-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tn,fd	        $savedir'/land_mrgtim_fd.nc' 	 	        $savedir'/sn2018v2005_hist_none_none_norway_1km_fd_annual-mean_'$startyear'-'$endyear'.nc4'
-ncrename -v tx,summerd-nor	$savedir'/land_mrgtim_summerd-nor.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_summerd-nor_annual-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,hdwi-nor  $savedir'/land_mrgtim_hdwi-nor'   $savedir'/sn2018v2005_hist_none_none_norway_1km_hdwi-nor_annual-mean_'$startyear'-'$endyear'.nc4'
+ #ncrename -v tx,heatwave  $savedir'/land_mrgtim_heatwave_index28X-16N-3days.nc'   $savedir'/sn2018v2005_hist_none_none_norway_1km_heatwave28X-16N-3days_annual-mean_'$startyear'-'$endyear'.nc4'
+ #ncrename -v tx,heatwave  $savedir'/land_mrgtim_heatwave_index28X-3days.nc'       $savedir'/sn2018v2005_hist_none_none_norway_1km_heatwave28X-3days_annual-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_annual-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_annual-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_DJF.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_winter-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_DJF.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_winter-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_MAM.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_spring-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_MAM.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_spring-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_JJA.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_summer-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_JJA.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_summer-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,tasmin	 	$savedir'/land_mrgtim_TAN_SON.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmin_autumn-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,tasmax	 	$savedir'/land_mrgtim_TAX_SON.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tasmax_autumn-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_annual-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_DJF.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_winter-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_MAM.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_spring-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_JJA.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_summer-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,dtr	 	$savedir'/land_mrgtim_DTR_SON.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dtr_autumn-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_DJF.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_winter-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_MAM.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_spring-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_JJA.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_summer-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_SON.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_autumn-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,dzc	 	$savedir'/land_mrgtim_zerodeg_ANN.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_dzc_annual-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,tropnight	$savedir'/land_mrgtim_tropnight.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_tropnight_annual-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tn,fd	        $savedir'/land_mrgtim_fd.nc' 	 	        $savedir'/sn2018v2005_hist_none_none_norway_1km_fd_annual-mean_'$startyear'-'$endyear'.nc4'
+ ncrename -v tx,summerd-nor	$savedir'/land_mrgtim_summerd-nor.nc' 	 	$savedir'/sn2018v2005_hist_none_none_norway_1km_summerd-nor_annual-mean_'$startyear'-'$endyear'.nc4'
  
  
 echo "End of script. Now, move to R to plot."  # see scripts in https://github.com/KSSno/KiN2100/tree/main/indices
