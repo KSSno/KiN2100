@@ -56,9 +56,13 @@ Hvis du bruker cdo mul med 0/1 mask og har 0 verdier (e.g 0 summerdager), får d
 Fila geoinfo/kss2023_mask1km_norway.nc4 viser landmasken til seNorge-griddet.
 
 Den er laget slik: 
+
 cdo gec,0 kss2023_dem1km_all.nc4 kss2023_mask1km_norway.nc4
+
 ncrename -v elevation,mask kss2023_mask1km_norway.nc4
+
 ncatted -a standard_name,mask,o,c,"mask" -a units,mask,o,c,"1" kss2023_mask1km_norway.nc4
+
 
 
 
