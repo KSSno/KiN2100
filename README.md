@@ -47,22 +47,18 @@ Mye informasjon er også nedfelt i modelleringsprotokollen [https://docs.google.
 
 ## Landmasker
 
-Husk å bruke ifthen (ikke mul) 
+Husk å bruke ifthen (ikke mul) hvis du har en 0/1 mask.
 
- cdo ifthen NorwayMaskOnSeNorgeGrid.nc infile-med-naboland.nc outfile-uten-naboland.nc
+ cdo ifthen kss2023_mask1km_norway.nc4 infile-med-naboland.nc outfile-uten-naboland.nc
 
-Hvis du bruker cdo mul med 0/1 mask og har 0 verdier, får du 0 over havet og 0 over land. Hvis du bruker ifthen, får du NA over havet og 0 over land.
+Hvis du bruker cdo mul med 0/1 mask og har 0 verdier (e.g 0 summerdager), får du 0 over havet OG 0 hvor du har 0 verdiene. Hvis du bruker ifthen, får du NA over havet og 0 hvor du har 0 verdiene. (Men maskene her er NA/1 masker, da er cdo mul også greit.)
 
-
-Fila geoinfo/NorwayMaskOnSeNorgeGrid.nc viser landmasken til seNorge-griddet.
+Fila geoinfo/kss2023_mask1km_norway.nc4 viser landmasken til seNorge-griddet.
 
 Den er laget slik: 
+cdo gec,0 kss2023_dem1km_all.nc4 kss2023_mask1km_norway.nc4
+ncrename -v elevation,mask kss2023_mask1km_norway.nc4
+ncatted -a standard_name,mask,o,c,"mask" -a units,mask,o,c,"1" kss2023_mask1km_norway.nc4
 
-cdo gtc,-Inf kss2023_dem1km_norway.nc4 NorwayMaskOnSeNorgeGrid.nc
 
 
-NorwayMaskOnSeNorgeGrid.nc er identisk med fila kss2023_mask1km_norway.nc4 
-
-Den er laget slik:
-
-cdo gec,0 kss2023_dem1km_norway.nc4 kss2023_mask1km_norway.nc4
