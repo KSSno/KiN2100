@@ -96,7 +96,7 @@ One drawback of using a quantile-based confidence interval in this case is the s
 
 ## Additional information
 
-We need to read in observations (historical/"observed" temperature for Norway) and corresponding statistics from empirical-statistical downscaling (ESD). The obsefvations were downloaded as CSV-file from <https://klimaservicesenter.no/kss/vrdata/regionv> and it's not obvious what Google-doc contains what. My guess is that the following file contains the country temperature regord for all of Norway, but there is no guarantee for this being correct:
+We need to read in observations (historical/"observed" temperature for Norway) and corresponding statistics from empirical-statistical downscaling (ESD). The observations were downloaded as CSV-file from <https://klimaservicesenter.no/kss/vrdata/regionv> and it's not obvious what Google-doc contains what. My guess is that the following file contains the country temperature record for all of Norway, but there is no guarantee for this being correct:
 
 ```{r}
 obs <- read.csv('~/Downloads/tam_1901-2021_GR0.csv',sep=';')
