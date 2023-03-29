@@ -1,0 +1,194 @@
+---
+title: "Figure-sugggestions"
+author: "REB"
+date: "2023-03-29"
+output: pdf_document
+---
+
+The esd-package is open-code available from <https://github.com/metno/esd>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(esd)
+setwd('~/R')
+```
+
+
+## Collect data.
+
+Reading and organising data from multiple Euro-CORDEX regional climate model simulations into a convenient structure for further processing and plotting. Here a symblic link has been used for the data path.
+
+```{r organise-data}
+## Read and organise/structure the data in a convenient way for analysing ensembles:
+path <- '~/data/KSS/kin2100_2024/Indices/Temperature/temperature_inds_Irene'
+subpaths <- list.files(path=path,full.names = TRUE)
+print(list.files(path=path))
+timeseries <- list()
+for (subpath in subpaths) {
+  files <- list.files(path=subpath,full.names = TRUE)
+  print(files)
+  for (fname in files) { 
+    ncid <- nc_open(fname)
+    vids <- names(ncid$var)
+    vids <- vids[!is.element(vids,c('time','lon','lat','time_bnds'))]
+    modelID <- ncatt_get(ncid,0,'model_id')$value
+    expID <- ncatt_get(ncid,0,'driving_experiment_name')$value
+    for (vid in vids) { 
+      print(paste(modelID,expID,vid))
+      x <- ncvar_get(ncid,vid)
+      t <- ncvar_get(ncid,'time')
+      lon <- ncvar_get(ncid,'lon')
+      lat <- ncvar_get(ncid,'lat')
+      t <- as.Date(t/24,origin='1900-01-01')
+      y <- zoo(x,order.by=t)
+      attr(y,'lon') <- lon; attr(y,'lat') <- lat
+      # This doesn't work
+      if (!is.null(timeseries[[paste(modelID,expID,sep='.')]])) {
+        t1 <- index(timeseries[[paste(modelID,expID,sep='.')]])
+        x1 <- coredata(timeseries[[paste(modelID,expID,sep='.')]])
+        t2 <- index(y); x2 <- coredata(y)
+        t12 <- c(t1,t2); x12 <- c(x1,x2)
+        srt <- order(t12,decreasing=FALSE)
+        y <- zoo(x12[srt],order.by=t12[srt])
+      }
+      print(table(month.abb[month(y)]))
+      print(range(index(y)))
+      timeID <- paste(month.abb[month(y)][1],paste(range(year(y)),collapse='-'),sep='.')
+      timeseries[[paste(modelID,expID,timeID,sep='.')]] <- y
+      #print('---')
+    }
+    nc_close(ncid)
+  }
+}
+series <- names(timeseries)
+```
+
+## Extract a season 
+
+For producing samplie figures, we choose February. 
+
+```{r extract-selected}
+# Example of extracting the data based on informative names in the list object
+pattern <- '.Feb.'
+select <- series[grep(pattern,series)]
+print(select)
+ensemble <- timeseries[[select[1]]]
+for (pick in select[-1]) {
+  ensemble <- merge(ensemble,timeseries[[pick]])
+}
+
+## Estimate ensemble statistics for the selected subset
+em <- apply(ensemble,1,mean) # Ensemble mean of subset
+es <- apply(ensemble,1,sd)   # Ensemble standard dviation of subset
+eci <- apply(ensemble,1,quantile,probs=c(0.1,0.9),na.rm=TRUE)  # 10%-90% Confidence interval of subset"
+mps <- em + 2*es
+mms <- em - 2*es
+t <- index(ensemble)
+ok <- is.finite(mps) & is.finite(mms)
+
+CI <- data.frame(em = em, es = es, eci = t(eci), mps = mps, mms = mms, t = t)
+```
+
+One drawback of using a quantile-based confidence interval in this case is the small sample size. Also, the data are from model estimates which are a very controlled situation with low risk of erronous measurements and contamination of other processes, which is one motivation for using quantiles (e.g. median and IQR) rather than statistical moments (mean and standard deviation). Hence, any outlier that has strong influence on the model spread and the standard deviation reflects a modelled situation, albeit rare, rather than a misreading. 
+
+## Additional information
+
+We need to read in observations (historical/"observed" temperature for Norway) and corresponding statistics from empirical-statistical downscaling (ESD). The obsefvations were downloaded as CSV-file from <https://klimaservicesenter.no/kss/vrdata/regionv> and it's not obvious what Google-doc contains what. My guess is that the following file contains the country temperature regord for all of Norway, but there is no guarantee for this being correct:
+
+```{r}
+obs <- read.csv('~/Downloads/tam_1901-2021_GR0.csv',sep=';')
+x <- zoo(obs$DJF,order.by=as.Date(paste(obs$Year,'07-01',sep='-')))
+```
+
+
+## Types of time series presentation
+
+
+### Suggestion #1 
+
+Unfiltered curve with ensemble mean and standard deviations - shows a jagged grey area, but the visible spikes are just due to random sampling fluctuations and should not be interpreted as warm or cold seasons for those particular years. 
+
+```{r figure-1}
+## Suggestion 1 - ragged plot with mean +- stdv
+
+par(mar=c(3.1, 4.1, 2.1, 0.1), bty='n')
+plot(ensemble[ok,]-273.15, type='b',pch=19,col=rgb(0.5,0.5,0.5,0.3),cex=0.75,lty=3,
+     plot.type='single',lwd=2,main='Nedskalert temperatur',xlab='',ylab=expression(paste('Temperatur (',degree*C,')')))
+grid()
+points(x,type='b',pch=19,lty=3)
+
+polygon(c(CI$t[ok],rev(CI$t[ok])),c(CI$mps[ok],rev(CI$mms[ok]))-273.15,col=rgb(0.5,0.5,0.5,0.3),border=NA)
+lines(zoo(CI$em,order.by=CI$t)-273.15,col='grey40',lwd=3)
+legend(as.Date('2040-01-01'),-12,expression(paste('CI: ',mu %+-% 2*sigma)),lwd=10,col=rgb(0.5,0.5,0.5,0.3),bty='n')
+```
+
+### Suggestion #2 
+
+Filtered smoothe curve with ensemble mean and standard deviations - shows smoothed statistics, but the visible spikes are just due to random sampling fluctuations and should not be interpreted as warm or cold seasons for those particular years. 
+
+```{r figure-2}
+sem <- predict(lm(em ~ I(t) + I(t)^2 + I(t)^3 + I(t)^4, data=CI),newdata=CI)
+ci1 <- predict(lm(mps ~ I(t) + I(t)^2 + I(t)^3 + I(t)^4, data=CI),newdata=CI)
+ci2 <- predict(lm(mms ~ I(t) + I(t)^2 + I(t)^3 + I(t)^4, data=CI),newdata=CI)
+
+## Suggestion 3 - ragged plot with mean +- stdv
+
+par(mar=c(3.1, 4.1, 2.1, 0.1), bty='n')
+plot(ensemble[ok,]-273.15, type='b',pch=19,col=rgb(0.5,0.5,0.5,0.3),cex=0.75,lty=3,
+     plot.type='single',lwd=2,main='Nedskalert temperatur',xlab='',ylab=expression(paste('Temperatur (',degree*C,')')))
+grid()
+
+points(x,type='b',pch=19,lty=3)
+
+polygon(c(CI$t[ok],rev(CI$t[ok])),c(ci1[ok],rev(ci2[ok]))-273.15,col=rgb(0.5,0.5,0.5,0.2),border=NA)
+lines(zoo(CI$em,order.by=CI$t)-273.15,col='grey40',lwd=2)
+lines(zoo(sem,order.by=CI$t)-273.15,col='grey40',lwd=3)
+legend(as.Date('2040-01-01'),-12,expression(paste('CI: ',mu %+-% 2*sigma)),lwd=10,col=rgb(0.5,0.5,0.5,0.3),bty='n')
+```
+
+### Suggestion #3
+
+The third suggestion is to use 10-90 interval as confidence interval. The drawback of using quantiles on small samples (here 9 data points/ensemble members) is the strong dominance of random sampling fluctuations. Such random variations are even more severe for higher quantiles, which may justify 20-80 intervals, but the latter only embraces 60 percent of the data and excludes more extreme temperatures. Also, a 20-80 interval will not be very visible in this figure. 
+
+```{r figure-3}
+## Suggestion 3 - ragged plot with mean +- stdv
+
+par(mar=c(3.1, 4.1, 2.1, 0.1), bty='n')
+plot(ensemble[ok,]-273.15, type='b',pch=19,col=rgb(0.5,0.5,0.5,0.3),cex=0.75,lty=3,
+     plot.type='single',lwd=2,main='Nedskalert temperatur',xlab='',ylab=expression(paste('Temperatur (',degree*C,')')))
+grid()
+
+points(x,type='b',pch=19,lty=3)
+
+polygon(c(CI$t[ok],rev(CI$t[ok])),c(CI$eci.10.[ok],rev(CI$eci.90.[ok]))-273.15,col=rgb(0.5,0.5,0.5,0.3),border=NA)
+lines(zoo(CI$em,order.by=CI$t)-273.15,col='grey40',lwd=3)
+legend(as.Date('2040-01-01'),-12,expression(paste('CI: ',group("[",list(q[10],q[9]),"]"))),lwd=10,col=rgb(0.5,0.5,0.5,0.3),bty='n')
+```
+
+
+### Suggestion #4
+
+The 4th suggestion is to use 10-90 interval as confidence interval with smoothing/filtering.  
+
+```{r figure-4}
+## Suggestion 4 - ragged plot with mean +- stdv
+sem <- predict(lm(em ~ I(t) + I(t)^2 + I(t)^3 + I(t)^4, data=CI),newdata=CI)
+ci1 <- predict(lm(eci.10. ~ I(t) + I(t)^2 + I(t)^3 + I(t)^4, data=CI),newdata=CI)
+ci2 <- predict(lm(eci.90.~ I(t) + I(t)^2 + I(t)^3 + I(t)^4, data=CI),newdata=CI)
+
+par(mar=c(3.1, 4.1, 2.1, 0.1), bty='n')
+plot(ensemble[ok,]-273.15, type='b',pch=19,col=rgb(0.5,0.5,0.5,0.3),cex=0.75,lty=3,
+     plot.type='single',lwd=2,main='Nedskalert temperatur',xlab='',ylab=expression(paste('Temperatur (',degree*C,')')))
+grid()
+
+points(x,type='b',pch=19,lty=3)
+
+polygon(c(CI$t[ok],rev(CI$t[ok])),c(ci1[ok],rev(ci2[ok]))-273.15,col=rgb(0.5,0.5,0.5,0.2),border=NA)
+lines(zoo(CI$em,order.by=CI$t)-273.15,col='grey40',lwd=2)
+lines(zoo(sem,order.by=CI$t)-273.15,col='grey40',lwd=3)
+legend(as.Date('2040-01-01'),-12,expression(paste('CI: ',group("[",list(q[10],q[9]),"]"))),lwd=10,col=rgb(0.5,0.5,0.5,0.3),bty='n')
+```
+
