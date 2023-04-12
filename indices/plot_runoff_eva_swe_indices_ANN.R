@@ -27,13 +27,13 @@ library(rgdal)
 #setEPS()
 
 
-#input <- "/lustre/storeB/project/KSS/kin2100_2024/Indices/Precipitation/1991-2020/"
+#input <- "/../storeB/project/KSS/kin2100_2024/Indices/Precipitation/1991-2020/"
 #output <- "~/Documents/results/KIN_indicators/"
 
 input <- c("/felles/ibni/KiN/IHA-analyser/hist/")    # fra app05 heter denne /app02-felles/, men bruk 02.
-# Kopiert til app-02 fra /hdata/hmdata/KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/runoff_1991-2020.nc
-# Kopiert til app-02 fra /hdata/hmdata/KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/evapo_1991-2020.nc
-# Kopiert til app-02 fra /hdata/hmdata/KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/swedogn_1991-2020.nc
+# Kopiert til app-02 fra /KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/runoff_1991-2020.nc
+# Kopiert til app-02 fra /KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/evapo_1991-2020.nc
+# Kopiert til app-02 fra /KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/swedogn_1991-2020.nc
 
 #output  <- input
 maskpath  <- c("/felles/ibni/KiN/temperature_indices/senorge/")
@@ -70,7 +70,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
     # Norge
     stiogNorgefil <- paste(maskpath, "NorwayMaskOnSeNorgeGrid.nc", sep="")
     nc  <- nc_open(stiogNorgefil)
-    #nc <- nc_open("/lustre/storeB/project/KSS/kin2100_2024/geoinfo/NorwayMaskOnSeNorgeGrid.nc")
+    #nc <- nc_open("/../storeB/project/KSS/kin2100_2024/geoinfo/NorwayMaskOnSeNorgeGrid.nc")
     Norge_mask <- ncvar_get(nc,"mask")
     nc_close(nc)
     Norge_mask[is.na(Norge_mask)]=0 # setter alle NA til 0
