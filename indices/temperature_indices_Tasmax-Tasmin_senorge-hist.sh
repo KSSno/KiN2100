@@ -5,8 +5,8 @@
 # (0 if you want to skip processing (meaning it starts after mergetime), otherwise 1)
 # Remember to log into a screen terminal before running. (Processing takes > 3 hours)
 #
-# Output is saved on the external PPI:
-# ibni@ppi-ext-login.met.no:/lustre/storeC-ext/users/kin2100/NVE/analyses/temperature_inds/
+# Output is saved on the external PPI
+
 # Last edited by IBNI 9-03-2023.
 
 # This script computes:
@@ -28,21 +28,22 @@ echo "This program calculates temperature indicators from TmaxTmin (heatwave ind
 echo "Argument 1 = 0 if you want to skip the processing, else 1. Now it is = " $1
 
 
-# filedir='/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05' # På lustre
-filedir='/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf/' #NVE
+# filedir='/../storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05' 
+filedir='/../../../../ForcingData/ObsData/seNorge2018_v20.05/netcdf/' #NVE
 
-# savedir='/lustre/storeC-ext/users/kin2100/NVE/analyses/indicators/temperature_inds'
-# savedir='/hdata/hmdata/KiN2100/analyses/indicators/temperature_indices/senorge/months' #NVE
-# savedir='/hdata/hmdata/KiN2100/analyses/indicators/temperature_indices/senorge/seasonal61-90/' #NVE
+# savedir='/../storeC-ext/users/kin2100/NVE/analyses/indicators/temperature_inds'
+# savedir='/../../../../analyses/indicators/temperature_indices/senorge/months' #NVE
+# savedir='/../../../../analyses/indicators/temperature_indices/senorge/seasonal61-90/' #NVE
+
 
 if [ $startyear = "1961" ]; then
     endyear=1990
     echo "Startyear = " $startyear ". Double-check your endyear = " $endyear
-    savedir='/hdata/hmdata/KiN2100/analyses/indicators/temperature_indices/senorge/seasonal61-90/' #NVE
+    savedir='/../../../../analyses/indicators/temperature_indices/senorge/seasonal61-90/' #NVE, KiN2100/analyses
 elif [ $startyear = "1991" ]; then
     endyear=2020
     echo "Startyear = " $startyear ". Double-check your endyear = " $endyear
-    savedir='/hdata/hmdata/KiN2100/analyses/indicators/temperature_indices/senorge/seasonal91-20/' #NVE
+    savedir='/../../../../analyses/indicators/temperature_indices/senorge/seasonal91-20/' #NVE
 else
     echo "Double-check your chosen startyear = " $startyear
 fi
@@ -103,7 +104,7 @@ fi
      #     cdo yearsum -mul -gec,28 -runmean,3 $ifileX -gec,16 -runmean,3 $ifileN  $savedir'/'$y'_heatwave_index28X-16N-3days.nc'
      #     cdo yearsum -gec,28 -runmean,3 $ifileX $savedir'/'$y'_heatwave_index28X-3days.nc' 
      
-     # cdo yearsum -mul -gec,28 -runmean,5  /hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf/tx_senorge2018_1991.nc  -gec,16 -runmean,5 /hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf/tn_senorge2018_1991.nc  ./1991_hdwi-nor.nc
+     # cdo yearsum -mul -gec,28 -runmean,5  /../../../..//ForcingData/ObsData/seNorge2018_v20.05/netcdf/tx_senorge2018_1991.nc  -gec,16 -runmean,5 /../../../../ForcingData/ObsData/seNorge2018_v20.05/netcdf/tn_senorge2018_1991.nc  ./1991_hdwi-nor.nc
      
 
      ## DTR, diurnal temperature range
@@ -206,19 +207,19 @@ fi
  fi      # end testing-if-sentencene  if[ $1 = "1" ]; then
  
  ################ 
- # USE /hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc
- # or norgeDEM=/lustre/storeC-ext/users/kin2100/NVE/analyses/indicators/kss2023_dem1km_norway.nc4 # PPI
+ # USE /../../../../analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc
+ # or norgeDEM=/lu../s..C-e../users/kin2100/NVE/analyses/indicators/kss2023_dem1km_norway.nc4 # PPI
  # I originally used created a landmask from IHA's /app01-felles/iha/KiN2023/misc/kss2023_dem1km_norway.nc4 (this shows elevation, not just "1" for land cells)
  # IHA generated a landmask generated this way:
  # By masking all values greater than or equal to 0
- # cdo gec,0 /app01-felles/iha/KiN2023/misc/kss2023_dem1km_norway.nc4 kss2023_mask1km_norway.nc4
+ # cdo gec,0 /01-fe.../iha/KiN2023/misc/kss2023_dem1km_norway.nc4 kss2023_mask1km_norway.nc4
  #
  # NorwayMaskOnSeNorgeGrid.nc is generated this way:
  # By masking all positve values (which is equivalent):
  # cdo gtc,-Inf kss2023_dem1km_norway.nc4 NorwayMaskOnSeNorgeGrid.nc
  ################
 
-  landMask=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc
+  landMask=/../../../../analyses/github/KiN2100/geoinfo/NorwayMaskOnSeNorgeGrid.nc
 
   echo "Crop the grid (containing Sweden and Finland) to mainland Norway only"
   echo 
