@@ -6,7 +6,7 @@ set -e #exit on error
 # EQM and 3DBC
 # Hist, rcp26 and rcp45 so far, ssp3.70 to follow
 #
-# Call: ./calc_monmean_tas.sh VAR
+# Call: ./calc_monmeans.sh VAR
 # where VAR is one of hurs, pr, ps, rlds, rsds, sfcWind, tas, tasmax, tasmin
 
 # ProgressBar function (from https://github.com/fearside/ProgressBar/)
