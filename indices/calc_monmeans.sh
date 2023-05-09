@@ -40,11 +40,11 @@ fi
 VAR=$1
 
 #go to working dir
-workdir=/home/andreasd/kin2100_projdata/MET/monmeans_bc
+workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc
 cd $workdir
 
 #get list of RCMs
-RCMLIST=`ls /home/andreasd/kin2100_projdata/NVE/EQM/`
+RCMLIST=`ls /lustre/storeC-ext/users/kin2100/NVE/EQM/`
 echo "Found the following RCMs:"
 echo $RCMLIST | tr " " "\n"
 echo -ne "======================"
@@ -57,7 +57,7 @@ do
  
  #HIST
  count=0
- filelist=`ls /home/andreasd/kin2100_projdata/NVE/EQM/$RCM/$VAR/hist/*`
+ filelist=`ls /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/*`
  nbrfiles=`echo $filelist | wc -w`
  echo "Hist: Processing" $nbrfiles "files"
  for file in $filelist
@@ -69,7 +69,7 @@ do
 
  #RCP2.6
  count=0
- filelist=`ls /home/andreasd/kin2100_projdata/NVE/EQM/$RCM/$VAR/rcp26/*`
+ filelist=`ls /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/*`
  nbrfiles=`echo $filelist | wc -w`
  echo -ne "\nRCP2.6: Processing" $nbrfiles "files\n"
  for file in $filelist
@@ -81,7 +81,7 @@ do
 
  #RCP4.5
  count=0
- filelist=`ls /home/andreasd/kin2100_projdata/NVE/EQM/$RCM/$VAR/rcp45/*`
+ filelist=`ls /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/*`
  nbrfiles=`echo $filelist | wc -w`
  echo -ne "\nRCP4.5: Processing" $nbrfiles "files\n"
  for file in $filelist
@@ -96,7 +96,7 @@ do
 
  #HIST
  count=0
- filelist=`ls /home/andreasd/kin2100_projdata/MET/3DBC/application/$RCM/hist/$VAR/*`
+ filelist=`ls /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/hist/$VAR/*`
  nbrfiles=`echo $filelist | wc -w`
  echo "Hist: Processing" $nbrfiles "files"
  for file in $filelist
@@ -108,7 +108,7 @@ do
 
  #RCP2.6
  count=0
- filelist=`ls /home/andreasd/kin2100_projdata/MET/3DBC/application/$RCM/rcp26/$VAR/*`
+ filelist=`ls /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/rcp26/$VAR/*`
  nbrfiles=`echo $filelist | wc -w`
  echo -ne "\nRCP2.6: Processing" $nbrfiles "files\n"
  for file in $filelist
@@ -120,7 +120,7 @@ do
 
  #RCP4.5
  count=0
- filelist=`ls /home/andreasd/kin2100_projdata/MET/3DBC/application/$RCM/rcp45/$VAR/*`
+ filelist=`ls /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/rcp45/$VAR/*`
  nbrfiles=`echo $filelist | wc -w`
  echo -ne "\nRCP4.5: Processing" $nbrfiles "files\n"
  for file in $filelist
