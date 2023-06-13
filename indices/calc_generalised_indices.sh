@@ -252,9 +252,9 @@ elif [ $HOSTNAME == "lustre" ]; then
     workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/test_ibni/ # /analyses/calc_gen_indices
     ## workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc/test_ibni
     filedir_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
-    filedir_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/hist/$VAR/
+    filedir_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
 
-    #    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/rcp45/$VAR/    
+    #    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/    
     landmask=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4
     
 fi
@@ -281,12 +281,8 @@ do
  mkdir -p $RCM/$VAR
  
  #HIST
- 
- if [ $HOSTNAME == "l-klima-app05" ]; then 
-     calc_indices $filedir_EQM/$RCM/$VAR/hist/
- else 
-     calc_indices $filedir_EQM/$RCM/hist/$VAR/
- fi
+ calc_indices $filedir_EQM/$RCM/$VAR/hist/
+
   #calc_indices $filedir_EQM_hist
   ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
 
@@ -295,28 +291,24 @@ do
   ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
 
   #RCP4.5
-  #calc_indices $filedir_EQM_hist
+  #calc_indices $filedir_EQM_rcp45
   ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/
  
  ### 3DBC
  echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
 
  #HIST
- if [ $HOSTNAME == "l-klima-app05" ]; then 
-     calc_indices $filedir_3DBC/$RCM/$VAR/hist/ $landmask
- else
-     calc_indices $filedir_3DBC/$RCM/hist/$VAR/ $landmask
- fi
+ calc_indices $filedir_3DBC/$RCM/$VAR/hist/ $landmask
  
-  ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/hist/$VAR/
+  ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
  
   #RCP2.6
-  #calc_indices $filedir_3DBC_rcp26/$RCM/$VAR/hist/
-  ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/rcp26/$VAR/
+  #calc_indices $filedir_3DBC_rcp26/$RCM/$VAR/rcp26/
+  ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
  
   # RCP4.5
-  #calc_indices $filedir_3DBC_rcp45/$RCM/$VAR/hist/
-  ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/rcp45/$VAR/
+  #calc_indices $filedir_3DBC_rcp45/$RCM/$VAR/rcp45/
+  ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
  
 done
 
