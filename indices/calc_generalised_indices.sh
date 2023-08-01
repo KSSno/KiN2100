@@ -73,8 +73,12 @@ function calc_indices {       # call this function with one input argument: file
 	 ofile_cdd=`echo $ofile | sed s/tas/cdd/`
 	 ofile_gsl=`echo $ofile | sed s/tas/gsl/`
 
+	 # I guess it would make sense to crop the domain to mainland Norway before processing? I've added "ifthen $landmask" in the lines below.
+	 # Are there better ways to crop to the landmask? This is what "ifthen $landmask" does:
+	 # cdo ifthen $landmask $filedir/$file '$filedir/$file_mainland_norway.nc4' 
+	 
 	 # Gjennomsnitt av tas
-         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_tas_monmean
+         cdo -s monmean ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_monmean
 
 	 # vekstsesongens lengde
 	 # Denne er tricky fordi den skal beregnes fra en glattet kurve.
@@ -87,7 +91,7 @@ function calc_indices {       # call this function with one input argument: file
 	 # Avkjølingsgraddager, cooling days
          # Antall dager med TAM>=22 (gec) over året
 	
-	 cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 $filedir/$file ./$RCM/$VAR/$ofile_cdd
+	 cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
 
 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		  ./$RCM/tas/$ofile_tas_monmean
@@ -111,10 +115,14 @@ function calc_indices {       # call this function with one input argument: file
 	 ofile_norheatwave=`echo $ofile | sed s/tasmax/norheatwave/`
 	 ofile_summerdnor=`echo $ofile | sed s/tasmax/summerdnor/`
 	 ofile_summerd=`echo $ofile | sed s/tasmax/summerd/`
- 
+
+
+# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'     ./$RCM'/land_tasmax'
+# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'     ./$RCM'/land_norheatwave'
+	 
 	 # Gjennomsnitt av tasmax
 	 mkdir -p  $RCM/tasmax/
-         cdo -s monmean $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
+         cdo -s monmean ifthen $landmask $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
  
  	 # Read in tasmin
 	 ifileN=`echo $file | sed s/tasmax/tasmin/`
@@ -123,7 +131,7 @@ function calc_indices {       # call this function with one input argument: file
 	 
  	 # Gjennomsnitt av tasmin
 	 mkdir -p  $RCM/tasmin/
-         cdo -s monmean $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
+         cdo -s monmean ifthen $landmask $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
 	 echo "Tasmin: done"
 
 
@@ -131,42 +139,42 @@ function calc_indices {       # call this function with one input argument: file
 	 #ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`  # <- this is written higher up
 	 mkdir -p  $RCM/dtr/
 	 echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
-	 cdo sub $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
+	 cdo sub ifthen $landmask $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
 
 	 
  	 # DZC, nullgradspasseringer
 	 mkdir -p  $RCM/dzc/
  	 echo "Ofile_dzc=" $RCM"/dzc/"$ofile_dzc	 
-	 cdo monsum -mul -ltc,273.15 $ifiledirN/$ifileN -gtc,273.15 $filedir/$file ./$RCM/dzc/$ofile_dzc
+	 cdo monsum -mul -ltc,273.15 ifthen $landmask $ifiledirN/$ifileN -gtc,273.15 ifthen $landmask $filedir/$file ./$RCM/dzc/$ofile_dzc
 
 
 	 # Frostdager, fd # under 0 grader
 	 mkdir -p $RCM/fd/
 	 echo "Ofile_fd=" $RCM"/fd/"$ofile_fd
-	 cdo monsum -ltc,273.15 $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
+	 cdo monsum -ltc,273.15 ifthen $landmask $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
 
 	 
 	 # tropenattdøgn # Tmin >= 20 grader
          mkdir -p $RCM/tropnight/
 	 echo "Ofile_tropnight=" $RCM"/tropnight/"$ofile_tropnight
-         cdo -s monsum -gec,293.15 $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
+         cdo -s monsum -gec,293.15 ifthen $landmask $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
 	 
 	 
 	 # Nordiske sommerdager # over 20 grader
  	 mkdir -p  $RCM/norsummer/
 	 echo "Ofile_norsummer=" $RCM"/norsummer/"$ofile_norsummer	 	 
-	 cdo monsum -gec,293.15 $filedir/$file ./$RCM/norsummer/$ofile_norsummer
+	 cdo monsum -gec,293.15 ifthen $landmask $filedir/$file ./$RCM/norsummer/$ofile_norsummer
 	 
 
 	 # Nordiske sommerdager # over 25 grader
  	 mkdir -p  $RCM/summerdays/	 
 	 echo "Ofile_summerdays=" $RCM"/summerdays/"$ofile_summerdays 	 
-	 cdo monsum -gec,298.15 $filedir/$file ./$RCM/summerdays/$ofile_summerdays
+	 cdo monsum -gec,298.15 ifthen $landmask $filedir/$file ./$RCM/summerdays/$ofile_summerdays
 	 
 	 # norsk hetebølge # over 27 grader
 	 #ofile_norheatwave=`echo $ofile | sed s/tasmax/norheatwave/`
          mkdir -p $RCM/norheatwave/
-	 cdo monsum -gec,300.15 -runmean,5 $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
+	 cdo monsum -gec,300.15 -runmean,5 ifthen $landmask $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
 	 echo "norsk hetebølge: done"
 
 
@@ -226,7 +234,7 @@ function calc_indices {       # call this function with one input argument: file
 	 #ofile_pr_monmean=`echo $ofile | sed s/pr/pr_monmean/`	 
 	 
 	 # Sum av pr
-         cdo -s monsum $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
+         cdo -s monsum ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
          #cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_pr_monmean	 
 	 
 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		./$RCM/pr/$ofile_pr_monsum
