@@ -36,16 +36,19 @@ function ProgressBar {
 printf "\rProgress : [${_fill// /#}${_empty// /-}] ${_progress}%%"
 }
 
+# Scroll down below (all functions) to see the main script. 
 
-function calc_indices {       # two input arguments:  filedir and $landmask
-   # på formen /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/$1/*`
+function calc_indices {       # call this function with one input argument: filedir 
+    # on the form /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/$1/*`
+    # I tried adding two input arguments:  filedir and $landmask, but that did not work.
     count=0
     filedir=$1
     if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
 	echo $HOSTNAME
 	landmask=/hdata/hmdata/KiN2100/analyses/kss2023_mask1km_norway.nc4
     else
-        landmask=/hdata/hmdata/KiN2100/analyses/kss2023_mask1km_norway.nc4	
+	echo $HOSTNAME	
+        landmask=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4	
     fi
     
     echo "Filedir = " $filedir
@@ -73,20 +76,31 @@ function calc_indices {       # two input arguments:  filedir and $landmask
 	 # Gjennomsnitt av tas
          cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_tas_monmean
 
- 	 # Avkjølingsgraddager, cooling days
+	 # vekstsesongens lengde
+	 # Denne er tricky fordi den skal beregnes fra en glattet kurve.
+	 # Fra dynamisk dokument: "Midlere vekstsesong i 30-års perioder gjøres utfra glattet kurve for temperaturutvikling gjennom året." 
+	 # den også tar inn filbane til landmaske. Og den skjønner ikke at jeg prøver å gi den to inputargumenter.
+         # cdo eca_gsl $file $landmask -gec,20 $file $RCM/$VAR/$ofile_gsl
+
+	 # vinter- og sommersesong inn her?
+
+	 # Avkjølingsgraddager, cooling days
          # Antall dager med TAM>=22 (gec) over året
 	
 	 cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
-	# vekstsesongens lengde
-	# Denne er tricky fordi den også tar inn filbane til landmaske. Og den skjønner ikke at jeg prøver å gi den to inputargumenter.
-        # cdo eca_gsl $file $landmask -gec,20 $file $RCM/$VAR/$ofile_gsl
-	
-	
-	
+
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		  ./$RCM/tas/$ofile_tas_monmean
+	 ncatted -O -a short_name,tas,o,c,"tas_monmean" 		  ./$RCM/tas/$ofile_tas_monmean
+	 ncatted -O -a units,tas,o,c,"C" 				  ./$RCM/tas/$ofile_tas_monmean
+	 ncatted -O -a long_name,tas,o,c,"average_of_air_temperature"     ./$RCM/tas/$ofile_tas_monmean
+	 
+	 echo "Done computing monthly indices and adding metadata."
+
+	 
       elif [ $VAR == "tasmax" ]; then 
          echo ""
-	 echo "tasmax chosen"
+	 echo "tasmax chosen (and tasmin automatically read in)"
 	 echo "File = " $file
 	 ofile_tasmax_monmean=`echo $ofile | sed s/tasmax/tasmax_monmean/`
 	 ofile_tasmin_monmean=`echo $ofile | sed s/tasmax/tasmin_monmean/`
@@ -101,8 +115,8 @@ function calc_indices {       # two input arguments:  filedir and $landmask
 	 # Gjennomsnitt av tasmax
 	 mkdir -p  $RCM/tasmax/
          cdo -s monmean $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
-
-	 
+ 
+ 	 # Read in tasmin
 	 ifileN=`echo $file | sed s/tasmax/tasmin/`
          ifiledirN=`echo $filedir | sed s/tasmax/tasmin/`
 	 echo $ifiledirN/$ifileN
@@ -114,43 +128,40 @@ function calc_indices {       # two input arguments:  filedir and $landmask
 
 
 	 # DTR		
-	 #ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`
+	 #ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`  # <- this is written higher up
 	 mkdir -p  $RCM/dtr/
+	 echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
 	 cdo sub $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
 
- 	 # Nullgradspasseringer
-##        echo "dzc chosen"
-##	    filelist_tasmin=`ls /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/TASMIN/hist/*`
-##	    nbrfiles=`echo $filelist | wc -w`
 	 
-
-	 #ofile_dzc=`echo $ofile | sed s/tasmax/dzc/`
+ 	 # DZC, nullgradspasseringer
 	 mkdir -p  $RCM/dzc/
+ 	 echo "Ofile_dzc=" $RCM"/dzc/"$ofile_dzc	 
 	 cdo monsum -mul -ltc,273.15 $ifiledirN/$ifileN -gtc,273.15 $filedir/$file ./$RCM/dzc/$ofile_dzc
 
 
 	 # Frostdager, fd # under 0 grader
 	 mkdir -p $RCM/fd/
+	 echo "Ofile_fd=" $RCM"/fd/"$ofile_fd
 	 cdo monsum -ltc,273.15 $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
 
 	 
-	 # tropenattdøgn # over 20 grader
-	 #ofile_tropnight=`echo $ofile | sed s/tasmax/tropnight/`
+	 # tropenattdøgn # Tmin >= 20 grader
          mkdir -p $RCM/tropnight/
 	 echo "Ofile_tropnight=" $RCM"/tropnight/"$ofile_tropnight
          cdo -s monsum -gec,293.15 $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
 	 
-	 echo "tropenatt: done"
-
 	 
 	 # Nordiske sommerdager # over 20 grader
- 	 mkdir -p  $RCM/summerdnor/
-	 cdo monsum -gec,293.15 $filedir/$file ./$RCM/summerdnor/$ofile_summerdnor
+ 	 mkdir -p  $RCM/norsummer/
+	 echo "Ofile_norsummer=" $RCM"/norsummer/"$ofile_norsummer	 	 
+	 cdo monsum -gec,293.15 $filedir/$file ./$RCM/norsummer/$ofile_norsummer
 	 
 
 	 # Nordiske sommerdager # over 25 grader
- 	 mkdir -p  $RCM/summerd/	 
-	 cdo monsum -gec,298.15 $filedir/$file ./$RCM/summerd/$ofile_summerd
+ 	 mkdir -p  $RCM/summerdays/	 
+	 echo "Ofile_summerdays=" $RCM"/summerdays/"$ofile_summerdays 	 
+	 cdo monsum -gec,298.15 $filedir/$file ./$RCM/summerdays/$ofile_summerdays
 	 
 	 # norsk hetebølge # over 27 grader
 	 #ofile_norheatwave=`echo $ofile | sed s/tasmax/norheatwave/`
@@ -165,15 +176,15 @@ function calc_indices {       # two input arguments:  filedir and $landmask
 
 	 # Endre til: ncatted -O -a tracking_id,global,o,c,`uuidgen`
   
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` ./$RCM/tasmax/$ofile_tasmax_monmean
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` ./$RCM/tasmin/$ofile_tasmin_monmean
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` ./$RCM/dtr/$ofile_dtr
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` ./$RCM/dzc/$ofile_dzc; echo "dzc metadata done"
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` ./$RCM/fd/$ofile_fd
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` ./$RCM/tropnight/$ofile_tropnight 	
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` ./$RCM/summerdnor/$ofile_summerdnor
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` ./$RCM/summerd/$ofile_summerd
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` ./$RCM/norheatwave/$ofile_norheatwave 
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/tasmax/$ofile_tasmax_monmean
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/tasmin/$ofile_tasmin_monmean
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/dtr/$ofile_dtr
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/dzc/$ofile_dzc
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/fd/$ofile_fd
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/tropnight/$ofile_tropnight 	
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/norsummer/$ofile_norsummer
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/summerdays/$ofile_summerdays
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/norheatwave/$ofile_norheatwave 
 
 	 ncatted -O -a short_name,tasmax,o,c,"tasmax"      ./$RCM/tasmax/$ofile_tasmax_monmean
 	 ncatted -O -a short_name,tasmin,o,c,"tasmin"      ./$RCM/tasmin/$ofile_tasmin_monmean		
@@ -181,18 +192,18 @@ function calc_indices {       # two input arguments:  filedir and $landmask
 	 ncatted -O -a short_name,tasmin,o,c,"dzc" 	   ./$RCM/dzc/$ofile_dzc 	
 	 ncatted -O -a short_name,tasmin,o,c,"fd" 	   ./$RCM/fd/$ofile_fd
 	 ncatted -O -a short_name,tasmin,o,c,"tropnight"   ./$RCM/tropnight/$ofile_tropnight 	
-	 ncatted -O -a short_name,tasmax,o,c,"summerdnor"  ./$RCM/summerdnor/$ofile_summerdnor
-	 ncatted -O -a short_name,tasmax,o,c,"summerd"     ./$RCM/summerd/$ofile_summerd
+	 ncatted -O -a short_name,tasmax,o,c,"norsummer"   ./$RCM/norsummer/$ofile_norsummer
+	 ncatted -O -a short_name,tasmax,o,c,"summerdays"  ./$RCM/summerdays/$ofile_summerdays
 	 ncatted -O -a short_name,tasmax,o,c,"norheatwave" ./$RCM/norheatwave/$ofile_norheatwave 
  
-	 ncatted -O -a units,tasmax,o,c,"C" 	./$RCM/tasmax/$ofile_tasmax_monmean
-	 ncatted -O -a units,tasmin,o,c,"C" 	./$RCM/tasmin/$ofile_tasmin_monmean
-	 ncatted -O -a units,tasmax,o,c,"C" 	./$RCM/dtr/$ofile_dtr 
-	 ncatted -O -a units,tasmin,o,c,"days" 	./$RCM/dzc/$ofile_dzc
-	 ncatted -O -a units,tasmin,o,c,"days" 	./$RCM/fd/$ofile_fd
-	 ncatted -O -a units,tasmin,o,c,"days" 	./$RCM/tropnight/$ofile_tropnight
-	 ncatted -O -a units,tasmax,o,c,"days" 	./$RCM/summerdnor/$ofile_summerdnor
-	 ncatted -O -a units,tasmax,o,c,"days" 	./$RCM/summerd/$ofile_summerd	
+	 ncatted -O -a units,tasmax,o,c,"C" 		   ./$RCM/tasmax/$ofile_tasmax_monmean
+	 ncatted -O -a units,tasmin,o,c,"C" 		   ./$RCM/tasmin/$ofile_tasmin_monmean
+	 ncatted -O -a units,tasmax,o,c,"C" 		   ./$RCM/dtr/$ofile_dtr 
+	 ncatted -O -a units,tasmin,o,c,"days" 		   ./$RCM/dzc/$ofile_dzc
+	 ncatted -O -a units,tasmin,o,c,"days" 		   ./$RCM/fd/$ofile_fd
+	 ncatted -O -a units,tasmin,o,c,"days" 		   ./$RCM/tropnight/$ofile_tropnight
+	 ncatted -O -a units,tasmax,o,c,"days" 		   ./$RCM/norsummer/$ofile_norsummer
+	 ncatted -O -a units,tasmax,o,c,"days" 	 	   ./$RCM/summerdays/$ofile_summerdays	
 	 ncatted -O -a units,tasmax,o,c,"number of events" ./$RCM/norheatwave/$ofile_norheatwave
  
 	 ncatted -O -a long_name,tasmax,o,c,"average_of_maximum_air_temperature"     ./$RCM/tasmax/$ofile_tasmax_monmean
@@ -201,18 +212,31 @@ function calc_indices {       # two input arguments:  filedir and $landmask
 	 ncatted -O -a long_name,tasmin,o,c,"number_of_days_with_zero_crossings"     ./$RCM/dzc/$ofile_dzc
 	 ncatted -O -a long_name,tasmin,o,c,"number_of_frost_days_tasmin-below-0"    ./$RCM/fd/$ofile_fd
 	 ncatted -O -a long_name,tasmin,o,c,"number of tropical nights" 	     ./$RCM/tropnight/$ofile_tropnight
-	 ncatted -O -a long_name,tasmax,o,c,"nordic_summer_days_tasmax-exceeding-20" ./$RCM/summerdnor/$ofile_summerdnor
-	 ncatted -O -a long_name,tasmax,o,c,"summer_days_tasmax-exceeding-20"        ./$RCM/summerd/$ofile_summerd 
+	 ncatted -O -a long_name,tasmax,o,c,"nordic_summer_days_tasmax-exceeding-20" ./$RCM/norsummer/$ofile_summerdnor
+	 ncatted -O -a long_name,tasmax,o,c,"summer_days_tasmax-exceeding-20"        ./$RCM/summerdays/$ofile_summerdays 
 	 ncatted -O -a long_name,tasmax,o,c,"norwegian_heatwave_index"               ./$RCM/norheatwave/$ofile_norheatwave	
 
- 
+	 echo "Done computing monthly indices and adding metadata."
+
+	 
       elif [ $VAR == "pr" ]; then
 	 echo ""
          echo "pr chosen"
-
-         #cdo -s monmean $file $RCM/$VAR/$ofile
-
+	 ofile_pr_monsum=`echo $ofile | sed s/pr/pr_monsum/`       # I guess this should be sum and not average, please delete the uncommented lines.
+	 #ofile_pr_monmean=`echo $ofile | sed s/pr/pr_monmean/`	 
 	 
+	 # Sum av pr
+         cdo -s monsum $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
+         #cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_pr_monmean	 
+	 
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		./$RCM/pr/$ofile_pr_monsum
+	 ncatted -O -a short_name,pr,o,c,"tas_monsum" 			./$RCM/pr/$ofile_pr_monsum
+	 #ncatted -O -a short_name,pr,o,c,"tas_monmean" 		./$RCM/pr/$ofile_pr_monmean	 
+	 ncatted -O -a units,pr,o,c,"kg m**-2 month**-1" 		./$RCM/pr/$ofile_pr_monsum
+	 ncatted -O -a long_name,pr,o,c,"average_of_precipitation"	./$RCM/pr/$ofile_pr_monsum
+
+	 echo "Done computing monthly indices and adding metadata."
+
 	 
       fi             # end if VAR
      ((count+=1))
