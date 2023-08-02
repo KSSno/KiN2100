@@ -39,27 +39,32 @@ printf "\rProgress : [${_fill// /#}${_empty// /-}] ${_progress}%%"
 # Scroll down below (all functions) to see the main script. 
 
 function calc_indices {       # call this function with one input argument: filedir 
-    # on the form /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/$1/*`
+    # on the form /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/
+    # or          /hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf/cnrm-r1i1p1-aladin/tas/rcp26/ 
     # I tried adding two input arguments:  filedir and $landmask, but that did not work.
     count=0
     filedir=$1
-    if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
-	echo $HOSTNAME
-	landmask=/hdata/hmdata/KiN2100/analyses/kss2023_mask1km_norway.nc4
-    else
-	echo $HOSTNAME	
-        landmask=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4	
-    fi
     
     echo "Filedir = " $filedir
-    #echo $RCM/$VAR/$ofile_tas_monmean
     filelist=`ls $1`
+    # lists files on the form $RCM_rcp26_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_2100.nc4
     nbrfiles=`echo $filelist | wc -w`
-    # landmask=$2    <- This does not seem to work, so I have harcoded NVE's path:
-
-    echo "Test " $landmask
+    
     echo "Processing " $1
     echo "Processing " $nbrfiles " files"
+    # echo "Landmask = " $landmask
+    
+    ######## A note on subsetting by years:
+    ### I guess you can replace filelist by filelist_subset if you want specific years.
+    ### The rationale behind this script is possibly that monthly files are generated one time only, then stored?
+    ### In that case, subsetting is done later in the process.
+    ### Note, too, that the different RCMs span different years.
+    ### ls $1'/cnrm-r1i1p1-aladin_rcp26_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_'{2071..2100}'.nc4'
+    ### echo ls $1'/'$RCM'_rcp26_eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_'{2071..2100}'.nc4'
+    # filelist_subset=`ls $1'/'$RCM'_rcp26_eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_'{2071..2100}'.nc4'`
+    # echo "Subsetted Filelist = " $filelist_subset
+    # nbrfiles_subset=`echo $filelist_subset | wc -w`
+    
 
    
    for file in $filelist
@@ -73,12 +78,12 @@ function calc_indices {       # call this function with one input argument: file
 	 ofile_cdd=`echo $ofile | sed s/tas/cdd/`
 	 ofile_gsl=`echo $ofile | sed s/tas/gsl/`
 
-	 # I guess it would make sense to crop the domain to mainland Norway before processing? I've added "ifthen $landmask" in the lines below.
+	 # I guess it would make sense to crop the domain to mainland Norway before processing? I've added "-ifthen $landmask" in the lines below.
 	 # Are there better ways to crop to the landmask? This is what "ifthen $landmask" does:
 	 # cdo ifthen $landmask $filedir/$file '$filedir/$file_mainland_norway.nc4' 
 	 
 	 # Gjennomsnitt av tas
-         cdo -s monmean ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_monmean
+         cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_monmean
 
 	 # vekstsesongens lengde
 	 # Denne er tricky fordi den skal beregnes fra en glattet kurve.
@@ -91,16 +96,13 @@ function calc_indices {       # call this function with one input argument: file
 	 # Avkjølingsgraddager, cooling days
          # Antall dager med TAM>=22 (gec) over året
 	
-	 cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
-
+	 cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		  ./$RCM/tas/$ofile_tas_monmean
 	 ncatted -O -a short_name,tas,o,c,"tas_monmean" 		  ./$RCM/tas/$ofile_tas_monmean
 	 ncatted -O -a units,tas,o,c,"C" 				  ./$RCM/tas/$ofile_tas_monmean
 	 ncatted -O -a long_name,tas,o,c,"average_of_air_temperature"     ./$RCM/tas/$ofile_tas_monmean
 	 
-	 echo "Done computing monthly indices and adding metadata."
-
 	 
       elif [ $VAR == "tasmax" ]; then 
          echo ""
@@ -122,7 +124,7 @@ function calc_indices {       # call this function with one input argument: file
 	 
 	 # Gjennomsnitt av tasmax
 	 mkdir -p  $RCM/tasmax/
-         cdo -s monmean ifthen $landmask $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
+         cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
  
  	 # Read in tasmin
 	 ifileN=`echo $file | sed s/tasmax/tasmin/`
@@ -131,7 +133,7 @@ function calc_indices {       # call this function with one input argument: file
 	 
  	 # Gjennomsnitt av tasmin
 	 mkdir -p  $RCM/tasmin/
-         cdo -s monmean ifthen $landmask $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
+         cdo -s monmean -ifthen $landmask $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
 	 echo "Tasmin: done"
 
 
@@ -139,42 +141,41 @@ function calc_indices {       # call this function with one input argument: file
 	 #ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`  # <- this is written higher up
 	 mkdir -p  $RCM/dtr/
 	 echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
-	 cdo sub ifthen $landmask $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
+	 cdo sub -ifthen $landmask $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
 
 	 
  	 # DZC, nullgradspasseringer
 	 mkdir -p  $RCM/dzc/
  	 echo "Ofile_dzc=" $RCM"/dzc/"$ofile_dzc	 
-	 cdo monsum -mul -ltc,273.15 ifthen $landmask $ifiledirN/$ifileN -gtc,273.15 ifthen $landmask $filedir/$file ./$RCM/dzc/$ofile_dzc
-
+	 cdo monsum -mul -ltc,273.15 -ifthen $landmask $ifiledirN/$ifileN -gtc,273.15 -ifthen $landmask $filedir/$file ./$RCM/dzc/$ofile_dzc
 
 	 # Frostdager, fd # under 0 grader
 	 mkdir -p $RCM/fd/
 	 echo "Ofile_fd=" $RCM"/fd/"$ofile_fd
-	 cdo monsum -ltc,273.15 ifthen $landmask $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
+	 cdo monsum -ltc,273.15 -ifthen $landmask $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
 
 	 
 	 # tropenattdøgn # Tmin >= 20 grader
          mkdir -p $RCM/tropnight/
 	 echo "Ofile_tropnight=" $RCM"/tropnight/"$ofile_tropnight
-         cdo -s monsum -gec,293.15 ifthen $landmask $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
+         cdo -s monsum -gec,293.15 -ifthen $landmask $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
 	 
 	 
 	 # Nordiske sommerdager # over 20 grader
  	 mkdir -p  $RCM/norsummer/
 	 echo "Ofile_norsummer=" $RCM"/norsummer/"$ofile_norsummer	 	 
-	 cdo monsum -gec,293.15 ifthen $landmask $filedir/$file ./$RCM/norsummer/$ofile_norsummer
+	 cdo monsum -gec,293.15 -ifthen $landmask $filedir/$file ./$RCM/norsummer/$ofile_norsummer
 	 
 
 	 # Nordiske sommerdager # over 25 grader
  	 mkdir -p  $RCM/summerdays/	 
 	 echo "Ofile_summerdays=" $RCM"/summerdays/"$ofile_summerdays 	 
-	 cdo monsum -gec,298.15 ifthen $landmask $filedir/$file ./$RCM/summerdays/$ofile_summerdays
+	 cdo monsum -gec,298.15 -ifthen $landmask $filedir/$file ./$RCM/summerdays/$ofile_summerdays
 	 
 	 # norsk hetebølge # over 27 grader
 	 #ofile_norheatwave=`echo $ofile | sed s/tasmax/norheatwave/`
          mkdir -p $RCM/norheatwave/
-	 cdo monsum -gec,300.15 -runmean,5 ifthen $landmask $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
+	 cdo monsum -gec,300.15 -runmean,5 -ifthen $landmask $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
 	 echo "norsk hetebølge: done"
 
 
@@ -224,8 +225,6 @@ function calc_indices {       # call this function with one input argument: file
 	 ncatted -O -a long_name,tasmax,o,c,"summer_days_tasmax-exceeding-20"        ./$RCM/summerdays/$ofile_summerdays 
 	 ncatted -O -a long_name,tasmax,o,c,"norwegian_heatwave_index"               ./$RCM/norheatwave/$ofile_norheatwave	
 
-	 echo "Done computing monthly indices and adding metadata."
-
 	 
       elif [ $VAR == "pr" ]; then
 	 echo ""
@@ -234,19 +233,89 @@ function calc_indices {       # call this function with one input argument: file
 	 #ofile_pr_monmean=`echo $ofile | sed s/pr/pr_monmean/`	 
 	 
 	 # Sum av pr
-         cdo -s monsum ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
+         cdo -s monsum -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
          #cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_pr_monmean	 
 	 
 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		./$RCM/pr/$ofile_pr_monsum
-	 ncatted -O -a short_name,pr,o,c,"tas_monsum" 			./$RCM/pr/$ofile_pr_monsum
-	 #ncatted -O -a short_name,pr,o,c,"tas_monmean" 		./$RCM/pr/$ofile_pr_monmean	 
+	 ncatted -O -a short_name,pr,o,c,"pr_monsum" 			./$RCM/pr/$ofile_pr_monsum
+	 #ncatted -O -a short_name,pr,o,c,"pr_monmean" 		        ./$RCM/pr/$ofile_pr_monmean	 
 	 ncatted -O -a units,pr,o,c,"kg m**-2 month**-1" 		./$RCM/pr/$ofile_pr_monsum
-	 ncatted -O -a long_name,pr,o,c,"average_of_precipitation"	./$RCM/pr/$ofile_pr_monsum
+	 ncatted -O -a long_name,pr,o,c,"sum_of_precipitation"	        ./$RCM/pr/$ofile_pr_monsum
 
-	 echo "Done computing monthly indices and adding metadata."
+
+      elif [ $VAR == "hurs" ]; then
+	 echo ""
+         echo "hurs chosen"
+	 ofile_hurs_monmean=`echo $ofile | sed s/hurs/hurs_monmean/`	 
+	 
+	 # Monthly mean av hurs
+         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_hurs_monmean	 
+	 
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		                ./$RCM//$ofile_hurs_monmean
+	 ncatted -O -a short_name,hurs,o,c,"hurs_monmean" 		                ./$RCM//$ofile_hurs_monmean	 
+	 ncatted -O -a units,hurs,o,c,"W m**-2" 		                        ./$RCM//$ofile_hurs_monmean
+	 ncatted -O -a long_name,hurs,o,c,"surface_downwelling_shortwave_flux_in_air"	./$RCM//$ofile_hurs_monmean
+
+
+      elif [ $VAR == "rlds" ]; then
+	 echo ""
+         echo "rlds chosen"
+	 ofile_rlds_monmean=`echo $ofile | sed s/rlds/rlds_monmean/`	 
+	 
+	 # Monthly mean av rlds
+         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_rlds_monmean	 
+	 
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	 	                ./$RCM//$ofile_rlds_monmean
+	 ncatted -O -a short_name,rlds,o,c,"rlds_monmean"                  	        ./$RCM//$ofile_rlds_monmean	 
+	 ncatted -O -a units,rlds,o,c,"W m**-2" 		                        ./$RCM//$ofile_rlds_monmean
+	 ncatted -O -a long_name,rlds,o,c,"surface_downwelling_longwave_flux_in_air"	./$RCM//$ofile_rlds_monmean
+
+
+       elif [ $VAR == "rsds" ]; then
+	 echo ""
+         echo "rsds chosen"
+	 ofile_rsds_monmean=`echo $ofile | sed s/rsds/rsds_monmean/`	 
+	 
+	 # Monthly mean av rsds
+         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_rsds_monmean	 
+	 
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen`           ./$RCM//$ofile_rsds_monmean
+	 ncatted -O -a short_name,rsds,o,c,"rsds_monmean"         ./$RCM//$ofile_rsds_monmean	 
+	 ncatted -O -a units,rsds,o,c,"%"                         ./$RCM//$ofile_rsds_monmean
+	 ncatted -O -a long_name,rsds,o,c,"relative humidity"     ./$RCM//$ofile_rsds_monmean
 
 	 
+       elif [ $VAR == "ps" ]; then
+	 echo ""
+         echo "ps chosen"
+	 ofile_ps_monmean=`echo $ofile | sed s/ps/ps_monmean/`	 
+	 
+	 # Monthly mean av ps
+         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_ps_monmean	 
+	 
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM//$ofile_ps_monmean
+	 ncatted -O -a short_name,ps,o,c,"ps_monmean" 		./$RCM//$ofile_ps_monmean	 
+	 ncatted -O -a units,ps,o,c,"Pa" 		        ./$RCM//$ofile_ps_monmean
+	 ncatted -O -a long_name,ps,o,c,"surface_air_pressure"	./$RCM//$ofile_ps_monmean
+
+
+
+       elif [ $VAR == "sfcWind" ]; then
+	 echo ""
+         echo "sfcWind chosen"
+	 ofile_sfcWind_monmean=`echo $ofile | sed s/sfcWind/sfcWind_monmean/`	 
+	 
+	 # Monthly mean av sfcWind
+         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_sfcWind_monmean	 
+	 
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM//$ofile_sfcWind_monmean
+	 ncatted -O -a short_name,sfcWind,o,c,"sfcWind_monmean" ./$RCM//$ofile_sfcWind_monmean	 
+	 ncatted -O -a units,sfcWind,o,c,"m s**-1" 		./$RCM//$ofile_sfcWind_monmean
+	 ncatted -O -a long_name,sfcWind,o,c,"wind_speed"	./$RCM//$ofile_sfcWind_monmean
+	 
       fi             # end if VAR
+
+     echo "Done computing monthly indices and adding metadata for variable " $VAR
      ((count+=1))
      ProgressBar $count $nbrfiles && : #update progress bar and set to OK to skip exiting the script
     done          # end for file in filelist
@@ -270,17 +339,19 @@ VAR=$1   # note: not to be confused with $1 in the functions. This is the input 
 
 
 
-if [ $HOSTNAME == "l-klima-app05" ]; then
-        
+if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
+
+    echo $HOSTNAME
     workdir=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
     filedir_EQM=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf
     filedir_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
 
-    landmask=/hdata/hmdata/KiN2100/analyses/kss2023_mask1km_norway.nc4 
+    landmask=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/kss2023_mask1km_norway.nc4 # from our github repo
     #    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/
     
 elif [ $HOSTNAME == "lustre" ]; then
-    
+
+    echo $HOSTNAME
     workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/test_ibni/ # /analyses/calc_gen_indices
     ## workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc/test_ibni
     filedir_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
@@ -319,27 +390,27 @@ do
   ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
 
   #RCP2.6
-  #calc_indices $filedir_EQM_rcp26
+  calc_indices $filedir_EQM/$RCM/$VAR/rcp26/
   ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
 
   #RCP4.5
-  #calc_indices $filedir_EQM_rcp45
+  calc_indices $filedir_EQM/$RCM/$VAR/rcp45/
   ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/
  
  ### 3DBC
  echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
 
  #HIST
- calc_indices $filedir_3DBC/$RCM/$VAR/hist/ $landmask
+ calc_indices $filedir_3DBC/$RCM/$VAR/hist/ 
  
   ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
  
   #RCP2.6
-  #calc_indices $filedir_3DBC_rcp26/$RCM/$VAR/rcp26/
+  calc_indices $filedir_3DBC/$RCM/$VAR/rcp26/
   ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
  
   # RCP4.5
-  #calc_indices $filedir_3DBC_rcp45/$RCM/$VAR/rcp45/
+  calc_indices $filedir_3DBC/$RCM/$VAR/rcp45/
   ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
  
 done
