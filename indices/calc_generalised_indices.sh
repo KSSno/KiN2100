@@ -9,10 +9,11 @@ set -e #exit on error
 # Hist, rcp26 and rcp45 so far, ssp3.70 to follow
 #
 # Call: ./calc_generalised_indices.sh VAR 
-# where VAR is one of hurs, pr, ps, rlds, rsds, sfcWind, tas, tasmax, tasmin; later also mrro (runoff), swe (snow), esvpbls (evapotranspiration), soilmoist (soil moisture deficit).
+# where VAR is one of hurs, pr, ps, rlds, rsds, sfcWind, tas, tasmax; later also mrro (runoff), swe (snow), esvpbls (evapotranspiration), soilmoist (soil moisture deficit).
+# Output from tas is cdd (cooling days) and tas_monmean
+# Output from tasmax is dtr, dzc, fd, norheatwave, norsummer, summerdays, tasmax, tasmin, tropnight.  
 #
-#
-# Run from workdir=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
+# Run from workdir=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/ <- remember opening a screen terminal.
 # NOT workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/calc_gen_indices # foreløpig: test_ibni
 # NOT workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc
                    
@@ -68,13 +69,29 @@ function calc_indices {       # call this function with one input argument: file
 
    
    for file in $filelist
-      do ofile=`basename $file | sed s/daily/monthly/`
-         #echo "Ofile is: " $ofile
+   do
+       ofile=`basename $file | sed s/daily_//`                # manually replace this text later.
+       echo "Ofile is: " $ofile
+       # ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
+       # files by using this line of code in the if sentence below:
+     	 # Monthly mean of $VAR (no space to save this for all variables and models)	 
+         # cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean
+
+       #ofile=`basename $file | sed s/daily/annual-mean/`
+       #ofile=`basename $file | sed s/daily/seasonal-mean/`
+       #ofile_Asu=`basename $file | sed s/daily/annual-sum/`   # <- Precipitation is computed as a sum, not mean.
+       #ofile_Ssu=`basename $file | sed s/daily/seasonal-sum/` # <- Precipitation is computed as a sum, not mean.
+ 
+       # echo "Ofile is: " $ofile
+       # e.g. cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1960.nc4
 	 
       if [ $VAR == "tas" ]; then 
 	 echo ""
-         echo "tas chosen"
-	 ofile_tas_monmean=`echo $ofile | sed s/tas/tas_monmean/`
+         echo "tas chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
+ 	 # ofile_tas_monmean=`echo $ofile | sed s/tas/tas_monmean/`
+	 ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`
+	 ofile_tas_seasonal=`echo $ofile | sed s/tas/tas_seasonal-mean/`
+
 	 ofile_cdd=`echo $ofile | sed s/tas/cdd/`
 	 ofile_gsl=`echo $ofile | sed s/tas/gsl/`
 
@@ -82,9 +99,26 @@ function calc_indices {       # call this function with one input argument: file
 	 # Are there better ways to crop to the landmask? This is what "ifthen $landmask" does:
 	 # cdo ifthen $landmask $filedir/$file '$filedir/$file_mainland_norway.nc4' 
 	 
-	 # Gjennomsnitt av tas
-         cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_monmean
+	 # Annual and seasonal mean of $VAR
+	 cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
+	 
+	 cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+	 cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+	 cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+	 cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+	 cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
+	 rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" 
+	 # Trenger kanskje ikke rm, for den blir overskrevet uansett hvert år? 
 
+ 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_annual
+	 #ncatted -O -a short_name,tas,o,c,"tas" 		               ./$RCM/$VAR/$ofile_tas_annual  # Trengs vel ikke?
+	 #ncatted -O -a units,tas,o,c,"K" 				       ./$RCM/$VAR/$ofile_tas_annual  # Trengs vel ikke?
+	 ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature"   ./$RCM/$VAR/$ofile_tas_annual  
+	 echo "done adding metadata to the annual file. Proceed to seasonal."
+	 
+ 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_seasonal
+	 ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal 	 
+	 
 	 # vekstsesongens lengde
 	 # Denne er tricky fordi den skal beregnes fra en glattet kurve.
 	 # Fra dynamisk dokument: "Midlere vekstsesong i 30-års perioder gjøres utfra glattet kurve for temperaturutvikling gjennom året." 
@@ -96,22 +130,33 @@ function calc_indices {       # call this function with one input argument: file
 	 # Avkjølingsgraddager, cooling days
          # Antall dager med TAM>=22 (gec) over året
 	
-	 cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
+	 #cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		  ./$RCM/tas/$ofile_tas_monmean
-	 ncatted -O -a short_name,tas,o,c,"tas_monmean" 		  ./$RCM/tas/$ofile_tas_monmean
-	 ncatted -O -a units,tas,o,c,"C" 				  ./$RCM/tas/$ofile_tas_monmean
-	 ncatted -O -a long_name,tas,o,c,"average_of_air_temperature"     ./$RCM/tas/$ofile_tas_monmean
+	 #ncatted -O -a tracking_id,global,o,c,`uuidgen` 		  ./$RCM/$VAR/$ofile_cdd
+	 #ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
+	 #ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
+	 #ncatted -O -a long_name,tas,o,c,"cooling_degree-days"           ./$RCM/$VAR/$ofile_cdd
 	 
 	 
+      elif [ $VAR == "tasmin" ]; then
+
+	  #set tasmin to tasmax because they are treated in the same way
+	  $VAR == "tasmax"
+	  
       elif [ $VAR == "tasmax" ]; then 
+	  
          echo ""
-	 echo "tasmax chosen (and tasmin automatically read in)"
-	 echo "File = " $file
-	 ofile_tasmax_monmean=`echo $ofile | sed s/tasmax/tasmax_monmean/`
-	 ofile_tasmin_monmean=`echo $ofile | sed s/tasmax/tasmin_monmean/`
-	 ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`
-	 ofile_dzc=`echo $ofile | sed s/tasmax/dzc/`
+	 echo "tasmax chosen (and tasmin automatically read in). Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
+	 
+	 # Gjennomsnitt av tasmax
+	 mkdir -p  $RCM/tasmax/
+	 ofile_tasmax_annual=`echo $ofile | sed s/tasmax/tasmax_annual-mean/`
+	 ofile_tasmax_seasonal=`echo $ofile | sed s/tasmax/tasmax_seasonal-mean/`	 
+	 #ofile_tasmax_monmean=`echo $ofile | sed s/tasmax/tasmax_monmean/`
+	 #ofile_tasmin_monmean=`echo $ofile | sed s/tasmax/tasmin_monmean/`
+	 
+	 #ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`
+	 #ofile_dzc=`echo $ofile | sed s/tasmax/dzc/`
 	 ofile_fd=`echo $ofile | sed s/tasmax/fd/`
 	 ofile_tropnight=`echo $ofile | sed s/tasmax/tropnight/`
 	 ofile_norheatwave=`echo $ofile | sed s/tasmax/norheatwave/`
@@ -122,9 +167,20 @@ function calc_indices {       # call this function with one input argument: file
 # cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'     ./$RCM'/land_tasmax'
 # cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'     ./$RCM'/land_norheatwave'
 	 
-	 # Gjennomsnitt av tasmax
-	 mkdir -p  $RCM/tasmax/
-         cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
+	 
+	 # Annual and seasonal mean of $VAR
+	 cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tasmax_annual
+ 
+	 cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+	 cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+	 cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+	 cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+
+	 cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
+	 rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc"
+	 
+	 # Monthly mean of $VAR (no space to save this for all variables and models)	 
+         # cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
  
  	 # Read in tasmin
 	 ifileN=`echo $file | sed s/tasmax/tasmin/`
@@ -133,19 +189,41 @@ function calc_indices {       # call this function with one input argument: file
 	 
  	 # Gjennomsnitt av tasmin
 	 mkdir -p  $RCM/tasmin/
-         cdo -s monmean -ifthen $landmask $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
+	 ofile_tasmin_annual=`echo $ofile | sed s/tasmax/tasmin_annual-mean/`
+	 ofile_tasmin_seasonal=`echo $ofile | sed s/tasmax/tasmin_seasonal-mean/`	 
+
+	 # Annual and seasonal mean of $VAR
+	 cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tasmin_annual
+
+	 cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
+	 
+	 cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+	 cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+	 cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+	 cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+	 cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
+	 rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc"
+		 
+	 # Monthly mean of $VAR (no space to save this for all variables and models)
+         # cdo -s monmean -ifthen $landmask $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
 	 echo "Tasmin: done"
 
 
 	 # DTR		
 	 #ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`  # <- this is written higher up
 	 mkdir -p  $RCM/dtr/
+	 ofile_dtr_annual=`echo $ofile | sed s/tasmax/dtr_annual-mean/`
+	 ofile_dtr_seasonal=`echo $ofile | sed s/tasmax/dtr_seasonal-mean/`	 
+	 #ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`
+
 	 echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
 	 cdo sub -ifthen $landmask $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
 
 	 
  	 # DZC, nullgradspasseringer
 	 mkdir -p  $RCM/dzc/
+	 ofile_dzc_annual=`echo $ofile | sed s/tasmax/dzc_annual-mean/`
+	 ofile_dzc_seasonal=`echo $ofile | sed s/tasmax/dzc_seasonal-mean/`	 
  	 echo "Ofile_dzc=" $RCM"/dzc/"$ofile_dzc	 
 	 cdo monsum -mul -ltc,273.15 -ifthen $landmask $ifiledirN/$ifileN -gtc,273.15 -ifthen $landmask $filedir/$file ./$RCM/dzc/$ofile_dzc
 
@@ -205,16 +283,17 @@ function calc_indices {       # call this function with one input argument: file
 	 ncatted -O -a short_name,tasmax,o,c,"summerdays"  ./$RCM/summerdays/$ofile_summerdays
 	 ncatted -O -a short_name,tasmax,o,c,"norheatwave" ./$RCM/norheatwave/$ofile_norheatwave 
  
-	 ncatted -O -a units,tasmax,o,c,"C" 		   ./$RCM/tasmax/$ofile_tasmax_monmean
-	 ncatted -O -a units,tasmin,o,c,"C" 		   ./$RCM/tasmin/$ofile_tasmin_monmean
-	 ncatted -O -a units,tasmax,o,c,"C" 		   ./$RCM/dtr/$ofile_dtr 
+	 ncatted -O -a units,tasmax,o,c,"K" 		   ./$RCM/tasmax/$ofile_tasmax_monmean
+	 ncatted -O -a units,tasmin,o,c,"K" 		   ./$RCM/tasmin/$ofile_tasmin_monmean
+	 ncatted -O -a units,tasmax,o,c,"K" 		   ./$RCM/dtr/$ofile_dtr 
 	 ncatted -O -a units,tasmin,o,c,"days" 		   ./$RCM/dzc/$ofile_dzc
 	 ncatted -O -a units,tasmin,o,c,"days" 		   ./$RCM/fd/$ofile_fd
 	 ncatted -O -a units,tasmin,o,c,"days" 		   ./$RCM/tropnight/$ofile_tropnight
 	 ncatted -O -a units,tasmax,o,c,"days" 		   ./$RCM/norsummer/$ofile_norsummer
 	 ncatted -O -a units,tasmax,o,c,"days" 	 	   ./$RCM/summerdays/$ofile_summerdays	
 	 ncatted -O -a units,tasmax,o,c,"number of events" ./$RCM/norheatwave/$ofile_norheatwave
- 
+
+	 # Mulig bug: dette er standard name, ikke long_name. Vurdere å endre teksten til det lange navnet? 
 	 ncatted -O -a long_name,tasmax,o,c,"average_of_maximum_air_temperature"     ./$RCM/tasmax/$ofile_tasmax_monmean
 	 ncatted -O -a long_name,tasmin,o,c,"average_of_minimum_air_temperature"     ./$RCM/tasmin/$ofile_tasmin_monmean 	
 	 ncatted -O -a long_name,tasmax,o,c,"diurnal temperature range"  	     ./$RCM/dtr/$ofile_dtr
@@ -228,98 +307,113 @@ function calc_indices {       # call this function with one input argument: file
 	 
       elif [ $VAR == "pr" ]; then
 	 echo ""
-         echo "pr chosen"
-	 ofile_pr_monsum=`echo $ofile | sed s/pr/pr_monsum/`       # I guess this should be sum and not average, please delete the uncommented lines.
-	 #ofile_pr_monmean=`echo $ofile | sed s/pr/pr_monmean/`	 
+         echo "pr chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
 	 
 	 # Sum av pr
-         cdo -s monsum -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
-         #cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_pr_monmean	 
+       	 ofile_pr_annual=`echo $ofile_Asu | sed s/pr/pr_annual-sum/`
+	 ofile_pr_DJFmean=`echo $ofile_Ssu | sed s/pr/pr_DJFsum/`
+	 ofile_pr_MAMmean=`echo $ofile_Ssu | sed s/pr/pr_MAMsum/`
+	 ofile_pr_JJAmean=`echo $ofile_Ssu | sed s/pr/pr_JJAsum/`
+	 ofile_pr_SONmean=`echo $ofile_Ssu | sed s/pr/pr_SONsum/`
 	 
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		./$RCM/pr/$ofile_pr_monsum
-	 ncatted -O -a short_name,pr,o,c,"pr_monsum" 			./$RCM/pr/$ofile_pr_monsum
-	 #ncatted -O -a short_name,pr,o,c,"pr_monmean" 		        ./$RCM/pr/$ofile_pr_monmean	 
-	 ncatted -O -a units,pr,o,c,"kg m**-2 month**-1" 		./$RCM/pr/$ofile_pr_monsum
-	 ncatted -O -a long_name,pr,o,c,"sum_of_precipitation"	        ./$RCM/pr/$ofile_pr_monsum
+	 # Annual and seasonal mean of $VAR
+	 cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_annual
+	 cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_DJFsum
+	 cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_MAMsum
+	 cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_JJAsum
+	 cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_SONsum
+	 
+	 # Monthly sum of $VAR (no space to save this for all variables and models)
+	 #cdo -s monsum -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
+         ## cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_pr_monmean	 
+	 
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM/$VAR/$ofile_pr_monsum
+	 ncatted -O -a short_name,pr,o,c,"pr_monsum" 	        ./$RCM/$VAR/$ofile_pr_monsum
+	 #ncatted -O -a short_name,pr,o,c,"pr_monmean" 		./$RCM/$VAR/$ofile_pr_monmean	 
+	 ncatted -O -a units,pr,o,c,"kg m-2 month-1"  		./$RCM/$VAR/$ofile_pr_monsum
+	 ncatted -O -a long_name,pr,o,c,"sum_of_precipitation"	./$RCM/$VAR/$ofile_pr_monsum
 
 
-      elif [ $VAR == "hurs" ]; then
-	 echo ""
-         echo "hurs chosen"
-	 ofile_hurs_monmean=`echo $ofile | sed s/hurs/hurs_monmean/`	 
+      # elif [ $VAR == "hurs" ]; then
+      # 	 echo ""
+      #    echo "hurs chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
+      # 	 ofile_hurs_monmean=`echo $ofile | sed s/hurs/hurs_monmean/`	 
 	 
-	 # Monthly mean av hurs
-         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_hurs_monmean	 
+      # 	 # Monthly mean av hurs
+      #    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_hurs_monmean	 
 	 
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		                ./$RCM//$ofile_hurs_monmean
-	 ncatted -O -a short_name,hurs,o,c,"hurs_monmean" 		                ./$RCM//$ofile_hurs_monmean	 
-	 ncatted -O -a units,hurs,o,c,"W m**-2" 		                        ./$RCM//$ofile_hurs_monmean
-	 ncatted -O -a long_name,hurs,o,c,"surface_downwelling_shortwave_flux_in_air"	./$RCM//$ofile_hurs_monmean
+      # 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		                ./$RCM/$VAR/$ofile_hurs_monmean
+      # 	 ncatted -O -a short_name,hurs,o,c,"hurs_monmean" 		                ./$RCM/$VAR/$ofile_hurs_monmean	 
+      # 	 ncatted -O -a units,hurs,o,c,"W m-2" 		                        ./$RCM/$VAR/$ofile_hurs_monmean
+      # 	 ncatted -O -a long_name,hurs,o,c,"surface_downwelling_shortwave_flux_in_air"	./$RCM/$VAR/$ofile_hurs_monmean
 
 
-      elif [ $VAR == "rlds" ]; then
-	 echo ""
-         echo "rlds chosen"
-	 ofile_rlds_monmean=`echo $ofile | sed s/rlds/rlds_monmean/`	 
+      # elif [ $VAR == "rlds" ]; then
+      # 	 echo ""
+      #    echo "rlds chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
+      # 	 ofile_rlds_monmean=`echo $ofile | sed s/rlds/rlds_monmean/`	 
 	 
-	 # Monthly mean av rlds
-         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_rlds_monmean	 
+      # 	 # Monthly mean av rlds
+      #    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_rlds_monmean	 
 	 
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	 	                ./$RCM//$ofile_rlds_monmean
-	 ncatted -O -a short_name,rlds,o,c,"rlds_monmean"                  	        ./$RCM//$ofile_rlds_monmean	 
-	 ncatted -O -a units,rlds,o,c,"W m**-2" 		                        ./$RCM//$ofile_rlds_monmean
-	 ncatted -O -a long_name,rlds,o,c,"surface_downwelling_longwave_flux_in_air"	./$RCM//$ofile_rlds_monmean
+      # 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	 	                ./$RCM/$VAR/$ofile_rlds_monmean
+      # 	 ncatted -O -a short_name,rlds,o,c,"rlds_monmean"                  	        ./$RCM/$VAR/$ofile_rlds_monmean	 
+      # 	 ncatted -O -a units,rlds,o,c,"W m-2" 		                        ./$RCM/$VAR/$ofile_rlds_monmean
+      # 	 ncatted -O -a long_name,rlds,o,c,"surface_downwelling_longwave_flux_in_air"	./$RCM/$VAR/$ofile_rlds_monmean
 
 
-       elif [ $VAR == "rsds" ]; then
-	 echo ""
-         echo "rsds chosen"
-	 ofile_rsds_monmean=`echo $ofile | sed s/rsds/rsds_monmean/`	 
+      #  elif [ $VAR == "rsds" ]; then
+      # 	 echo ""
+      #    echo "rsds chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
+      # 	 ofile_rsds_monmean=`echo $ofile | sed s/rsds/rsds_monmean/`	 
 	 
-	 # Monthly mean av rsds
-         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_rsds_monmean	 
+      # 	 # Monthly mean av rsds
+      #    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_rsds_monmean	 
 	 
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen`           ./$RCM//$ofile_rsds_monmean
-	 ncatted -O -a short_name,rsds,o,c,"rsds_monmean"         ./$RCM//$ofile_rsds_monmean	 
-	 ncatted -O -a units,rsds,o,c,"%"                         ./$RCM//$ofile_rsds_monmean
-	 ncatted -O -a long_name,rsds,o,c,"relative humidity"     ./$RCM//$ofile_rsds_monmean
+      # 	 ncatted -O -a tracking_id,global,o,c,`uuidgen`           ./$RCM/$VAR/$ofile_rsds_monmean
+      # 	 ncatted -O -a short_name,rsds,o,c,"rsds_monmean"         ./$RCM/$VAR/$ofile_rsds_monmean	 
+      # 	 ncatted -O -a units,rsds,o,c,"%"                         ./$RCM/$VAR/$ofile_rsds_monmean
+      # 	 ncatted -O -a long_name,rsds,o,c,"relative humidity"     ./$RCM/$VAR/$ofile_rsds_monmean
 
 	 
-       elif [ $VAR == "ps" ]; then
-	 echo ""
-         echo "ps chosen"
-	 ofile_ps_monmean=`echo $ofile | sed s/ps/ps_monmean/`	 
+      #  elif [ $VAR == "ps" ]; then
+      # 	 echo ""
+      #    echo "ps chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
+      # 	 ofile_ps_monmean=`echo $ofile | sed s/ps/ps_monmean/`	 
 	 
-	 # Monthly mean av ps
-         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_ps_monmean	 
+      # 	 # Monthly mean av ps
+      #    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_ps_monmean	 
 	 
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM//$ofile_ps_monmean
-	 ncatted -O -a short_name,ps,o,c,"ps_monmean" 		./$RCM//$ofile_ps_monmean	 
-	 ncatted -O -a units,ps,o,c,"Pa" 		        ./$RCM//$ofile_ps_monmean
-	 ncatted -O -a long_name,ps,o,c,"surface_air_pressure"	./$RCM//$ofile_ps_monmean
+      # 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM/$VAR/$ofile_ps_monmean
+      # 	 ncatted -O -a short_name,ps,o,c,"ps_monmean" 		./$RCM/$VAR/$ofile_ps_monmean	 
+      # 	 ncatted -O -a units,ps,o,c,"Pa" 		        ./$RCM/$VAR/$ofile_ps_monmean
+      # 	 ncatted -O -a long_name,ps,o,c,"surface_air_pressure"	./$RCM/$VAR/$ofile_ps_monmean
 
 
 
-       elif [ $VAR == "sfcWind" ]; then
-	 echo ""
-         echo "sfcWind chosen"
-	 ofile_sfcWind_monmean=`echo $ofile | sed s/sfcWind/sfcWind_monmean/`	 
+      #  elif [ $VAR == "sfcWind" ]; then
+      # 	 echo ""
+      #    echo "sfcWind chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
+      # 	 ofile_sfcWind_monmean=`echo $ofile | sed s/sfcWind/sfcWind_monmean/`	 
 	 
-	 # Monthly mean av sfcWind
-         cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_sfcWind_monmean	 
+      # 	 # Monthly mean av sfcWind
+      #    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_sfcWind_monmean	 
 	 
-	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM//$ofile_sfcWind_monmean
-	 ncatted -O -a short_name,sfcWind,o,c,"sfcWind_monmean" ./$RCM//$ofile_sfcWind_monmean	 
-	 ncatted -O -a units,sfcWind,o,c,"m s**-1" 		./$RCM//$ofile_sfcWind_monmean
-	 ncatted -O -a long_name,sfcWind,o,c,"wind_speed"	./$RCM//$ofile_sfcWind_monmean
+      # 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM/$VAR/$ofile_sfcWind_monmean
+      # 	 ncatted -O -a short_name,sfcWind,o,c,"sfcWind_monmean" ./$RCM/$VAR/$ofile_sfcWind_monmean	 
+      # 	 ncatted -O -a units,sfcWind,o,c,"m s-1" 		./$RCM/$VAR/$ofile_sfcWind_monmean
+      # 	 ncatted -O -a long_name,sfcWind,o,c,"wind_speed"	./$RCM/$VAR/$ofile_sfcWind_monmean
 	 
       fi             # end if VAR
 
-     echo "Done computing monthly indices and adding metadata for variable " $VAR
-     ((count+=1))
-     ProgressBar $count $nbrfiles && : #update progress bar and set to OK to skip exiting the script
-    done          # end for file in filelist
-}                 # end function calc_indices
+      ((count+=1))
+      ProgressBar $count $nbrfiles && : #update progress bar and set to OK to skip exiting the script
+      
+   done              # end for file in filelist
+
+   
+   echo "Done computing monthly indices and adding metadata for all years in model " $RCM " and variable " $VAR ". Other models and RCPs still remain."
+}                    # end function calc_indices
 
 
 ### Main script
@@ -341,7 +435,8 @@ VAR=$1   # note: not to be confused with $1 in the functions. This is the input 
 
 if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
 
-    echo $HOSTNAME
+    echo ""
+    echo "Running from " $HOSTNAME
     workdir=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
     filedir_EQM=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf
     filedir_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
@@ -351,7 +446,8 @@ if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
     
 elif [ $HOSTNAME == "lustre" ]; then
 
-    echo $HOSTNAME
+    echo ""
+    echo "Running from " $HOSTNAME
     workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/test_ibni/ # /analyses/calc_gen_indices
     ## workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc/test_ibni
     filedir_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
