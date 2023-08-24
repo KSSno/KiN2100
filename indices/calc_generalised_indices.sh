@@ -47,7 +47,8 @@ function calc_indices {       # call this function with one input argument: file
     filedir=$1
     
     echo "Filedir = " $filedir
-    filelist=`ls $1`
+    #filelist=`ls $1`  # This is the original line. Roll back to it!
+    filelist=`ls $1/$VAR*`   # testing senorge ls senorgepath/tx*
     # lists files on the form $RCM_rcp26_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_2100.nc4
     nbrfiles=`echo $filelist | wc -w`
     
@@ -70,80 +71,98 @@ function calc_indices {       # call this function with one input argument: file
    
    for file in $filelist
    do
-       ofile=`basename $file | sed s/daily_//`                # manually replace this text later.
+       #ofile=`basename $file | sed s/daily_//`                # manually replace this text later.
+       #ofile=`basename $file | sed s/senorge2018_//`          # Testing this for seNorge. Format: tg_senorge2018_2008.nc
+       ofile=`basename $file`                                  # Testing this for seNorge. Format: tg_senorge2018_2008.nc
        echo "Ofile is: " $ofile
+       # $file = cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_1960.nc4
        # ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
        # files by using this line of code in the if sentence below:
      	 # Monthly mean of $VAR (no space to save this for all variables and models)	 
          # cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean
 
-       #ofile=`basename $file | sed s/daily/annual-mean/`
-       #ofile=`basename $file | sed s/daily/seasonal-mean/`
-       #ofile_Asu=`basename $file | sed s/daily/annual-sum/`   # <- Precipitation is computed as a sum, not mean.
-       #ofile_Ssu=`basename $file | sed s/daily/seasonal-sum/` # <- Precipitation is computed as a sum, not mean.
- 
-       # echo "Ofile is: " $ofile
-       # e.g. cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1960.nc4
+
 	 
-      if [ $VAR == "tas" ]; then 
+       #if [ $VAR == "tas" ]; then                           # orig. Roll back to this.
+       if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
 	 echo ""
          echo "tas chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
- 	 # ofile_tas_monmean=`echo $ofile | sed s/tas/tas_monmean/`
-	 ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`
-	 ofile_tas_seasonal=`echo $ofile | sed s/tas/tas_seasonal-mean/`
+	 #ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`    # orig. Roll back to this.
+	 #ofile_tas_seasonal=`echo $ofile | sed s/tas/tas_seasonal-mean/`# orig. Roll back to this.
 
-	 ofile_cdd=`echo $ofile | sed s/tas/cdd/`
-	 ofile_gsl=`echo $ofile | sed s/tas/gsl/`
+	 #ofile_cdd=`echo $ofile | sed s/tas/cdd/`                       # orig. Roll back to this.
+	 #ofile_gsl=`echo $ofile | sed s/tas/gsl/`                       # orig. Roll back to this. 
+
+	 ofile_tas_annual=`echo $ofile | sed s/tg/tg_annual-mean/`      # Testing senorge
+	 ofile_tas_seasonal=`echo $ofile | sed s/tg/tg_seasonal-mean/`  # Testing senorge 
+
+	 ofile_growing=`echo $ofile | sed s/tg/growing/`                 # Testing senorge: vekstsesong
+	 
 
 	 # I guess it would make sense to crop the domain to mainland Norway before processing? I've added "-ifthen $landmask" in the lines below.
 	 # Are there better ways to crop to the landmask? This is what "ifthen $landmask" does:
 	 # cdo ifthen $landmask $filedir/$file '$filedir/$file_mainland_norway.nc4' 
-	 
-	 # Annual and seasonal mean of $VAR
-	 cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
-	 
-	 cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-	 cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-	 cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-	 cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
-	 cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
-	 rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" 
-	 # Trenger kanskje ikke rm, for den blir overskrevet uansett hvert år? 
 
- 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_annual
-	 #ncatted -O -a short_name,tas,o,c,"tas" 		               ./$RCM/$VAR/$ofile_tas_annual  # Trengs vel ikke?
-	 #ncatted -O -a units,tas,o,c,"K" 				       ./$RCM/$VAR/$ofile_tas_annual  # Trengs vel ikke?
-	 ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature"   ./$RCM/$VAR/$ofile_tas_annual  
-	 echo "done adding metadata to the annual file. Proceed to seasonal."
+	 # vekstsesongens lengde, Mean annual growing season (days>=5C). Merk at senorge er i degC, derfor terskel på 5, ikke 278.15.
+ 	 mkdir -p "./senorge/growing/"
+	 echo "Ofile_growing=" ."/senorge/growing/"$ofile_growing
+	 cdo timsum -gec,5 -ifthen $landmask $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
+	 # trenger ikke månedsverdier:
+	 #cdo monsum -gec,5 -ifthen $landmask $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
 	 
- 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_seasonal
-	 ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal 	 
+	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		                                ."/senorge/growing/"$ofile_growing
+	 ncatted -O -a standard_name,tg,o,c,"spell_length_of_days_with_air_temperature_above_threshold" ."/senorge/growing/"$ofile_growing
+	 ncatted -O -a short_name,tg,o,c,"growing"                                                   ."/senorge/growing/"$ofile_growing 	 
+	 ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
+	 ncatted -O -a long_name,tg,o,c,"Mean annual growing season length (days TAS >=5 °C)"           ."/senorge/growing/"$ofile_growing
+
 	 
-	 # vekstsesongens lengde
-	 # Denne er tricky fordi den skal beregnes fra en glattet kurve.
-	 # Fra dynamisk dokument: "Midlere vekstsesong i 30-års perioder gjøres utfra glattet kurve for temperaturutvikling gjennom året." 
-	 # den også tar inn filbane til landmaske. Og den skjønner ikke at jeg prøver å gi den to inputargumenter.
-         # cdo eca_gsl $file $landmask -gec,20 $file $RCM/$VAR/$ofile_gsl
+	 # # Annual and seasonal mean of $VAR
+	 # cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
+	 
+	 # cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+	 # cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+	 # cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+	 # cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+	 # cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
+	 # rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" 
+	 # # Trenger kanskje ikke rm, for den blir overskrevet uansett hvert år? 
 
-	 # vinter- og sommersesong inn her?
+ 	 # ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_annual
+	 # #ncatted -O -a short_name,tas,o,c,"tas" 		               ./$RCM/$VAR/$ofile_tas_annual  # Trengs vel ikke?
+	 # #ncatted -O -a units,tas,o,c,"K" 				       ./$RCM/$VAR/$ofile_tas_annual  # Trengs vel ikke?
+	 # ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature"   ./$RCM/$VAR/$ofile_tas_annual  
+	 # echo "done adding metadata to the annual file. Proceed to seasonal."
+	 
+ 	 # ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_seasonal
+	 # ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal 	 
+	 
+	 # # vekstsesongens lengde
+	 # # Denne er tricky fordi den skal beregnes fra en glattet kurve.
+	 # # Fra dynamisk dokument: "Midlere vekstsesong i 30-års perioder gjøres utfra glattet kurve for temperaturutvikling gjennom året." 
+	 # # den også tar inn filbane til landmaske. Og den skjønner ikke at jeg prøver å gi den to inputargumenter.
+         # # cdo eca_gsl $file $landmask -gec,20 $file $RCM/$VAR/$ofile_gsl
+	 
+	 # # vinter- og sommersesong inn her?
 
-	 # Avkjølingsgraddager, cooling days
-         # Antall dager med TAM>=22 (gec) over året
+	 # # Avkjølingsgraddager, cooling days
+         # # Antall dager med TAM>=22 (gec) over året
 	
-	 #cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
+	 # #cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
-	 #ncatted -O -a tracking_id,global,o,c,`uuidgen` 		  ./$RCM/$VAR/$ofile_cdd
-	 #ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
-	 #ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
-	 #ncatted -O -a long_name,tas,o,c,"cooling_degree-days"           ./$RCM/$VAR/$ofile_cdd
+	 # #ncatted -O -a tracking_id,global,o,c,`uuidgen` 		  ./$RCM/$VAR/$ofile_cdd
+	 # #ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
+	 # #ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
+	 # #ncatted -O -a long_name,tas,o,c,"cooling_degree-days"           ./$RCM/$VAR/$ofile_cdd
 	 
-	 
-      elif [ $VAR == "tasmin" ]; then
-
-	  #set tasmin to tasmax because they are treated in the same way
-	  $VAR == "tasmax"
+	
 	  
-      elif [ $VAR == "tasmax" ]; then 
+#      elif [ $VAR == "tasmax" || $VAR == "tasmin" ]; then             # orig. Roll back to this.
+       elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
+
+      	 #set tasmin to tasmax because they are treated in the same way
+	 #VAR="tasmax"      # set the first variable is tasmax and treat tasmin equally.  # orig. Roll back to this.
+	 VAR="tx"          # Testing senorge
 	  
          echo ""
 	 echo "tasmax chosen (and tasmin automatically read in). Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
@@ -310,12 +329,9 @@ function calc_indices {       # call this function with one input argument: file
          echo "pr chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
 	 
 	 # Sum av pr
-       	 ofile_pr_annual=`echo $ofile_Asu | sed s/pr/pr_annual-sum/`
-	 ofile_pr_DJFmean=`echo $ofile_Ssu | sed s/pr/pr_DJFsum/`
-	 ofile_pr_MAMmean=`echo $ofile_Ssu | sed s/pr/pr_MAMsum/`
-	 ofile_pr_JJAmean=`echo $ofile_Ssu | sed s/pr/pr_JJAsum/`
-	 ofile_pr_SONmean=`echo $ofile_Ssu | sed s/pr/pr_SONsum/`
-	 
+       	 ofile_pr_annual=`echo $ofile | sed s/pr/pr_annual-sum/`
+       	 ofile_pr_seasonal=`echo $ofile | sed s/pr/pr_seasonal-sum/`
+		 
 	 # Annual and seasonal mean of $VAR
 	 cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_annual
 	 cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_DJFsum
@@ -440,7 +456,7 @@ if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
     workdir=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
     filedir_EQM=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf
     filedir_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
-
+    filedir_senorge=/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf
     landmask=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/kss2023_mask1km_norway.nc4 # from our github repo
     #    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/
     
@@ -452,7 +468,7 @@ elif [ $HOSTNAME == "lustre" ]; then
     ## workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc/test_ibni
     filedir_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
     filedir_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
-
+    #filedir_senorge=/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05 # <- check filepath! 
     #    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/    
     landmask=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4
     
@@ -463,6 +479,11 @@ fi
 cd $workdir
 
 
+### seNorge 2018 v20.05
+  # For the historical period (DP1), we need to process seNorge data.
+  calc_indices $filedir_senorge        # files on the form tg_senorge2018_1957.nc or senorge2018_RR_1957.nc
+
+  
 #get list of RCMs
 RCMLIST=`ls $filedir_EQM`
 #RCMLIST=`ls /lustre/storeC-ext/users/kin2100/NVE/EQM/`
@@ -511,6 +532,24 @@ do
  
 done
 
+
+cdo mergetime senorge/growing/'growing_'*'.nc' senorge/growing'/growing_mergetime_timsum_1957-2020.nc'  #'$startyr'-'$endyear'.nc'   # 1957-2020.nc
+
+# cdo timmean $savedir'/growing_season_length_mergetime_eca-gsl_'$startyr'-'$endyear'.nc' $savedir'/gsl_30-yrmean_mgtim_'$startyr'-'$endyear'.nc'
+cdo timmean -seltimestep,5/34  .'/senorge/growing/growing_mergetime_timsum_1957-2020.nc' .'/senorge/growing/growing_30-yrmean_mgtim_1961-1990.nc'
+cdo timmean -seltimestep,35/64 .'/senorge/growing/growing_mergetime_timsum_1957-2020.nc' .'/senorge/growing/growing_30-yrmean_mgtim_1991-2000.nc'
+
+
+#ncrename -v tg,growing .'/senorge/growing/growing_mergetime_timsum_1957-2020.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_'$startyear'-'$endyear'.nc4'
+ncrename -v tg,growing .'/senorge/growing/growing_30-yrmean_mgtim_1961-1990.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1961-1990.nc4'
+ncrename -v tg,growing .'/senorge/growing/growing_30-yrmean_mgtim_1991-2000.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1991-2020.nc4'
+
+echo 'Computing differences by subtracting the reference period.' # For senorge that means the difference between 91-2020 and 61-90.
+
+cdo sub .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1991-2020.nc4' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1961-1990.nc4' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_diff-growing_annual-mean_1991-2020_minus_1961-1990.nc4'
+
+
+
 # Fortsett her.
 # Før denne kan fullføres: legg inn årstall i input til mergetime. Legg den inn etter kallet til calc_index over; hist tar bare 91-2020 osv.
 #years=$(seq $startyear $endyear) 
@@ -519,8 +558,19 @@ done
 # cdo mergetime ./$RCM/tasmax/$ofile_tasmax_monmean   ./$RCM'/mergetime_tasmax_'$startyear'-'$endyear'.nc4'
 # cdo mergetime ./$RCM/norheatwave/$ofile_norheatwave ./$RCM'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'
 
-# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'     ./$RCM'/land_tasmax'
-# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'     ./$RCM'/land_norheatwave'
+
+    #  for pctls in 10 25 50 75 90; do
+    #     cdo enspctl,$pctls  $filedir/*/$var*_30-yrmean_mgtim_1991-2020.nc $savedir/'common_ensemble_enspctl-'$pctls'_1991-2020_'$var'.nc'
+     
+    #     cdo fldmean $savedir/'common_ensemble_enspctl-'$pctls'_1991-2020_'$var'.nc' $savedir/'fldmean_1991-2020_enspctl-'$pctls'.nc'
+     
+    #     echo 
+    #     echo 'Printing fieldmean for 1991-2020, enspctl=' $enspctl
+    #     echo 
+     
+    #     cdo info $savedir/'fldmean_1991-2020_enspctl-'$pctls'.nc'
+
+    # done   # Done looping over percentiles: 10,25,50,75,90
  
 #done
 
