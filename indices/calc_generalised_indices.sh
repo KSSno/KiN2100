@@ -8,8 +8,11 @@ set -e #exit on error
 # EQM and 3DBC
 # Hist, rcp26 and rcp45 so far, ssp3.70 to follow
 #
-# Call: ./calc_generalised_indices.sh VAR 
-# where VAR is one of hurs, pr, ps, rlds, rsds, sfcWind, tas, tasmax; later also mrro (runoff), swe (snow), esvpbls (evapotranspiration), soilmoist (soil moisture deficit).
+# Call: ./calc_generalised_indices.sh --var VAR --refbegin 1991 --refend 2020 --scenbegin 2071 --scenend 2100 --rcm modelA modelB modelC etc.
+#  where VAR is one of hurs, pr, ps, rlds, rsds, sfcWind, tas, tasmax; later also mrro (runoff), swe (snow), esvpbls (evapotranspiration), soilmoist (soil moisture deficit)
+#  and reference and scenario begin and end years are set using the corresponding arguments.
+#  A selection of RCMs can be made using --rcm followed by a list of RCMs separated by spaces (not working yet).
+#  For additional status messages you may use --verbose.
 # Output from tas is cdd (cooling days) and tas_monmean
 # Output from tasmax is dtr, dzc, fd, norheatwave, norsummer, summerdays, tasmax, tasmin, tropnight.  
 #
@@ -17,7 +20,40 @@ set -e #exit on error
 # NOT workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/calc_gen_indices # foreløpig: test_ibni
 # NOT workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc
                    
+# Default values (used if not specified by the input arguments mentioned above):
+rcmlist=all
+refbegin=1991
+refend=2020
+scenbegin=2071
+scenend=2100
+verbose=0
 
+args=( )
+
+while (( $# )); do
+  case $1 in
+    --var)       VAR=$2 ;;
+    --refbegin)  refbegin=$2 ;;
+    --refend)    refend=$2 ;;
+    --scenbegin) scenbegin=$2 ;;
+    --scenend)   scenend=$2 ;;
+    --rcm)  rcmlist=$2 ;; # This does not work with multiple entries yet, only the first one is used.
+    --verbose)   verbose=1 ;;
+    -*) printf 'Unknown option: %q\n\n' "$1"
+        exit 1 ;; # Aborts when called with unsupported arguments.
+    *)  args+=( "$1" ) ;;
+  esac
+  shift
+done
+
+if [ $verbose -eq 1 ]
+then
+  echo "rcmlist" $rcmlist
+  echo "refbegin" $refbegin
+  echo "refend" $refend
+  echo "scenbegin" $scenbegin
+  echo "scenend" $scenend
+fi
 
 # ProgressBar function (from https://github.com/fearside/ProgressBar/)
 # to show the current progress while running
@@ -441,14 +477,14 @@ function calc_indices {       # call this function with one input argument: file
 currdir=$PWD
 
 #Check provision of varname
-if [ -z "$1" ]; then
- echo "no variable specified!"
+if [ -z "$VAR" ]; then
+ echo "Error: No variable specified! Add using --var varname."
  exit 1
 fi
 
 
 
-VAR=$1   # note: not to be confused with $1 in the functions. This is the input argument to calc_generalised_indices.sh
+# VAR=$1   # note: not to be confused with $1 in the functions. This is the input argument to calc_generalised_indices.sh
 # DISK=$2  # hmdata on NVE or lustre on MET. Use HOSTNAME instead.
 
 
