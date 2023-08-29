@@ -3,7 +3,7 @@
 ##!/usr/bin/bash   # <- use this on Lustre
 set -e #exit on error
 
-## Script to calculate monthly means of the bias-adjusted RCM data
+## Script to calculate annual and seasonal values for various indices from the bias-adjusted RCM data
 #
 # EQM and 3DBC
 # Hist, rcp26 and rcp45 so far, ssp3.70 to follow
@@ -76,6 +76,7 @@ printf "\rProgress : [${_fill// /#}${_empty// /-}] ${_progress}%%"
 # Scroll down below (all functions) to see the main script. 
 
 function calc_indices {       # call this function with one input argument: filedir 
+
     # on the form /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/
     # or          /hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf/cnrm-r1i1p1-aladin/tas/rcp26/ 
     # I tried adding two input arguments:  filedir and $landmask, but that did not work.
@@ -87,9 +88,11 @@ function calc_indices {       # call this function with one input argument: file
     # filelist=`ls $1/$VAR*`   # testing senorge ls senorgepath/tx*
     # lists files on the form $RCM_rcp26_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_2100.nc4
     nbrfiles=`echo $filelist | wc -w`
-    
+
+    #    $filedir_EQM/$RCM/$VAR/hist/
+        
     echo "Processing " $1
-    echo "Processing " $nbrfiles " files"
+    # echo "Processing " $nbrfiles " files"
     # echo "Landmask = " $landmask
     
     ######## A note on subsetting by years:
@@ -103,19 +106,22 @@ function calc_indices {       # call this function with one input argument: file
     # echo "Subsetted Filelist = " $filelist_subset
     # nbrfiles_subset=`echo $filelist_subset | wc -w`
     
+    
+    #   for file in $filelist                # replaced looping over filenames with looping over (chosen) years
+    for yyyy in $( seq $refbegin $refend )   # list chosen years. NOTE: this only takes in the reference period.
+    do
+	file=`ls $1/*$yyyy.nc4`
+        file=`basename $file`                   
+	echo "file is: " $file
+        ofile=`echo $file | sed s/daily_//`                   # later, this text is replaced with the variable name etc.
+        echo "Ofile is: " $ofile
+        ###ofile=`basename $file | sed s/senorge2018_//`          # Testing this for seNorge. Format: tg_senorge2018_2008.nc
 
-   
-   for file in $filelist
-   do
-       ofile=`basename $file | sed s/daily_//`                   # later, this text is replaced with the variable name etc.
-       ###ofile=`basename $file | sed s/senorge2018_//`          # Testing this for seNorge. Format: tg_senorge2018_2008.nc
-       # ofile=`basename $file`                                  # Testing this for seNorge. Format: tg_senorge2018_2008.nc
-       echo "Ofile is: " $ofile
-       # $file = cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_1960.nc4
-       # ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
-       # files by using this line of code in the if sentence below:
-     	 # Monthly mean of $VAR (no space to save this for all variables and models)	 
-         # cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean
+        # $file = cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_1960.nc4
+        # ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
+        # files by using this line of code in the if sentence below:
+     	# Monthly mean of $VAR (no space to save this for all variables and models)	 
+        # cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean
 
 
 	 
@@ -152,29 +158,44 @@ function calc_indices {       # call this function with one input argument: file
 	 #ncatted -O -a long_name,tg,o,c,"Mean annual growing season length (days TAS >=5 °C)"           ."/senorge/growing/"$ofile_growing
 	 ##ncatted -O -a short_name,tg,o,c,"growing"                                                   ."/senorge/growing/"$ofile_growing
          ## ncrename -v tg,growing .'/senorge/growing/'$ofile_growing .'/senorge/growing/'$ofile_growing
-	 
-	 # Annual and seasonal mean of $VAR
-	 cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
-	 
-	 cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-	 cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-	 cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-	 cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
-	 cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
-	 rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" 
-	 # Trenger kanskje ikke rm, for den blir overskrevet uansett hvert år? 
 
- 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_annual
-	 ncatted -O -a standard_name,global,o,c,"air_temperature"              ./$RCM/$VAR/$ofile_tas_annual 
-	 #ncatted -O -a units,tas,o,c,"K" 				       ./$RCM/$VAR/$ofile_tas_annual  # Trengs vel ikke?
-	 ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature"   ./$RCM/$VAR/$ofile_tas_annual
-	 ## ncrename -v tas,annual_avg_air_temperature ./$RCM/$VAR/$ofile_tas_annual ./$RCM/$VAR/$ofile_tas_annual
+         # Compute annual and seasonal mean of $VAR
+	 if ! [ -f ./$RCM/$VAR/$ofile_tas_annual ]; then   # check if the file exists
 
-	 echo "done adding metadata to the annual file. Proceed to seasonal."
+	     echo $ofile_tas_annual
+	     pwd
+	     
+	     cdo timmean   -ifthen $landmask $filedir/$file  ./$RCM/$VAR/$ofile_tas_annual
+	     
+ 	     ncatted -O -a tracking_id,global,o,c,`uuidgen` 		         ./$RCM/$VAR/$ofile_tas_annual
+	     ncatted -O -a standard_name,global,o,c,"air_temperature"            ./$RCM/$VAR/$ofile_tas_annual 
+	     ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_annual
+	     ## ncrename -v tas,annual_avg_air_temperature ./$RCM/$VAR/$ofile_tas_annual ./$RCM/$VAR/$ofile_tas_annual
+
+	     echo "done adding metadata to the annual file. Proceed to seasonal."
+	    
+	 else
+	     echo "file" ./$RCM/$VAR/$ofile_tas_annual "already exists. Skipping computations."
+	 fi
+	    
+ 	 if ! [ -f ./$RCM/$VAR/$ofile_tas_seasonal ]; then
+
+	     cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+	     cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+	     cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+	     cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+	     cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
+	     rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" 
+	     # Trenger kanskje ikke rm, for den blir overskrevet uansett hvert år? 
+
+ 	     ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_seasonal
+	     ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal
+	     ## ncrename -v tas,seasonal_avg_air_temperature ./$RCM/$VAR/$ofile_tas_seasonal ./$RCM/$VAR/$ofile_tas_seasonal	 
+	 else
+	     echo "file" ./$RCM/$VAR/$ofile_tas_seasonal "already exists. Skipping computations."
+
+	 fi 
 	 
- 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_seasonal
-	 ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal
-	 ## ncrename -v tas,seasonal_avg_air_temperature ./$RCM/$VAR/$ofile_tas_seasonal ./$RCM/$VAR/$ofile_tas_seasonal	 
  	 
 	 
 	 # vekstsesongens lengde
@@ -223,8 +244,8 @@ function calc_indices {       # call this function with one input argument: file
 	 ofile_summerd=`echo $ofile | sed s/tasmax/summerd/`
 
 
-# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'     ./$RCM'/land_tasmax'
-# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'     ./$RCM'/land_norheatwave'
+# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$refbegin'-'$refend'.nc'     ./$RCM'/land_tasmax'
+# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$refbegin'-'$refend'.nc'     ./$RCM'/land_norheatwave'
 	 
 	 
 	 # Annual and seasonal mean of $VAR
@@ -504,7 +525,7 @@ elif [ $HOSTNAME == "lustre" ]; then
 
     echo ""
     echo "Running from " $HOSTNAME
-    workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/test_ibni/ # /analyses/calc_gen_indices
+    workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/calc_indices/ #
     ## workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc/test_ibni
     filedir_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
     filedir_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
@@ -516,8 +537,9 @@ fi
 
 
 #go to working dir
+mkdir -p $workdir
 cd $workdir
-
+mkdir -p tmp/$USER
 
 ### seNorge 2018 v20.05
   # For the historical period (DP1), we need to process seNorge data. # Testing senorge
@@ -595,47 +617,50 @@ fi
 # Continue here. The rest of the script is a proof-of-concept, outlining the order of commands, but they do not run.
 # Before they can run, there many special cases to treat: variable names/metadata, year selection, the fact that models cover different years etc.  
 # Før denne kan fullføres: legg inn årstall i input til mergetime. Legg den inn etter kallet til calc_index over; hist tar bare 91-2020 osv.
-#years=$(seq $startyear $endyear) 
-# cdo mergetime ./$RCM/tasmax/$ofile_tasmax_monmean   ./$RCM'/mergetime_tasmax_'$startyear'-'$endyear'.nc4'
-# cdo mergetime ./$RCM/norheatwave/$ofile_norheatwave ./$RCM'/mergetime_norheatwave_'$startyear'-'$endyear'.nc4'
+
+# cdo mergetime ./$RCM/tasmax/$ofile_tasmax_monmean   ./$RCM'/mergetime_tasmax_'$refbegin'-'$refend'.nc' 
+# cdo mergetime ./$RCM/norheatwave/$ofile_norheatwave ./$RCM'/mergetime_norheatwave_'$refbegin'-'$refend'.nc'
 
 
        if [ $VAR == "tas" ]; then                          
        #if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
 
-	   # These lines do not run (startyr and endyr are not defined). They serve as inspiration.
-	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc'   $workdir/$RCM/$VAR/'tas_annual-mean_mergetime_'$startyr'-'$endyear'.nc'
-	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$startyr'-'$endyear'.nc'
+	   # These lines do not run yet. They serve as inspiration.
+	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc'   $workdir/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
+	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
+
 
 	   # Then compute the 30-year means. Must adjust the timesteps according to the period.
-	   # cdo timmean -seltimestep,1/30 $workdir/$RCM/$VAR/'tas_annual-mean_mergetime_'$startyr'-'$endyear'.nc'     $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_1991-2020.nc' 
-	   # cdo timmean -seltimestep,1/30 $workdir/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$startyr'-'$endyear'.nc'   $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_1991-2020.nc'
-	   # cdo timmean -seltimestep,71/100 $workdir/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$startyr'-'$endyear'.nc' $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_2071-2100.nc'
+	   # cdo timmean -seltimestep,1/30 $workdir/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'     $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_1991-2020.nc' 
+	   # cdo timmean -seltimestep,1/30 $workdir/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'   $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_1991-2020.nc'
+	   # cdo timmean -seltimestep,71/100 $workdir/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc' $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_2071-2100.nc'
 
 	   # Change the name of the file and the variable name as shown in ncview:
 	   # See filename convensions in the modelling protocol, chapter 7.6. https://docs.google.com/document/d/1V9RBqdqUrMOYqfMVwcSHRwWP57fiS3R8/edit
 	   # Note here that bias-baseline could be either "eqm-sn2018v2005" or "3dbc-eqm-sn2018v2005", depending on the bias-adjustment method.
-	   ## ncrename -v tas,tas_annual-mean  $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_1991-2020.nc' $workdir/$RCM/$VAR/$RCM_$RCP_eqm-sn2018v2005_none_norway_1km_tas_annual-mean_'$startyear'-'$endyear'.nc4'
+	   ## ncrename -v tas,tas_annual-mean  $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_1991-2020.nc' $workdir/$RCM/$VAR/$RCM_$RCP_eqm-sn2018v2005_none_norway_1km_tas_annual-mean_'$refbegin'-'$refend'.nc'
 
 	   
        elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then 
        # elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
 
 	   # Does not run! 
-	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_annual-mean.nc'   $workdir/$RCM/$VAR/'tasmax_annual-mean_mergetime_'$startyr'-'$endyear'.nc'
-	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_seasonal-mean.nc' $workdir/$RCM/$VAR/'tasmax_seasonal-mean_mergetime_'$startyr'-'$endyear'.nc'	   
-   	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_annual-mean.nc'   $workdir/$RCM/$VAR/'tasmin_annual-mean_mergetime_'$startyr'-'$endyear'.nc'
-	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_seasonal-mean.nc' $workdir/$RCM/$VAR/'tasmin_seasonal-mean_mergetime_'$startyr'-'$endyear'.nc'	   
+	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_annual-mean.nc'   $workdir/tmp/$USER/'tasmax_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
+	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_seasonal-mean.nc' $workdir/tmp/$USER/'tasmax_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
+   	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_annual-mean.nc'   $workdir/tmp/$USER/'tasmin_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
+	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_seasonal-mean.nc' $workdir/tmp/$USER/'tasmin_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
+	   
 
        elif [ $VAR == "pr" ]; then
 
-	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc' $workdir/$RCM/$VAR/'tas_annual-mean_mergetime_'$startyr'-'$endyear'.nc'
-	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$startyr'-'$endyear'.nc'	   
+	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc' $workdir/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
+	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
+
 
        fi
        
 	   
-# cdo mergetime senorge/growing/'growing_'*'.nc' senorge/growing'/growing_mergetime_timsum_1957-2020.nc'  #'$startyr'-'$endyear'.nc'   # Testing senorge
+# cdo mergetime senorge/growing/'growing_'*'.nc' senorge/growing'/growing_mergetime_timsum_1957-2020.nc'  #'$refbegin'-'$refend'.nc'   # Testing senorge
 #cdo timmean -seltimestep,5/34  .'/senorge/growing/growing_mergetime_timsum_1957-2020.nc' .'/senorge/growing/growing_30-yrmean_mgtim_1961-1990.nc'
 #cdo timmean -seltimestep,35/64 .'/senorge/growing/growing_mergetime_timsum_1957-2020.nc' .'/senorge/growing/growing_30-yrmean_mgtim_1991-2000.nc'
 #ncrename -v tg,growing .'/senorge/growing/growing_30-yrmean_mgtim_1961-1990.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1961-1990.nc4'
@@ -661,6 +686,9 @@ cdo sub .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-
     # done   # Done looping over percentiles: 10,25,50,75,90
  
 #done
+
+
+echo "Add this when you have double-checked rm tmp/$USER/mergetime*"
 
 #return to starting dir
 cd $PWD
