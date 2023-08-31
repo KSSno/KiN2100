@@ -39,7 +39,7 @@ while (( $# )); do
     --refend)    refend=$2 ;;
     --scenbegin) scenbegin=$2 ;;
     --scenend)   scenend=$2 ;;
-    --rcm)  rcmlist=$2 ;; # This does not work with multiple entries yet, only the first one is used.
+    --rcm)  rcmlist=$(echo $2 | tr ‘,’ ‘\n’) ;; # change from comma to space as separator
     --verbose)   verbose=1 ;;
     -*) printf 'Unknown option: %q\n\n' "$1"
         exit 1 ;; # Aborts when called with unsupported arguments.
@@ -47,6 +47,7 @@ while (( $# )); do
   esac
   shift
 done
+
 
 if [ $verbose -eq 1 ]
 then
