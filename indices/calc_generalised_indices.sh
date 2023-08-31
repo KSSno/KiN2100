@@ -3,6 +3,8 @@
 ##!/usr/bin/bash   # <- use this on Lustre
 set -e #exit on error
 
+#sigrid tester git
+
 ## Script to calculate annual and seasonal values for various indices from the bias-adjusted RCM data
 #
 # EQM and 3DBC
