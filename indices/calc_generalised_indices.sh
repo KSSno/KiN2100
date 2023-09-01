@@ -7,7 +7,7 @@ set -e #exit on error
 # Etter at Sigrid legger inn sin endring, tester IBNI pull request.
 # IBNI tester merge
 #sigrid tester git
-#sigrid gjør en endring
+#sigrid gjør en TILLEGG TIL DENNE SETNINGEN endring
 
 ## Script to calculate annual and seasonal values for various indices from the bias-adjusted RCM data
 #
