@@ -3,11 +3,6 @@
 ##!/usr/bin/bash   # <- use this on Lustre
 set -e #exit on error
 
-#Pullrequest
-# Etter at Sigrid legger inn sin endring, tester IBNI pull request.
-# IBNI tester merge
-#sigrid tester git
-#sigrid gjør en TILLEGG TIL DENNE SETNINGEN endring
 
 ## Script to calculate annual and seasonal values for various indices from the bias-adjusted RCM data
 #
@@ -27,7 +22,8 @@ set -e #exit on error
 # NOT workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc
                    
 # Default values (used if not specified by the input arguments mentioned above):
-rcmlist=all
+#rcmlist=all
+rcmlist="cnrm-r1i1p1-aladin"
 refbegin=1991
 refend=2020
 scenbegin=2071
@@ -52,14 +48,15 @@ while (( $# )); do
   shift
 done
 
+#    echo $rcmlist
 
 if [ $verbose -eq 1 ]
 then
-  echo "rcmlist" $rcmlist
-  echo "refbegin" $refbegin
-  echo "refend" $refend
-  echo "scenbegin" $scenbegin
-  echo "scenend" $scenend
+    echo "rcmlist" $rcmlist
+    echo "refbegin" $refbegin
+    echo "refend" $refend
+    echo "scenbegin" $scenbegin
+    echo "scenend" $scenend
 fi
 
 # ProgressBar function (from https://github.com/fearside/ProgressBar/)
@@ -148,7 +145,14 @@ function calc_indices {       # call this function with one input argument: file
 
 	 #ofile_growing=`echo $ofile | sed s/tg/growing/`                 # Testing senorge: vekstsesong
 	 
+	 ofilelist="${ofile_tas_annual} ${ofile_tas_seasonal}"
 
+	 
+	 # echo "ofile is" $ofilelist
+	 # cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1993.nc4
+	 # ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`
+
+	 
 	 # I guess it would make sense to crop the domain to mainland Norway before processing? I've added "-ifthen $landmask" in the lines below.
 	 # Are there better ways to crop to the landmask? This is what "ifthen $landmask" does:
 	 # cdo ifthen $landmask $filedir/$file '$filedir/$file_mainland_norway.nc4' 
@@ -223,8 +227,11 @@ function calc_indices {       # call this function with one input argument: file
 	 #ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
 	 #ncatted -O -a long_name,tas,o,c,"cooling_degree-days"           ./$RCM/$VAR/$ofile_cdd
 	 
-	
-	  
+
+
+
+
+	 
        elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then             # orig. Roll back to this.
        # elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
 
@@ -437,6 +444,8 @@ function calc_indices {       # call this function with one input argument: file
 	 ncatted -O -a long_name,tasmax,o,c,"summer_days_tasmax-exceeding-20"        ./$RCM/summerdays/$ofile_summerdays 
 	 ncatted -O -a long_name,tasmax,o,c,"norwegian_heatwave_index"               ./$RCM/norheatwave/$ofile_norheatwave	
 
+	 ofileList="${ofile_tasmax_annual} ${ofile_tasmax_seasonal} ${ofile_tasmin_annual} ${ofile_tasmin_seasonal}"
+
 	 
       elif [ $VAR == "pr" ]; then
 	 echo ""
@@ -551,6 +560,9 @@ function calc_indices {       # call this function with one input argument: file
 
    
    echo "Done computing monthly indices and adding metadata for all years in model " $RCM " and variable " $VAR ". Other models and RCPs still remain."
+
+   echo $ofilelist # return $ofilelist
+   
 }                    # end function calc_indices
 
 
@@ -643,7 +655,13 @@ else
     echo -ne "\n\nProcessing" $RCM "EQM" $VAR "\n"
     mkdir -p $RCM/$VAR
  
-     #HIST
+    #HIST
+    # Testing ofile
+    # NB! This method saves all echoes instead of printing them.
+     #ofile_List=$(calc_indices $filedir_EQM/$RCM/$VAR/hist/)
+     #echo $ofile_List
+     #exit
+     
      calc_indices $filedir_EQM/$RCM/$VAR/hist/
      #calc_indices $filedir_EQM_hist
      ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
