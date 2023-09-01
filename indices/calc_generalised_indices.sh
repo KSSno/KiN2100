@@ -3,6 +3,8 @@
 ##!/usr/bin/bash   # <- use this on Lustre
 set -e #exit on error
 
+#Pullrequest
+# Etter at Sigrid legger inn sin endring, tester IBNI pull request.
 # IBNI tester merge
 #sigrid tester git
 
