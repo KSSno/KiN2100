@@ -23,7 +23,7 @@ set -e #exit on error
                    
 # Default values (used if not specified by the input arguments mentioned above):
 #rcmlist=all
-rcmlist="cnrm-r1i1p1-aladin"
+rcmlist=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # all
 refbegin=1991
 refend=2020
 scenbegin=2071
@@ -39,7 +39,7 @@ while (( $# )); do
     --refend)    refend=$2 ;;
     --scenbegin) scenbegin=$2 ;;
     --scenend)   scenend=$2 ;;
-    --rcm)  rcmlist=$(echo $2 | tr ‘,’ ‘\n’) ;; # change from comma to space as separator
+    --rcm)  rcmlist=$(echo $2 | tr ',' '\n'); rcmlist=($rcmlist);; # change from comma to space as separator
     --verbose)   verbose=1 ;;
     -*) printf 'Unknown option: %q\n\n' "$1"
         exit 1 ;; # Aborts when called with unsupported arguments.
@@ -48,7 +48,10 @@ while (( $# )); do
   shift
 done
 
-#    echo $rcmlist
+echo ${rcmlist[@]} # all
+#echo ${rcmlist[0]}
+#echo ${rcmlist[-1]}
+
 
 if [ $verbose -eq 1 ]
 then
@@ -91,8 +94,9 @@ function calc_indices {       # call this function with one input argument: file
     local filelist=`ls $1`  # This is the original line. Roll back to it!
     # filelist=`ls $1/$VAR*`   # testing senorge ls senorgepath/tx*
     # lists files on the form $RCM_rcp26_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_2100.nc4
-    local nbrfiles=`echo $filelist | wc -w`
-
+    #local nbrfiles=`echo $filelist | wc -w`
+    let nbrfiles=$(( $refend-$refbegin+1 ))
+    echo $nbrfiles
     #    $filedir_EQM/$RCM/$VAR/hist/
         
     echo "Processing " $1
@@ -112,11 +116,26 @@ function calc_indices {       # call this function with one input argument: file
     
     
     #   for file in $filelist                # replaced looping over filenames with looping over (chosen) years
-    for yyyy in $( seq $refbegin $refend )   # list chosen years. NOTE: this only takes in the reference period.
-    #    for yyyy in $( seq $refbegin $refend ; seq $scenariobegin $scenarioend )   # list chosen years.
+
+    local scenario=`basename $1`   #extract characters  
+    echo $scenario
+    
+    if [ $scenario == "hist" ]; then # | [ $period == "senorge" ]
+	firstyear=$refbegin
+	lastyear=$refend
+    elif [ $scenario == "rcp26" ] || [ $scenario == "rcp45" ]; then
+	firstyear=$scenbegin
+	lastyear=$scenend
+    else
+	echo "check if you are computing the right thing."
+    fi
+	
+	
+    for yyyy in $( seq $firstyear $lastyear )   # list chosen years. NOTE: this only takes in the reference period.
+    #    for yyyy in $( seq $refbegin $refend ; seq $scenbegin $scenend )   # list chosen years.
     do
-	local file=`ls $1/*$yyyy.nc4`
-    local file=`basename $file`                   
+	file=`ls "$1"/*$yyyy.nc4`      # cannot be "local".
+	local file=`basename $file`                   
 	echo "file is: " $file
         local ofile=`echo $file | sed s/daily_//`                   # later, this text is replaced with the variable name etc.
         echo "Ofile is: " $ofile
@@ -133,7 +152,7 @@ function calc_indices {       # call this function with one input argument: file
        if [ $VAR == "tas" ]; then                             # orig. Roll back to this.
        #if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
 	 echo ""
-         echo "tas chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
+         echo "tas chosen. Now processing file " $file ", which is number " $(( $count+1 )) " out of " $nbrfiles " (from one model, RCM and RCP only)."
 	 local ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`     # orig. Roll back to this.
 	 local ofile_tas_seasonal=`echo $ofile | sed s/tas/tas_seasonal-mean/` # orig. Roll back to this.
 
@@ -561,7 +580,7 @@ function calc_indices {       # call this function with one input argument: file
    
    echo "Done computing monthly indices and adding metadata for all years in model " $RCM " and variable " $VAR ". Other models and RCPs still remain."
 
-   echo $ofilelist # print $ofilelist
+   echo $ofilelist # print $ofilelist (last year)
    
 }                    # end function calc_indices
 
@@ -569,6 +588,8 @@ function calc_indices {       # call this function with one input argument: file
 ### Main script
 #Save current dir for return point
 currdir=$PWD
+echo "Current directory" $currdir
+echo "Workdir directory" $workdir
 
 #Check provision of varname
 if [ -z "$VAR" ]; then
@@ -620,17 +641,18 @@ mkdir -p tmp/$USER
 
   
 #get list of RCMs
-RCMLIST=`ls $filedir_EQM`
+#RCMLIST=`ls $filedir_EQM`
 #RCMLIST=`ls /lustre/storeC-ext/users/kin2100/NVE/EQM/`
 
 echo "Found the following RCMs:"
-echo $RCMLIST | tr " " "\n"
+echo ${rcmlist[@]}
+#echo $RCMLIST | tr " " "\n"
 echo -ne "======================"
 
 echo "Check if index files have already been created before computing indices (if needed)."
 
 if [ $VAR == "tas" ] || [ $VAR == "pr" ]; then
-    last_output_file=$workdir'/noresm-r1i1p1-remo/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_annual-mean_2098.nc4'
+    last_output_file=$workdir'/'${rcmlist[${#rcmlist[@]} - 1]}'/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_annual-mean_2098.nc4'
     #last_output_file=$workdir'/cnrm-r1i1p1-aladin/'$VAR'/cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1961.nc4' #<-first 
     #last_input_file=$filedir_3DBC'/noresm-r1i1p1-remo/'$VAR'/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_2098.nc4'
     echo ""   # Blank line (or print $last_output_file)
@@ -649,7 +671,7 @@ if [ -f "$last_output_file" ]; then
 else 
     echo "last_output_file does not exist. Proceed to compute indices. last_output_file = " $last_output_file
 
-   for RCM in $RCMLIST
+   for RCM in $rcmlist  #$RCMLIST
    do
     ### EQM
     echo -ne "\n\nProcessing" $RCM "EQM" $VAR "\n"
