@@ -29,6 +29,7 @@ refend=2020
 scenbegin=2071
 scenend=2100
 verbose=0
+VAR=tas
 
 args=( )
 
@@ -66,18 +67,18 @@ fi
 # to show the current progress while running
 # Input is currentState($1) and totalState($2)
 function ProgressBar {
-# Process data
+	# Process data
     let _progress=(${1}*100/${2}*100)/100
     let _done=(${_progress}*4)/10
     let _left=40-$_done
-# Build progressbar string lengths
+	# Build progressbar string lengths
     _fill=$(printf "%${_done}s")
     _empty=$(printf "%${_left}s")
 
-# Build progressbar strings and print the ProgressBar line
-# Output example:                           
-# Progress : [########################################] 100%
-printf "\rProgress : [${_fill// /#}${_empty// /-}] ${_progress}%%"
+	# Build progressbar strings and print the ProgressBar line
+	# Output example:                           
+	# Progress : [########################################] 100%
+	printf "\rProgress : [${_fill// /#}${_empty// /-}] ${_progress}%%"
 }
 
 # Scroll down below (all functions) to see the main script. 
@@ -630,11 +631,12 @@ elif [ $HOSTNAME == "lustre" ]; then
 fi
 
 
+echo "Workdir directory" $workdir
 #go to working dir
 mkdir -p $workdir
 cd $workdir
-mkdir -p tmp/$USER
 
+mkdir -p tmp/$USER
 ### seNorge 2018 v20.05
   # For the historical period (DP1), we need to process seNorge data. # Testing senorge
   # calc_indices $filedir_senorge        # files on the form tg_senorge2018_1957.nc or senorge2018_RR_1957.nc
@@ -670,7 +672,7 @@ if [ -f "$last_output_file" ]; then
     echo "last_output_file exists. Skip index computations. last_output_file = " $last_output_file.
 else 
     echo "last_output_file does not exist. Proceed to compute indices. last_output_file = " $last_output_file
-
+	
    for RCM in $rcmlist  #$RCMLIST
    do
     ### EQM
@@ -685,6 +687,15 @@ else
      #exit
      
      calc_indices $filedir_EQM/$RCM/$VAR/hist/
+	 echo
+	 echo
+	 echo
+	 echo
+	 echo
+	 echo
+	 echo
+	 echo "exit"
+	 exit
      #calc_indices $filedir_EQM_hist
      ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
 
