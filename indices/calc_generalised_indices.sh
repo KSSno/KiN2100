@@ -3,6 +3,18 @@
 ##!/usr/bin/bash   # <- use this on Lustre
 set -e #exit on error
 
+<<<<<< HEAD
+<<<<<<< HEAD
+#Pullrequest
+# Etter at Sigrid legger inn sin endring, tester IBNI pull request.
+# IBNI tester merge
+#sigrid tester git
+#sigrid gjør en endring
+#sigrid gjør nok en endring
+=======
+>>>>>>> branch4
+=======
+>>>>>>> 1e95ce65080b4ea0322dd610df6a92dce734091e
 
 ## Script to calculate annual and seasonal values for various indices from the bias-adjusted RCM data
 #
