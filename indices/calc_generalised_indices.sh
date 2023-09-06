@@ -149,8 +149,8 @@ function calc_indices {       # call this function with one input argument: file
 
 
 
-		if [ $VAR == "tas" ]; then                             # orig. Roll back to this.
         #if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
+		if [ $VAR == "tas" ]; then                             # orig. Roll back to this.
 			echo ""
 			echo "tas chosen. Now processing file " $file ", which is number " $(( $count+1 )) " out of " $nbrfiles " (from one model, RCM and RCP only)."
 			local ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`     # orig. Roll back to this.
@@ -232,12 +232,12 @@ function calc_indices {       # call this function with one input argument: file
 		# Denne er tricky fordi den skal beregnes fra en glattet kurve.
 		# Fra dynamisk dokument: "Midlere vekstsesong i 30-års perioder gjøres utfra glattet kurve for temperaturutvikling gjennom året." 
 		# den også tar inn filbane til landmaske. Og den skjønner ikke at jeg prøver å gi den to inputargumenter.
-			# cdo eca_gsl $file $landmask -gec,20 $file $RCM/$VAR/$ofile_gsl
+		# cdo eca_gsl $file $landmask -gec,20 $file $RCM/$VAR/$ofile_gsl
 
 		# vinter- og sommersesong inn her?
 
 		# Avkjølingsgraddager, cooling days
-			# Antall dager med TAM>=22 (gec) over året
+		# Antall dager med TAM>=22 (gec) over året
 
 		#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
@@ -247,8 +247,8 @@ function calc_indices {       # call this function with one input argument: file
 		#ncatted -O -a long_name,tas,o,c,"cooling_degree-days"           ./$RCM/$VAR/$ofile_cdd
 
 
-		elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then             # orig. Roll back to this.
 		# elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
+		elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then             # orig. Roll back to this.
 
 			#set tasmin to tasmax because they are treated in the same way
 			VAR="tasmax"      # set the first variable is tasmax and treat tasmin equally.  # orig. Roll back to this.
@@ -567,8 +567,8 @@ function calc_indices {       # call this function with one input argument: file
 			
 		fi             # end if VAR
 
-      ((count+=1))
-      ProgressBar $count $nbrfiles && : #update progress bar and set to OK to skip exiting the script
+		((count+=1))
+		ProgressBar $count $nbrfiles && : #update progress bar and set to OK to skip exiting the script
       
 	done              # end for file in filelist
 
@@ -588,8 +588,8 @@ echo "Workdir directory" $workdir
 
 #Check provision of varname
 if [ -z "$VAR" ]; then
- echo "Error: No variable specified! Add using --var varname."
- exit 1
+	echo "Error: No variable specified! Add using --var varname."
+	exit 1
 fi
 
 
@@ -600,27 +600,24 @@ fi
 
 
 if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
-
-    echo ""
-    echo "Running from " $HOSTNAME
-    workdir=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
-    filedir_EQM=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf
-    filedir_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
-    filedir_senorge=/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf
-    landmask=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/kss2023_mask1km_norway.nc4 # from our github repo
-    #    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/
-    
+	echo ""
+	echo "Running from " $HOSTNAME
+	workdir=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
+	filedir_EQM=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf
+	filedir_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
+	filedir_senorge=/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf
+	landmask=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/kss2023_mask1km_norway.nc4 # from our github repo
+	#    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/
 elif [ $HOSTNAME == "lustre" ]; then
-
-    echo ""
-    echo "Running from " $HOSTNAME
-    workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/calc_indices/ #
-    ## workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc/test_ibni
-    filedir_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
-    filedir_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
-    #filedir_senorge=/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05 # <- check filepath! 
-    #    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/    
-    landmask=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4
+	echo ""
+	echo "Running from " $HOSTNAME
+	workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/calc_indices/ #
+	## workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc/test_ibni
+	filedir_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
+	filedir_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
+	#filedir_senorge=/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05 # <- check filepath! 
+	#    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/    
+	landmask=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4
     
 fi
 
@@ -632,8 +629,8 @@ cd $workdir
 
 mkdir -p tmp/$USER
 ### seNorge 2018 v20.05
-  # For the historical period (DP1), we need to process seNorge data. # Testing senorge
-  # calc_indices $filedir_senorge        # files on the form tg_senorge2018_1957.nc or senorge2018_RR_1957.nc
+# For the historical period (DP1), we need to process seNorge data. # Testing senorge
+# calc_indices $filedir_senorge        # files on the form tg_senorge2018_1957.nc or senorge2018_RR_1957.nc
 
   
 #get list of RCMs
@@ -648,65 +645,65 @@ echo -ne "======================"
 echo "Check if index files have already been created before computing indices (if needed)."
 
 if [ $VAR == "tas" ] || [ $VAR == "pr" ]; then
-    last_output_file=$workdir'/'${rcmlist[${#rcmlist[@]} - 1]}'/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_annual-mean_2098.nc4'
-    #last_output_file=$workdir'/cnrm-r1i1p1-aladin/'$VAR'/cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1961.nc4' #<-first 
-    #last_input_file=$filedir_3DBC'/noresm-r1i1p1-remo/'$VAR'/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_2098.nc4'
-    echo ""   # Blank line (or print $last_output_file)
-    # NOTE: I have tried replacing noresm with ${RCMLIST[9]}, but ALL RCMs are contained in ${RCMLIST[0]}, for some reason...
+	last_output_file=$workdir'/'${rcmlist[${#rcmlist[@]} - 1]}'/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_annual-mean_2098.nc4'
+	#last_output_file=$workdir'/cnrm-r1i1p1-aladin/'$VAR'/cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1961.nc4' #<-first 
+	#last_input_file=$filedir_3DBC'/noresm-r1i1p1-remo/'$VAR'/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_2098.nc4'
+	echo ""   # Blank line (or print $last_output_file)
+	# NOTE: I have tried replacing noresm with ${RCMLIST[9]}, but ALL RCMs are contained in ${RCMLIST[0]}, for some reason...
 elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then
-    last_output_file=$workdir'/noresm-r1i1p1-remo/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_2098.nc4'
-                                                                                                              # eller tasmax_annual-mean
-    #last_input_file=$filedir_3DBC'/noresm-r1i1p1-remo/dtr/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_daily_2098.nc4'
+	last_output_file=$workdir'/noresm-r1i1p1-remo/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_2098.nc4'
+	# eller tasmax_annual-mean
+	#last_input_file=$filedir_3DBC'/noresm-r1i1p1-remo/dtr/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_daily_2098.nc4'
 else
-    echo "This if clause must be extended with the chosen variable."
+	echo "This if clause must be extended with the chosen variable."
 fi
 
 
 if [ -f "$last_output_file" ]; then
-    echo "last_output_file exists. Skip index computations. last_output_file = " $last_output_file.
+	echo "last_output_file exists. Skip index computations. last_output_file = " $last_output_file.
 else 
     echo "last_output_file does not exist. Proceed to compute indices. last_output_file = " $last_output_file
 	
    for RCM in $rcmlist  #$RCMLIST
    do
-    ### EQM
-    echo -ne "\n\nProcessing" $RCM "EQM" $VAR "\n"
-    mkdir -p $RCM/$VAR
- 
-    #HIST
-    # Testing ofile
-    # NB! This method saves all echoes instead of printing them.
-     #ofile_List=$(calc_indices $filedir_EQM/$RCM/$VAR/hist/)
-     #echo $ofile_List
-     #exit
-     
-     calc_indices $filedir_EQM/$RCM/$VAR/hist/
+		### EQM
+		echo -ne "\n\nProcessing" $RCM "EQM" $VAR "\n"
+		mkdir -p $RCM/$VAR
 
-     #calc_indices $filedir_EQM_hist
-     ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
+		#HIST
+		# Testing ofile
+		# NB! This method saves all echoes instead of printing them.
+		#ofile_List=$(calc_indices $filedir_EQM/$RCM/$VAR/hist/)
+		#echo $ofile_List
+		#exit
 
-     #RCP2.6
-     calc_indices $filedir_EQM/$RCM/$VAR/rcp26/
-     ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
+		calc_indices $filedir_EQM/$RCM/$VAR/hist/
 
-     #RCP4.5
-     calc_indices $filedir_EQM/$RCM/$VAR/rcp45/
-     ## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/
- 
-    ### 3DBC
-    echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
+		#calc_indices $filedir_EQM_hist
+		## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
 
-     #HIST
-     calc_indices $filedir_3DBC/$RCM/$VAR/hist/ 
-     ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
- 
-     #RCP2.6
-     calc_indices $filedir_3DBC/$RCM/$VAR/rcp26/
-     ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
-  
-     # RCP4.5
-     calc_indices $filedir_3DBC/$RCM/$VAR/rcp45/
-     ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
+		#RCP2.6
+		calc_indices $filedir_EQM/$RCM/$VAR/rcp26/
+		## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
+
+		#RCP4.5
+		calc_indices $filedir_EQM/$RCM/$VAR/rcp45/
+		## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/
+
+		### 3DBC
+		echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
+
+		#HIST
+		calc_indices $filedir_3DBC/$RCM/$VAR/hist/ 
+		##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
+
+		#RCP2.6
+		calc_indices $filedir_3DBC/$RCM/$VAR/rcp26/
+		##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
+
+		# RCP4.5
+		calc_indices $filedir_3DBC/$RCM/$VAR/rcp45/
+		##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
  
    done
 
@@ -716,43 +713,43 @@ fi
 # Before they can run, there many special cases to treat: variable names/metadata, year selection, the fact that models cover different years etc.  
 
 
-       if [ $VAR == "tas" ]; then                          
-       #if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
+#if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
+if [ $VAR == "tas" ]; then                          
 
-	   # These lines do not run yet. They serve as inspiration.
-	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc'   $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
-	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
+	# These lines do not run yet. They serve as inspiration.
+	#cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc'   $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
+	#cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
 
 
-	   # Then compute the 30-year means. Must adjust the timesteps according to the period.
-	   # cdo timmean -selyear,$refbegin/$refend $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'     $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' 
-	   # cdo timmean -selyear,$refbegin/$refend $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'   $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' 
-	   # cdo timmean -selyear,$scenbegin/$scenend $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$scenbegin'-'$scenend'.nc'   $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$scenbegin'-'$scenend'.nc' 	   
-	   # cdo timmean -selyear,$scenbegin/$scenend $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$scenbegin'-'$scenend'.nc'   $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_'$scenbegin'-'$scenend'.nc'
-	   
+	# Then compute the 30-year means. Must adjust the timesteps according to the period.
+	# cdo timmean -selyear,$refbegin/$refend $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'     $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' 
+	# cdo timmean -selyear,$refbegin/$refend $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'   $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' 
+	# cdo timmean -selyear,$scenbegin/$scenend $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$scenbegin'-'$scenend'.nc'   $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$scenbegin'-'$scenend'.nc' 	   
+	# cdo timmean -selyear,$scenbegin/$scenend $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$scenbegin'-'$scenend'.nc'   $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_'$scenbegin'-'$scenend'.nc'
 
-	   # Change the name of the file and the variable name as shown in ncview:
-	   # See filename convensions in the modelling protocol, chapter 7.6. https://docs.google.com/document/d/1V9RBqdqUrMOYqfMVwcSHRwWP57fiS3R8/edit
-	   # Note here that bias-baseline could be either "eqm-sn2018v2005" or "3dbc-eqm-sn2018v2005", depending on the bias-adjustment method.
-	   ## ncrename -v tas,tas_annual-mean  $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' $workdir/$RCM/$VAR/$RCM_$RCP_eqm-sn2018v2005_none_norway_1km_tas_annual-mean_'$refbegin'-'$refend'.nc'
 
-	   
-       elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then 
-       # elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
+	# Change the name of the file and the variable name as shown in ncview:
+	# See filename convensions in the modelling protocol, chapter 7.6. https://docs.google.com/document/d/1V9RBqdqUrMOYqfMVwcSHRwWP57fiS3R8/edit
+	# Note here that bias-baseline could be either "eqm-sn2018v2005" or "3dbc-eqm-sn2018v2005", depending on the bias-adjustment method.
+	## ncrename -v tas,tas_annual-mean  $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' $workdir/$RCM/$VAR/$RCM_$RCP_eqm-sn2018v2005_none_norway_1km_tas_annual-mean_'$refbegin'-'$refend'.nc'
 
-	   # Does not run! 
-	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_annual-mean.nc'   $workdir/tmp/$USER/'tasmax_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
-	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_seasonal-mean.nc' $workdir/tmp/$USER/'tasmax_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
-   	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_annual-mean.nc'   $workdir/tmp/$USER/'tasmin_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
-	   cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_seasonal-mean.nc' $workdir/tmp/$USER/'tasmin_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
-	   
 
-       elif [ $VAR == "pr" ]; then
+elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then 
+	# elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
 
-	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc' $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
-	   #cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
+	# Does not run! 
+	cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_annual-mean.nc'   $workdir/tmp/$USER/'tasmax_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
+	cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_seasonal-mean.nc' $workdir/tmp/$USER/'tasmax_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
+	cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_annual-mean.nc'   $workdir/tmp/$USER/'tasmin_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
+	cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_seasonal-mean.nc' $workdir/tmp/$USER/'tasmin_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
 
-       fi
+
+elif [ $VAR == "pr" ]; then
+
+	#cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc' $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
+	#cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
+
+fi
        
 	   
 # cdo mergetime senorge/growing/'growing_'*'.nc' senorge/growing'/growing_mergetime_timsum_1957-2020.nc'  #'$refbegin'-'$refend'.nc'   # Testing senorge
@@ -767,19 +764,19 @@ echo 'Computing differences by subtracting the reference period.' # For senorge 
 
 
 
-    #  for pctls in 10 25 50 75 90; do
-    #     cdo enspctl,$pctls  $filedir/*/$var*_30-yrmean_mgtim_1991-2020.nc $savedir/'common_ensemble_enspctl-'$pctls'_1991-2020_'$var'.nc'
-     
-    #     cdo fldmean $savedir/'common_ensemble_enspctl-'$pctls'_1991-2020_'$var'.nc' $savedir/'fldmean_1991-2020_enspctl-'$pctls'.nc'
-     
-    #     echo 
-    #     echo 'Printing fieldmean for 1991-2020, enspctl=' $enspctl
-    #     echo 
-     
-    #     cdo info $savedir/'fldmean_1991-2020_enspctl-'$pctls'.nc'
+#  for pctls in 10 25 50 75 90; do
+#     cdo enspctl,$pctls  $filedir/*/$var*_30-yrmean_mgtim_1991-2020.nc $savedir/'common_ensemble_enspctl-'$pctls'_1991-2020_'$var'.nc'
+	
+#     cdo fldmean $savedir/'common_ensemble_enspctl-'$pctls'_1991-2020_'$var'.nc' $savedir/'fldmean_1991-2020_enspctl-'$pctls'.nc'
+	
+#     echo 
+#     echo 'Printing fieldmean for 1991-2020, enspctl=' $enspctl
+#     echo 
+	
+#     cdo info $savedir/'fldmean_1991-2020_enspctl-'$pctls'.nc'
 
-    # done   # Done looping over percentiles: 10,25,50,75,90
- 
+# done   # Done looping over percentiles: 10,25,50,75,90
+
 #done
 
 
