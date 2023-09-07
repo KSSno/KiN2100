@@ -623,6 +623,7 @@ function calc_periodmeans {
     # calc period mean for each ifilestart string
     for ifilestart in $ifilestartlist
     do
+		echo $ifilestart
         local ifilepathlist_periodyears=( "${yeararray[@]/#/$ipath$ifilestart}" )
         local ifilepathlist_periodyears=( "${ifilepathlist_periodyears[@]/%/.nc4}" )
 
@@ -741,8 +742,9 @@ else
 
 		calc_indices $filedir_EQM/$RCM/$VAR/hist/
 		echo ${ofilestartlist[@]}
+		calc_periodmeans $refbegin $refend $ofilestartlist
 		echo ""
-		echo "exit after one calc_indices call"
+		echo "exit after one calc_indices call and one calc_periodmeans call"
 		exit
 
 		#calc_indices $filedir_EQM_hist
