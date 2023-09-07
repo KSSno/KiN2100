@@ -602,6 +602,45 @@ function calc_indices {       # call this function with one input argument: file
    
 }                    # end function calc_indices
 
+function calc_periodmeans {
+    # This function do mergetime and timmean over all selected years for annual indices. It needs several arguments in correct order:
+    #   $1 = reffbegin or scenbegin
+    #   $2 = refend or scenend
+    #   $remaining = list of each substring common for all files for multiple years for which timmean should be computed
+    #       A substring can be e.g. "cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_" (where the year and .nc(4) is removed)
+    echo "In function computing mean over period"
+    
+
+    # make list of years:
+    local period="$1-$2"
+    local yearlist="$(seq $1 $2)"
+    local yeararray=($yearlist)
+    local ifilestartlist=${@:3}
+    local ipath=$workdir/$RCM/$VAR/
+    local opath=$workdir/tmp/$USER/$RCM/$VAR/
+    mkdir -p $opath
+    
+    # calc period mean for each ifilestart string
+    for ifilestart in $ifilestartlist
+    do
+        local ifilepathlist_periodyears=( "${yeararray[@]/#/$ipath$ifilestart}" )
+        local ifilepathlist_periodyears=( "${ifilepathlist_periodyears[@]/%/.nc4}" )
+
+        ofilepath1="$opath$ifilestart$period.nc4"
+        ofilepath2="$opath$ifilestart${period}_periodmean.nc4"
+        echo ""
+        if ! [ -f $ofilepath1 ]; then   # if ofile not already exist, do mergetime
+            cdo mergetime $ifilepathlist_periodyears $ofilepath1
+            echo Saved: $ofilepath1
+        fi
+        if ! [ -f $ofilepath2 ]; then   # if ofile not already exist, do timmean
+            cdo timmean $ofilepath1 $ofilepath2
+            echo Saved: $ofilepath2
+        fi
+    done
+    echo ""
+
+} 
 
 ### Main script
 #Save current dir for return point
