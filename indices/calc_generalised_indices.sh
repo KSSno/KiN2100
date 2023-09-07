@@ -180,7 +180,7 @@ function calc_indices {       # call this function with one input argument: file
 
 			#ofile_growing=`echo $ofile | sed s/tg/growing/`                 # Testing senorge: vekstsesong
 
-			# for first year (i.e. count==0); make list of ofilenames of which the year and file format is removed. 
+			# for first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 			if [ $count == 0 ]; then
 				get_filenamestart $ofile_tas_annual $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
@@ -232,7 +232,7 @@ function calc_indices {       # call this function with one input argument: file
 			fi
 	    
  			if ! [ -f ./$RCM/$VAR/$ofile_tas_seasonal ]; then
-
+				# cdo yseasmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
 				cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
 				cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
 				cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
