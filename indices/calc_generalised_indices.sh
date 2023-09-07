@@ -145,6 +145,7 @@ function calc_indices {       # call this function with one input argument: file
 		echo "check if you are computing the right thing."
     fi
 	
+	ofilestartlist=""
 	
     for yyyy in $( seq $firstyear $lastyear )   # list chosen years. NOTE: this only takes in the reference period.
     #    for yyyy in $( seq $refbegin $refend ; seq $scenbegin $scenend )   # list chosen years.
@@ -179,7 +180,14 @@ function calc_indices {       # call this function with one input argument: file
 
 			#ofile_growing=`echo $ofile | sed s/tg/growing/`                 # Testing senorge: vekstsesong
 
-			ofilelist="${ofile_tas_annual} ${ofile_tas_seasonal}"
+			# for first year (i.e. count==0); make list of ofilenames of which the year and file format is removed. 
+			if [ $count == 0 ]; then
+				get_filenamestart $ofile_tas_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+				
+				get_filenamestart $ofile_tas_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+			fi
 
 
 			# echo "ofile is" $ofilelist
@@ -693,6 +701,7 @@ else
 		#exit
 
 		calc_indices $filedir_EQM/$RCM/$VAR/hist/
+		echo ${ofilestartlist[@]}
 		echo ""
 		echo "exit after one calc_indices call"
 		exit
