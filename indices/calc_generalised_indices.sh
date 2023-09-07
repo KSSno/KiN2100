@@ -82,7 +82,19 @@ function ProgressBar {
 
 # Scroll down below (all functions) to see the main script. 
 
+function get_filenamestart {
+    # Function to remove year and fileformat of filename
+    # $1 = filename (basename)
+    # $2 = year of file
+    #
+    # E.g. 
+    #   $1 = "cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1992.nc4"
+    #   $2 = 1992
+    #   output = "cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_"
+    filestart=`echo $1 | cut -d "." -f 1` # delete everything in string from (including) "."
+    filestart=`echo $filestart | sed s/$2//`   # replace year with nothing in string
 
+}
 
 
 function calc_indices {       # call this function with one input argument: filedir 
