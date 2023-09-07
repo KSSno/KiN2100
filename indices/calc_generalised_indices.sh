@@ -25,9 +25,9 @@ set -e #exit on error
 #rcmlist=all
 rcmlist=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # all
 refbegin=1991
-refend=2020
+refend=1992 #2020
 scenbegin=2071
-scenend=2100
+scenend=2072 #2100
 verbose=0
 VAR=tas
 
@@ -81,6 +81,9 @@ function ProgressBar {
 }
 
 # Scroll down below (all functions) to see the main script. 
+
+
+
 
 function calc_indices {       # call this function with one input argument: filedir 
 
@@ -678,6 +681,9 @@ else
 		#exit
 
 		calc_indices $filedir_EQM/$RCM/$VAR/hist/
+		echo ""
+		echo "exit after one calc_indices call"
+		exit
 
 		#calc_indices $filedir_EQM_hist
 		## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
