@@ -626,13 +626,11 @@ function calc_periodmeans {
     # calc period mean for each ifilestart string
     for ifilestart in $ifilestartlist
     do
-		echo $ifilestart
         local ifilepathlist_periodyears=( "${yeararray[@]/#/$ipath$ifilestart}" )
         local ifilepathlist_periodyears="${ifilepathlist_periodyears[@]/%/.nc4}"
 
         ofilepath1="$opath$ifilestart$period.nc4"
         ofilepath2="$opath$ifilestart${period}_periodmean.nc4"
-        echo ""
         if ! [ -f $ofilepath1 ]; then   # if ofile not already exist, do mergetime
             cdo mergetime $ifilepathlist_periodyears $ofilepath1
             echo Saved: "$(basename $ofilepath1)"
@@ -735,29 +733,51 @@ do
 
 	#HIST
 	calc_indices $filedir_EQM/$RCM/$VAR/hist/
-	echo ${ofilestartlist[@]}
-	calc_periodmeans $refbegin $refend $ofilestartlist
-	ofilelist_hist=$ofilelist
-	echo ""
-	echo '$ofilelist_hist:' "$(basename $ofilelist_hist)"
+	calc_periodmeans $refbegin $refend $ofilestartlist # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+	ofilelist_hist=($ofilelist)
+	echo "done hist period means"
 
 	#calc_indices $filedir_EQM_hist
 	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
 
 	#RCP2.6
 	calc_indices $filedir_EQM/$RCM/$VAR/rcp26/
-	echo ${ofilestartlist[@]}
-	calc_periodmeans $scenbegin $scenend $ofilestartlist
-	ofilelist_rcp26=$ofilelist
+	calc_periodmeans $scenbegin $scenend $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+	ofilelist_rcp26=($ofilelist)
 	echo ""
-	echo '$ofilelist_rcp26:' "$(basename $ofilelist_rcp26)"
-	echo "exit after rcp2.6 calc_indices call and calc_periodmeans call"
-	exit
+	echo "done rcp2.6 period means"
 	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
 
 	#RCP4.5
 	calc_indices $filedir_EQM/$RCM/$VAR/rcp45/
+	calc_periodmeans $scenbegin $scenend $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+	ofilelist_rcp45=($ofilelist)
+	echo ""
+	echo "done rcp4.5 period means"
 	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/
+
+	# ---------- Computing difference ---------- #
+	echo ""
+	echo "EQM files: Computing change = scenario - historical"
+	for (( i=0; i<${#ofilelist_hist[@]}; i++ ))
+	do
+		ifile_hist=${ofilelist_hist[$i]}
+		ifile_rcp26=${ofilelist_rcp26[$i]}
+		ifile_rcp45=${ofilelist_rcp45[$i]}
+		ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/_periodmean/_periodmean_minus_hist${refbegin}-${refend}_periodmean/`
+		ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/_periodmean/_periodmean_minus_hist${refbegin}-${refend}_periodmean/`
+
+		echo "Index $i"
+		echo "	ifile_hist:        $(basename $ifile_hist)"
+		echo "	ifile_rcp2.6:      $(basename $ifile_rcp26)"
+		echo "	ofile_rcp2.6-hist: $(basename $ofile_rcp26_minus_hist)"
+		echo "	ofile_rcp4.5-hist: $(basename $ofile_rcp45_minus_hist)"
+
+		cdo ydaysub $ifile_rcp26 $ifile_hist $ofile_rcp26_minus_hist
+		cdo ydaysub $ifile_rcp45 $ifile_hist $ofile_rcp45_minus_hist
+	done
+	# ------------------------------------------ #
+	exit
 
 	### 3DBC
 	echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
