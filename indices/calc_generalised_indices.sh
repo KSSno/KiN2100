@@ -24,10 +24,10 @@ set -e #exit on error
 # Default values (used if not specified by the input arguments mentioned above):
 #rcmlist=all
 rcmlist=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # all
-refbegin=1991
-refend=1992 #2020
-scenbegin=2071
-scenend=2072 #2100
+refbegin=1994
+refend=1995 #2020
+scenbegin=2073
+scenend=2074 #2100
 verbose=0
 VAR=tas
 
@@ -635,11 +635,11 @@ function calc_periodmeans {
         echo ""
         if ! [ -f $ofilepath1 ]; then   # if ofile not already exist, do mergetime
             cdo mergetime $ifilepathlist_periodyears $ofilepath1
-            echo Saved: $ofilepath1
+            echo Saved: "$(basename $ofilepath1)"
         fi
         if ! [ -f $ofilepath2 ]; then   # if ofile not already exist, do timmean
 			cdo ydaymean $ofilepath1 $ofilepath2 #ydaymean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
-            echo Saved: $ofilepath2
+            echo Saved: "$(basename $ofilepath2)"
         fi
 		ofilelist="$ofilelist $ofilepath2"
     done
@@ -726,62 +726,56 @@ else
 fi
 
 
-if [ -f "$last_output_file" ]; then
-	echo "last_output_file exists. Skip index computations. last_output_file = " $last_output_file.
-else 
-    echo "last_output_file does not exist. Proceed to compute indices. last_output_file = " $last_output_file
-	
-   for RCM in $rcmlist  #$RCMLIST
-   do
-		### EQM
-		echo -ne "\n\nProcessing" $RCM "EQM" $VAR "\n"
-		mkdir -p $RCM/$VAR
 
-		#HIST
-		# Testing ofile
-		# NB! This method saves all echoes instead of printing them.
-		#ofile_List=$(calc_indices $filedir_EQM/$RCM/$VAR/hist/)
-		#echo $ofile_List
-		#exit
+for RCM in $rcmlist  #$RCMLIST
+do
+	### EQM
+	echo -ne "\n\nProcessing" $RCM "EQM" $VAR "\n"
+	mkdir -p $RCM/$VAR
 
-		calc_indices $filedir_EQM/$RCM/$VAR/hist/
-		echo ${ofilestartlist[@]}
-		calc_periodmeans $refbegin $refend $ofilestartlist
-		ofilelist_hist=$ofilelist
-		echo ""
-		echo '$ofilelist_hist' "$ofilelist_hist"
-		echo "exit after one calc_indices call and one calc_periodmeans call"
-		exit
+	#HIST
+	calc_indices $filedir_EQM/$RCM/$VAR/hist/
+	echo ${ofilestartlist[@]}
+	calc_periodmeans $refbegin $refend $ofilestartlist
+	ofilelist_hist=$ofilelist
+	echo ""
+	echo '$ofilelist_hist:' "$(basename $ofilelist_hist)"
 
-		#calc_indices $filedir_EQM_hist
-		## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
+	#calc_indices $filedir_EQM_hist
+	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
 
-		#RCP2.6
-		calc_indices $filedir_EQM/$RCM/$VAR/rcp26/
-		## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
+	#RCP2.6
+	calc_indices $filedir_EQM/$RCM/$VAR/rcp26/
+	echo ${ofilestartlist[@]}
+	calc_periodmeans $scenbegin $scenend $ofilestartlist
+	ofilelist_rcp26=$ofilelist
+	echo ""
+	echo '$ofilelist_rcp26:' "$(basename $ofilelist_rcp26)"
+	echo "exit after rcp2.6 calc_indices call and calc_periodmeans call"
+	exit
+	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
 
-		#RCP4.5
-		calc_indices $filedir_EQM/$RCM/$VAR/rcp45/
-		## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/
+	#RCP4.5
+	calc_indices $filedir_EQM/$RCM/$VAR/rcp45/
+	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/
 
-		### 3DBC
-		echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
+	### 3DBC
+	echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
 
-		#HIST
-		calc_indices $filedir_3DBC/$RCM/$VAR/hist/ 
-		##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
+	#HIST
+	calc_indices $filedir_3DBC/$RCM/$VAR/hist/ 
+	##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
 
-		#RCP2.6
-		calc_indices $filedir_3DBC/$RCM/$VAR/rcp26/
-		##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
+	#RCP2.6
+	calc_indices $filedir_3DBC/$RCM/$VAR/rcp26/
+	##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
 
-		# RCP4.5
-		calc_indices $filedir_3DBC/$RCM/$VAR/rcp45/
-		##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
- 
-   done
+	# RCP4.5
+	calc_indices $filedir_3DBC/$RCM/$VAR/rcp45/
+	##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
 
-fi
+done
+
 
 # Continue here. The rest of the script is a proof-of-concept, outlining the order of commands, but they do not run.
 # Before they can run, there many special cases to treat: variable names/metadata, year selection, the fact that models cover different years etc.  
