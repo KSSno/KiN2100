@@ -616,11 +616,13 @@ function calc_periodmeans {
     local period="$1-$2"
     local yearlist="$(seq $1 $2)"
     local yeararray=($yearlist)
+
     local ifilestartlist=${@:3}
     local ipath=$workdir/$RCM/$VAR/
     local opath=$workdir/tmp/$USER/$RCM/$VAR/
     mkdir -p $opath
     
+	ofilelist=""
     # calc period mean for each ifilestart string
     for ifilestart in $ifilestartlist
     do
@@ -636,10 +638,10 @@ function calc_periodmeans {
             echo Saved: $ofilepath1
         fi
         if ! [ -f $ofilepath2 ]; then   # if ofile not already exist, do timmean
-            # cdo timmean $ofilepath1 $ofilepath2
-			cdo ydaymean $ofilepath1 $ofilepath2 #ydaymean makes the mean calculation work for both annual and seasonal data.
+			cdo ydaymean $ofilepath1 $ofilepath2 #ydaymean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
             echo Saved: $ofilepath2
         fi
+		ofilelist="$ofilelist $ofilepath2"
     done
     echo ""
 
@@ -745,7 +747,9 @@ else
 		calc_indices $filedir_EQM/$RCM/$VAR/hist/
 		echo ${ofilestartlist[@]}
 		calc_periodmeans $refbegin $refend $ofilestartlist
+		ofilelist_hist=$ofilelist
 		echo ""
+		echo '$ofilelist_hist' "$ofilelist_hist"
 		echo "exit after one calc_indices call and one calc_periodmeans call"
 		exit
 
