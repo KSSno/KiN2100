@@ -39,7 +39,7 @@ Modeller, CMIP5 (rcp2.6 og rcp4.5):
 - hadgem-r1i1p1-remo    (1960 - 2098)
 - mpi-r1i1p1-cclm       (1960 -  2100)
 - mpi-r2i1p1-remo       (1960 -  2100)
-- noresm-r1i1p1-rca       (1970- 2100)
+- noresm-r1i1p1-rca     (1970- 2100)
 - noresm-r1i1p1-remo    (1960 -  2100)
 
 De ulike modellene har litt forskjellig tidsperiode også etter biasjustering. Start derfor tidsserier i 1971.
