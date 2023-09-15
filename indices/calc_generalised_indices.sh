@@ -636,7 +636,7 @@ function calc_periodmeans {
             echo Saved: "$(basename $ofilepath1)"
         fi
         if ! [ -f $ofilepath2 ]; then   # if ofile not already exist, do timmean
-			cdo ydaymean $ofilepath1 $ofilepath2 #ydaymean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
+			cdo yseasmean $ofilepath1 $ofilepath2 #yseasmean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
             echo Saved: "$(basename $ofilepath2)"
         fi
 		ofilelist="$ofilelist $ofilepath2"
@@ -773,8 +773,8 @@ do
 		echo "	ofile_rcp2.6-hist: $(basename $ofile_rcp26_minus_hist)"
 		echo "	ofile_rcp4.5-hist: $(basename $ofile_rcp45_minus_hist)"
 
-		cdo ydaysub $ifile_rcp26 $ifile_hist $ofile_rcp26_minus_hist
-		cdo ydaysub $ifile_rcp45 $ifile_hist $ofile_rcp45_minus_hist
+		cdo sub $ifile_rcp26 $ifile_hist $ofile_rcp26_minus_hist
+		cdo sub $ifile_rcp45 $ifile_hist $ofile_rcp45_minus_hist
 	done
 	# ------------------------------------------ #
 	exit
