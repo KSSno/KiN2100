@@ -615,11 +615,6 @@ fi
 
 
 
-# VAR=$1   # note: not to be confused with $1 in the functions. This is the input argument to calc_generalised_indices.sh
-# DISK=$2  # hmdata on NVE or lustre on MET. Use HOSTNAME instead.
-
-
-
 if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
 	echo ""
 	echo "Running from " $HOSTNAME
@@ -628,16 +623,13 @@ if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
 	filedir_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
 	filedir_senorge=/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf
 	landmask=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/kss2023_mask1km_norway.nc4 # from our github repo
-	#    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/
 elif [ $HOSTNAME == "lustre" ]; then
 	echo ""
 	echo "Running from " $HOSTNAME
 	workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/calc_indices/ #
-	## workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc/test_ibni
 	filedir_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
 	filedir_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
 	#filedir_senorge=/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05 # <- check filepath! 
-	#    filedir_3DBC_rcp45=$filedir_3DBC/$RCM/$VAR/rcp45/    
 	landmask=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4
     
 fi
