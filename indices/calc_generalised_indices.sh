@@ -232,13 +232,13 @@ function calc_indices {       # call this function with one input argument: file
 			fi
 	    
  			if ! [ -f ./$RCM/$VAR/$ofile_tas_seasonal ]; then
-				# cdo yseasmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
-				cdo -L timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-				cdo -L timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-				cdo -L timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-				cdo -L timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
-				cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
-				rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" 
+				cdo -L yseasmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
+				# cdo -L timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+				# cdo -L timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+				# cdo -L timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+				# cdo -L timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+				# cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
+				# rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" 
 				# Trenger kanskje ikke rm, for den blir overskrevet uansett hvert år? 
 
 				ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_seasonal
