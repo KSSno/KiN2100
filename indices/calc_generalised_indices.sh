@@ -24,8 +24,8 @@ set -e #exit on error
 # Default values (used if not specified by the input arguments mentioned above):
 #rcmlist=all
 rcmlist=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # all
-refbegin=1994
-refend=1995 #2020
+refbegin=1996
+refend=1997 #2020
 scenbegin=2073
 scenend=2074 #2100
 verbose=0
@@ -118,19 +118,8 @@ function calc_indices {       # call this function with one input argument: file
     # echo "Processing " $nbrfiles " files"
     # echo "Landmask = " $landmask
     
-    ######## A note on subsetting by years:
-    ### I guess you can replace filelist by filelist_subset if you want specific years.
-    ### The rationale behind this script is possibly that monthly files are generated one time only, then stored?
-    ### In that case, subsetting is done later in the process.
-    ### Note, too, that the different RCMs span different years.
-    ### ls $1'/cnrm-r1i1p1-aladin_rcp26_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_'{2071..2100}'.nc4'
-    ### echo ls $1'/'$RCM'_rcp26_eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_'{2071..2100}'.nc4'
-    # filelist_subset=`ls $1'/'$RCM'_rcp26_eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_'{2071..2100}'.nc4'`
-    # echo "Subsetted Filelist = " $filelist_subset
-    # nbrfiles_subset=`echo $filelist_subset | wc -w`
+
     
-    
-    #   for file in $filelist                # replaced looping over filenames with looping over (chosen) years
 
     local scenario=`basename $1`   #extract characters  
     echo $scenario
@@ -206,7 +195,6 @@ function calc_indices {       # call this function with one input argument: file
 			# trenger ikke månedsverdier:
 			# cdo monsum -gec,5 -ifthen $landmask $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
 
-			#ncatted -O -a tracking_id,global,o,c,`uuidgen` 		                                ."/senorge/growing/"$ofile_growing
 			#ncatted -O -a standard_name,tg,o,c,"spell_length_of_days_with_air_temperature_above_threshold" ."/senorge/growing/"$ofile_growing
 			#ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
 			#ncatted -O -a long_name,tg,o,c,"Mean annual growing season length (days TAS >=5 °C)"           ."/senorge/growing/"$ofile_growing
@@ -221,7 +209,6 @@ function calc_indices {       # call this function with one input argument: file
 
 				cdo timmean   -ifthen $landmask $filedir/$file  ./$RCM/$VAR/$ofile_tas_annual
 
-				ncatted -O -a tracking_id,global,o,c,`uuidgen` 		         ./$RCM/$VAR/$ofile_tas_annual
 				ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_annual
 				## ncrename -v tas,annual_avg_air_temperature ./$RCM/$VAR/$ofile_tas_annual ./$RCM/$VAR/$ofile_tas_annual
 
@@ -233,15 +220,6 @@ function calc_indices {       # call this function with one input argument: file
 	    
  			if ! [ -f ./$RCM/$VAR/$ofile_tas_seasonal ]; then
 				cdo -L yseasmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
-				# cdo -L timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-				# cdo -L timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-				# cdo -L timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-				# cdo -L timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
-				# cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
-				# rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" 
-				# Trenger kanskje ikke rm, for den blir overskrevet uansett hvert år? 
-
-				ncatted -O -a tracking_id,global,o,c,`uuidgen` 		       ./$RCM/$VAR/$ofile_tas_seasonal
 				ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal
 				## ncrename -v tas,seasonal_avg_air_temperature ./$RCM/$VAR/$ofile_tas_seasonal ./$RCM/$VAR/$ofile_tas_seasonal	 
 			else
@@ -264,7 +242,6 @@ function calc_indices {       # call this function with one input argument: file
 
 		#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
-		#ncatted -O -a tracking_id,global,o,c,`uuidgen` 		  ./$RCM/$VAR/$ofile_cdd 
 		#ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
 		#ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
 		#ncatted -O -a long_name,tas,o,c,"cooling_degree-days"           ./$RCM/$VAR/$ofile_cdd
@@ -416,21 +393,6 @@ function calc_indices {       # call this function with one input argument: file
 				echo "norsk hetebølge: done"
 			fi    
 
-			# Generate UUID
-			# uuid10=$(python -c 'import uuid; print(uuid.uuid4())')
-			# ncatted -O -a id,global,o,c,$uuid2  ./$RCM/tasmin/$ofile_tasmax_monmean 
-
-			# Endre til: ncatted -O -a tracking_id,global,o,c,`uuidgen`
-
-			ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/tasmax/$ofile_tasmax
-			ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/tasmin/$ofile_tasmin
-			ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/dtr/$ofile_dtr
-			ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/dzc/$ofile_dzc
-			ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/fd/$ofile_fd
-			ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/tropnight/$ofile_tropnight 	
-			ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/norsummer/$ofile_norsummer
-			ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/summerdays/$ofile_summerdays
-			ncatted -O -a tracking_id,global,o,c,`uuidgen`    ./$RCM/norheatwave/$ofile_norheatwave 
 
 			# Til alle standard_name under: Kan vurdere å legge inn variabel threshold (float threshold;   threshold:standard_name="air_temperature";    threshold:units="degC"; data: threshold=0.;)	 
 			ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_below_threshold"    ./$RCM/dzc/$ofile_dzc
@@ -511,7 +473,6 @@ function calc_indices {       # call this function with one input argument: file
 			#cdo -s monsum -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
 			## cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_pr_monmean	 
 
-			#ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM/$VAR/$ofile_pr_monsum
 			#ncatted -O -a short_name,pr,o,c,"pr_monsum" 	        ./$RCM/$VAR/$ofile_pr_monsum
 			##ncatted -O -a short_name,pr,o,c,"pr_monmean" 		./$RCM/$VAR/$ofile_pr_monmean	 
 			#ncatted -O -a units,pr,o,c,"kg m-2 month-1"  		./$RCM/$VAR/$ofile_pr_monsum
@@ -526,7 +487,6 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 # Monthly mean av hurs
 			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_hurs_monmean	 
 
-			# 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 		                ./$RCM/$VAR/$ofile_hurs_monmean
 			# 	 ncatted -O -a short_name,hurs,o,c,"hurs_monmean" 		                ./$RCM/$VAR/$ofile_hurs_monmean	 
 			# 	 ncatted -O -a units,hurs,o,c,"W m-2" 		                        ./$RCM/$VAR/$ofile_hurs_monmean
 			# 	 ncatted -O -a long_name,hurs,o,c,"surface_downwelling_shortwave_flux_in_air"	./$RCM/$VAR/$ofile_hurs_monmean
@@ -540,7 +500,6 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 # Monthly mean av rlds
 			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_rlds_monmean	 
 			
-			# 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	 	                ./$RCM/$VAR/$ofile_rlds_monmean
 			# 	 ncatted -O -a short_name,rlds,o,c,"rlds_monmean"                  	        ./$RCM/$VAR/$ofile_rlds_monmean	 
 			# 	 ncatted -O -a units,rlds,o,c,"W m-2" 		                        ./$RCM/$VAR/$ofile_rlds_monmean
 			# 	 ncatted -O -a long_name,rlds,o,c,"surface_downwelling_longwave_flux_in_air"	./$RCM/$VAR/$ofile_rlds_monmean
@@ -554,7 +513,6 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 # Monthly mean av rsds
 			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_rsds_monmean	 
 			
-			# 	 ncatted -O -a tracking_id,global,o,c,`uuidgen`           ./$RCM/$VAR/$ofile_rsds_monmean
 			# 	 ncatted -O -a short_name,rsds,o,c,"rsds_monmean"         ./$RCM/$VAR/$ofile_rsds_monmean	 
 			# 	 ncatted -O -a units,rsds,o,c,"%"                         ./$RCM/$VAR/$ofile_rsds_monmean
 			# 	 ncatted -O -a long_name,rsds,o,c,"relative humidity"     ./$RCM/$VAR/$ofile_rsds_monmean
@@ -568,7 +526,6 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 # Monthly mean av ps
 			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_ps_monmean	 
 			
-			# 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM/$VAR/$ofile_ps_monmean
 			# 	 ncatted -O -a short_name,ps,o,c,"ps_monmean" 		./$RCM/$VAR/$ofile_ps_monmean	 
 			# 	 ncatted -O -a units,ps,o,c,"Pa" 		        ./$RCM/$VAR/$ofile_ps_monmean
 			# 	 ncatted -O -a long_name,ps,o,c,"surface_air_pressure"	./$RCM/$VAR/$ofile_ps_monmean
@@ -583,7 +540,6 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 # Monthly mean av sfcWind
 			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_sfcWind_monmean	 
 			
-			# 	 ncatted -O -a tracking_id,global,o,c,`uuidgen` 	./$RCM/$VAR/$ofile_sfcWind_monmean
 			# 	 ncatted -O -a short_name,sfcWind,o,c,"sfcWind_monmean" ./$RCM/$VAR/$ofile_sfcWind_monmean	 
 			# 	 ncatted -O -a units,sfcWind,o,c,"m s-1" 		./$RCM/$VAR/$ofile_sfcWind_monmean
 			# 	 ncatted -O -a long_name,sfcWind,o,c,"wind_speed"	./$RCM/$VAR/$ofile_sfcWind_monmean
@@ -775,6 +731,10 @@ do
 
 		cdo sub $ifile_rcp26 $ifile_hist $ofile_rcp26_minus_hist
 		cdo sub $ifile_rcp45 $ifile_hist $ofile_rcp45_minus_hist
+
+		ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp26_minus_hist
+		ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_minus_hist
+
 	done
 	# ------------------------------------------ #
 	exit
@@ -801,54 +761,15 @@ done
 # Before they can run, there many special cases to treat: variable names/metadata, year selection, the fact that models cover different years etc.  
 
 
-#if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
-if [ $VAR == "tas" ]; then                          
 
-	# These lines do not run yet. They serve as inspiration.
-	#cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc'   $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
-	#cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
+# Change the name of the file and the variable name as shown in ncview:
+# See filename convensions in the modelling protocol, chapter 7.6. https://docs.google.com/document/d/1V9RBqdqUrMOYqfMVwcSHRwWP57fiS3R8/edit
+# Note here that bias-baseline could be either "eqm-sn2018v2005" or "3dbc-eqm-sn2018v2005", depending on the bias-adjustment method.
+## ncrename -v tas,tas_annual-mean  $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' $workdir/$RCM/$VAR/$RCM_$RCP_eqm-sn2018v2005_none_norway_1km_tas_annual-mean_'$refbegin'-'$refend'.nc'
 
-
-	# Then compute the 30-year means. Must adjust the timesteps according to the period.
-	# cdo timmean -selyear,$refbegin/$refend $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'     $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' 
-	# cdo timmean -selyear,$refbegin/$refend $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'   $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' 
-	# cdo timmean -selyear,$scenbegin/$scenend $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$scenbegin'-'$scenend'.nc'   $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$scenbegin'-'$scenend'.nc' 	   
-	# cdo timmean -selyear,$scenbegin/$scenend $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$scenbegin'-'$scenend'.nc'   $workdir/$RCM/$VAR'/tas_seasonal-mean_30-yrmean_mgtim_'$scenbegin'-'$scenend'.nc'
-
-
-	# Change the name of the file and the variable name as shown in ncview:
-	# See filename convensions in the modelling protocol, chapter 7.6. https://docs.google.com/document/d/1V9RBqdqUrMOYqfMVwcSHRwWP57fiS3R8/edit
-	# Note here that bias-baseline could be either "eqm-sn2018v2005" or "3dbc-eqm-sn2018v2005", depending on the bias-adjustment method.
-	## ncrename -v tas,tas_annual-mean  $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' $workdir/$RCM/$VAR/$RCM_$RCP_eqm-sn2018v2005_none_norway_1km_tas_annual-mean_'$refbegin'-'$refend'.nc'
-
-
-elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then 
-	# elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
-
-	# Does not run! 
-	cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_annual-mean.nc'   $workdir/tmp/$USER/'tasmax_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
-	cdo mergetime $workdir/$RCM/$VAR/*'_tasmax_seasonal-mean.nc' $workdir/tmp/$USER/'tasmax_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
-	cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_annual-mean.nc'   $workdir/tmp/$USER/'tasmin_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
-	cdo mergetime $workdir/$RCM/$VAR/*'_tasmin_seasonal-mean.nc' $workdir/tmp/$USER/'tasmin_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
-
-
-elif [ $VAR == "pr" ]; then
-
-	#cdo mergetime $workdir/$RCM/$VAR/*'_tas_annual-mean.nc' $workdir/tmp/$USER/$RCM/$VAR/'tas_annual-mean_mergetime_'$refbegin'-'$refend'.nc'
-	#cdo mergetime $workdir/$RCM/$VAR/*'_tas_seasonal-mean.nc' $workdir/tmp/$USER/$RCM/$VAR/'tas_seasonal-mean_mergetime_'$refbegin'-'$refend'.nc'
-
-fi
-       
-	   
-# cdo mergetime senorge/growing/'growing_'*'.nc' senorge/growing'/growing_mergetime_timsum_1957-2020.nc'  #'$refbegin'-'$refend'.nc'   # Testing senorge
-#cdo timmean -seltimestep,5/34  .'/senorge/growing/growing_mergetime_timsum_1957-2020.nc' .'/senorge/growing/growing_30-yrmean_mgtim_1961-1990.nc'
-#cdo timmean -seltimestep,35/64 .'/senorge/growing/growing_mergetime_timsum_1957-2020.nc' .'/senorge/growing/growing_30-yrmean_mgtim_1991-2000.nc'
 #ncrename -v tg,growing .'/senorge/growing/growing_30-yrmean_mgtim_1961-1990.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1961-1990.nc4'
 #ncrename -v tg,growing .'/senorge/growing/growing_30-yrmean_mgtim_1991-2000.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1991-2020.nc4'
 
-echo 'Computing differences by subtracting the reference period.' # For senorge that means the difference between 91-2020 and 61-90.
-
-#cdo sub .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1991-2020.nc4' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1961-1990.nc4' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_diff-growing_annual-mean_1991-2020_minus_1961-1990.nc4'
 
 
 
