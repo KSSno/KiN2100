@@ -88,18 +88,34 @@ while (( $# )); do
 	shift
 done
 
-if [ $VERBOSE -eq 1 ]; then
-	echo "RCMLIST:   " ${RCMLIST[@]} # first and last are ${RCMLIST[0]} and ${RCMLIST[-1]}
-	echo "REFBEGIN:  " $REFBEGIN
-	echo "REFEND:    " $REFEND
-	echo "SCENBEGIN: " $SCENBEGIN
-	echo "SCENEND:   " $SCENEND
-fi
+## LISTS OF VALID ITEMS IN CONSTANTS THAT CAN BE USER INPUT##
+VALID_RCMS=`ls $IFILEDIR_EQM` # list of RCMs (available for EQM). Can also be hard coded, e.g. RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm")
+VALID_REFBEGINS=$( seq 1961 2020 )
+VALID_REFENDS=$( seq 1961 2020 )
+VALID_SCENBEGINS=$( seq 2021 2100 )
+VALID_SCENENDS=$( seq 2021 2100 )
+VALID_VARS="tas" # later: "hurs pr ps rlds rsds sfcWind tas tasmax mrro swe esvpbls soilmoist"
+
 #---------------------------------------------------#
 
 
 #---------------------------------------------------#
 #### (2) FUNCTIONS ####
+
+function list_include_item {
+	# Function that checks if list ($1) contains item ($2) with name ($3)
+	# Exits the script if item is not in list.
+	local list="$1"
+	local item="$2"
+	local name="$3"
+	if ! [[ $list =~ (^|[[:space:]])"$item"($|[[:space:]]) ]] ; then
+		echo ""
+		echo "Error: $item is not a valid input of --$name."
+		echo "   Please select $name from list: "
+		echo "   " ${list[@]}
+		exit
+	fi
+}
 
 function ProgressBar {
 	# ProgressBar function (from https://github.com/fearside/ProgressBar/)
@@ -640,23 +656,39 @@ function calc_periodmeans {
 } 
 #---------------------------------------------------#
 
+
 #---------------------------------------------------#
 #### (3) Main script ####
 
 
-## Check provision of varname
-if [ -z "$VAR" ]; then
-	echo "Error: No variable specified! Add using --var varname."
-	exit 1
+## If verbose given by user, print input ##
+if [ $VERBOSE -eq 1 ]; then
+	echo "RCMLIST:   " ${RCMLIST[@]} # first and last are ${RCMLIST[0]} and ${RCMLIST[-1]}
+	echo "REFBEGIN:  " $REFBEGIN
+	echo "REFEND:    " $REFEND
+	echo "SCENBEGIN: " $SCENBEGIN
+	echo "SCENEND:   " $SCENEND
 fi
 
-## Make working directory and directory for temporary file if not already exist 
+## Use function that checks if (user or default) input is in list of valid inputs, and exits script if not ##
+list_include_item "$VALID_REFBEGINS" $REFBEGIN 'refbegin'
+list_include_item "$VALID_REFENDS" $REFEND 'refend'
+list_include_item "$VALID_SCENBEGINS" $SCENBEGIN 'scenbegin'
+list_include_item "$VALID_SCENENDS" $SCENEND 'scenend'
+list_include_item "$VALID_VARS" $VAR 'var'
+for rcm in $RCMLIST
+do
+	list_include_item "$VALID_RCMS" $rcm 'rcm'
+done
+echo "Accepted all (default and user) inputs of rcms, periods and variables. Proceed"
+
+
+## Make working directory, go there, and make directory for temporary files if not already exist ## 
 mkdir -p $WORKDIR
+cd $WORKDIR
 mkdir -p tmp/$USER
 
-## Go to working dir
-cd $WORKDIR
-
+exit
 
 ### seNorge 2018 v20.05
 # For the historical period (DP1), we need to process seNorge data. # Testing senorge
