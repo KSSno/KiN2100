@@ -734,22 +734,22 @@ do
 			ifile_hist=${ofilelist_hist[$i]}
 			ifile_rcp26=${ofilelist_rcp26[$i]}
 			ifile_rcp45=${ofilelist_rcp45[$i]}
-			#ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
-			#ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
-			ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/.nc4/minus${REFBEGIN}-${REFEND}.nc4/`
-			ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/.nc4/minus${REFBEGIN}-${REFEND}.nc4/`
+			#ofile_rcp26_vs_hist=`echo $ifile_rcp26 | sed s/_periodmean/_periodmean_vs_hist${REFBEGIN}-${REFEND}_periodmean/`
+			#ofile_rcp45_vs_hist=`echo $ifile_rcp45 | sed s/_periodmean/_periodmean_vs_hist${REFBEGIN}-${REFEND}_periodmean/`
+			ofile_rcp26_vs_hist=`echo $ifile_rcp26 | sed s/.nc4/vs${REFBEGIN}-${REFEND}.nc4/`
+			ofile_rcp45_vs_hist=`echo $ifile_rcp45 | sed s/.nc4/vs${REFBEGIN}-${REFEND}.nc4/`
 
 			echo "Index $i"
 			echo "	ifile_hist:        $(basename $ifile_hist)"
 			echo "	ifile_rcp2.6:      $(basename $ifile_rcp26)"
-			echo "	ofile_rcp2.6-hist: $(basename $ofile_rcp26_minus_hist)"
-			echo "	ofile_rcp4.5-hist: $(basename $ofile_rcp45_minus_hist)"
+			echo "	ofile_rcp2.6-hist: $(basename $ofile_rcp26_vs_hist)"
+			echo "	ofile_rcp4.5-hist: $(basename $ofile_rcp45_vs_hist)"
 
-			cdo sub $ifile_rcp26 $ifile_hist $ofile_rcp26_minus_hist
-			cdo sub $ifile_rcp45 $ifile_hist $ofile_rcp45_minus_hist
+			cdo sub $ifile_rcp26 $ifile_hist $ofile_rcp26_vs_hist
+			cdo sub $ifile_rcp45 $ifile_hist $ofile_rcp45_vs_hist
 
-			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp26_minus_hist
-			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_minus_hist
+			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp26_vs_hist
+			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_vs_hist
 
 		done
 	exit
