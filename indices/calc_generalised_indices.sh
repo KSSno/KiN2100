@@ -63,7 +63,7 @@ echo "Working directory: " $WORKDIR
 
 ## CONSTANTS THAT CAN BE USER INPUT ##
 # Default values (used if not specified by the input arguments):
-RCMLIST=`ls $IFILEDIR_EQM` # list of RCMs (available for EQM). Can also be hard coded, e.g. RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm")
+RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # list of RCMs (available for EQM). Can also be hard coded, e.g. RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm")
 REFBEGIN=1996  #1991
 REFEND=1997    #2020
 SCENBEGIN=2073 #2071
@@ -643,8 +643,8 @@ function calc_periodmeans {
         local ifilepathlist_periodyears=( "${yeararray[@]/#/$ipath$ifilestart}" )
         local ifilepathlist_periodyears="${ifilepathlist_periodyears[@]/%/.nc4}"
 
-        ofilepath1="$opath$ifilestart$period.nc4"
-        ofilepath2="$opath$ifilestart${period}_periodmean.nc4"
+        ofilepath1="$opath$ifilestart${period}_singleyears.nc4"
+        ofilepath2="$opath$ifilestart${period}.nc4"
         if ! [ -f $ofilepath1 ]; then   # if ofile not already exist, do mergetime
             cdo mergetime $ifilepathlist_periodyears $ofilepath1
             echo Saved: "$(basename $ofilepath1)"
@@ -653,6 +653,7 @@ function calc_periodmeans {
 			cdo yseasmean $ofilepath1 $ofilepath2 #yseasmean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
             echo Saved: "$(basename $ofilepath2)"
         fi
+		rm $ofilepath1
 		ofilelist="$ofilelist $ofilepath2"
     done
     echo ""
@@ -713,7 +714,6 @@ do
 		ofilelist_hist=($ofilelist)
 		echo "done hist period means"
 
-
 		#RCP2.6
 		calc_indices $bias_path/$RCM/$VAR/rcp26/
 		calc_periodmeans $SCENBEGIN $SCENEND $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
@@ -734,8 +734,10 @@ do
 			ifile_hist=${ofilelist_hist[$i]}
 			ifile_rcp26=${ofilelist_rcp26[$i]}
 			ifile_rcp45=${ofilelist_rcp45[$i]}
-			ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
-			ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
+			#ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
+			#ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
+			ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/.nc4/minus${REFBEGIN}-${REFEND}.nc4/`
+			ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/.nc4/minus${REFBEGIN}-${REFEND}.nc4/`
 
 			echo "Index $i"
 			echo "	ifile_hist:        $(basename $ifile_hist)"
@@ -750,25 +752,9 @@ do
 			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_minus_hist
 
 		done
+	exit
 	done
 	# ------------------------------------------ #
-	exit
-
-	# ### 3DBC
-	# echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
-
-	# #HIST
-	# calc_indices $IFILEDIR_3DBC/$RCM/$VAR/hist/ 
-	# ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
-
-	# #RCP2.6
-	# calc_indices $IFILEDIR_3DBC/$RCM/$VAR/rcp26/
-	# ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
-
-	# # RCP4.5
-	# calc_indices $IFILEDIR_3DBC/$RCM/$VAR/rcp45/
-	# ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
-
 done
 
 
@@ -801,16 +787,11 @@ done
 
 # done   # Done looping over percentiles: 10,25,50,75,90
 
-#done
 
 
 echo "Add this when you have double-checked rm tmp/$USER/mergetime*"
 
 #return to starting dir
 cd $CURRDIR
-
-
-
-
 echo -ne "\n=====\nDone!\n"
 #---------------------------------------------------#
