@@ -4,44 +4,83 @@
 set -e #exit on error
 
 
+#---------------------------------------------------#
+#### DESCRIPTION OF SCRIPT ####
 ## Script to calculate annual and seasonal values for various indices from the bias-adjusted RCM data
-#
 # EQM and 3DBC
 # Hist, rcp26 and rcp45 so far, ssp3.70 to follow
 #
-# Call: ./calc_generalised_indices.sh --var VAR --refbegin 1991 --refend 2020 --scenbegin 2071 --scenend 2100 --rcm modelA modelB modelC etc.
+## Call: 
+#  ./calc_generalised_indices.sh --var VAR --refbegin 1991 --refend 2020 --scenbegin 2071 --scenend 2100 --rcm modelA modelB modelC etc.
 #  where VAR is one of hurs, pr, ps, rlds, rsds, sfcWind, tas, tasmax; later also mrro (runoff), swe (snow), esvpbls (evapotranspiration), soilmoist (soil moisture deficit)
 #  and reference and scenario begin and end years are set using the corresponding arguments.
-#  A selection of RCMs can be made using --rcm followed by a list of RCMs separated by spaces (not working yet).
+#  A selection of RCMs can be made using --rcm followed by a list of RCMs separated by comma (no space between).
 #  For additional status messages you may use --verbose.
-# Output from tas is cdd (cooling days) and tas_monmean
-# Output from tasmax is dtr, dzc, fd, norheatwave, norsummer, summerdays, tasmax, tasmin, tropnight.  
 #
-# Run from workdir=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/ <- remember opening a screen terminal.
-# NOT workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/calc_gen_indices # foreløpig: test_ibni
-# NOT workdir=/lustre/storeC-ext/users/kin2100/MET/monmeans_bc
-                   
-# Default values (used if not specified by the input arguments mentioned above):
-#rcmlist=all
-rcmlist=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # all
-refbegin=1996
-refend=1997 #2020
-scenbegin=2073
-scenend=2074 #2100
-verbose=0
+## Output:
+#  - from tas is cdd (cooling days) and tas_monmean
+#  - from tasmax is dtr, dzc, fd, norheatwave, norsummer, summerdays, tasmax, tasmin, tropnight.  
+#
+## Structure:
+#  (1) Global constants, including variables that can be changed by optional user arguments
+#  (2) Functions
+#  (3) Main script. 
+#---------------------------------------------------#
+
+
+#---------------------------------------------------#
+#### (1) GLOBAL CONSTANTS ####
+
+## PATHS ##:
+if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
+	echo ""
+	echo "Running from " $HOSTNAME
+	WORKDIR=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
+	IFILEDIR_EQM=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf
+	IFILEDIR_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
+	IFILEDIR_SENORGE=/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf
+	LANDMASK=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/kss2023_mask1km_norway.nc4 # from our github repo
+elif [ $HOSTNAME == "lustre" ]; then
+	echo ""
+	echo "Running from " $HOSTNAME
+	WORKDIR=/lustre/storeC-ext/users/kin2100/NVE/analyses/calc_indices/ #
+	IFILEDIR_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
+	IFILEDIR_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
+	#IFILEDIR_SENORGE=/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05 # <- check filepath! 
+	LANDMASK=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4
+else
+	echo ""
+	echo "Currently, the script can be run from hosts l-klima-app05 (NVE) and lustre (MET)."
+	echo "Please change host to one of the two, and re-run the script."
+	exit
+fi
+CURRDIR=$PWD #Save current path for return point
+
+echo "Current directory: " $CURRDIR
+echo "Working directory: " $WORKDIR
+
+
+## CONSTANTS THAT CAN BE USER INPUT ##
+# Default values (used if not specified by the input arguments):
+RCMLIST=`ls $IFILEDIR_EQM` # list of RCMs (available for EQM). Can also be hard coded, e.g. RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm")
+REFBEGIN=1996  #1991
+REFEND=1997    #2020
+SCENBEGIN=2073 #2071
+SCENEND=2074   #2100
+VERBOSE=0
 VAR=tas
 
+# Change values based on user input:
 args=( )
-
 while (( $# )); do
 	case $1 in
 		--var)       VAR=$2 ;;
-		--refbegin)  refbegin=$2 ;;
-		--refend)    refend=$2 ;;
-		--scenbegin) scenbegin=$2 ;;
-		--scenend)   scenend=$2 ;;
-		--rcm)  rcmlist=$(echo $2 | tr ',' '\n'); rcmlist=($rcmlist);; # change from comma to space as separator
-		--verbose)   verbose=1 ;;
+		--refbegin)  REFBEGIN=$2 ;;
+		--refend)    REFEND=$2 ;;
+		--scenbegin) SCENBEGIN=$2 ;;
+		--scenend)   SCENEND=$2 ;;
+		--rcm)  RCMLIST=$(echo $2 | tr ',' '\n'); RCMLIST=($RCMLIST);; # change from comma to space as separator
+		--verbose)   VERBOSE=1 ;;
 		-*) printf 'Unknown option: %q\n\n' "$1"
 			exit 1 ;; # Aborts when called with unsupported arguments.
 		*)  args+=( "$1" ) ;;
@@ -49,23 +88,23 @@ while (( $# )); do
 	shift
 done
 
-echo ${rcmlist[@]} # all
-#echo ${rcmlist[0]}
-#echo ${rcmlist[-1]}
-
-
-if [ $verbose -eq 1 ]; then
-	echo "rcmlist" $rcmlist
-	echo "refbegin" $refbegin
-	echo "refend" $refend
-	echo "scenbegin" $scenbegin
-	echo "scenend" $scenend
+if [ $VERBOSE -eq 1 ]; then
+	echo "RCMLIST:   " ${RCMLIST[@]} # first and last are ${RCMLIST[0]} and ${RCMLIST[-1]}
+	echo "REFBEGIN:  " $REFBEGIN
+	echo "REFEND:    " $REFEND
+	echo "SCENBEGIN: " $SCENBEGIN
+	echo "SCENEND:   " $SCENEND
 fi
+#---------------------------------------------------#
 
-# ProgressBar function (from https://github.com/fearside/ProgressBar/)
-# to show the current progress while running
-# Input is currentState($1) and totalState($2)
+
+#---------------------------------------------------#
+#### (2) FUNCTIONS ####
+
 function ProgressBar {
+	# ProgressBar function (from https://github.com/fearside/ProgressBar/)
+	# to show the current progress while running
+	# Input is currentState($1) and totalState($2)
 	# Process data
 	let _progress=(${1}*100/${2}*100)/100
 	let _done=(${_progress}*4)/10
@@ -80,7 +119,6 @@ function ProgressBar {
 	printf "\rProgress : [${_fill// /#}${_empty// /-}] ${_progress}%%"
 }
 
-# Scroll down below (all functions) to see the main script. 
 
 function get_filenamestart {
     # Function to remove year and fileformat of filename
@@ -101,7 +139,7 @@ function calc_indices {       # call this function with one input argument: file
 
     # on the form /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/
     # or          /hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf/cnrm-r1i1p1-aladin/tas/rcp26/ 
-    # I tried adding two input arguments:  filedir and $landmask, but that did not work.
+    # I tried adding two input arguments:  filedir and $LANDMASK, but that did not work.
     local count=0
     local filedir=$1
     
@@ -110,13 +148,13 @@ function calc_indices {       # call this function with one input argument: file
     # filelist=`ls $1/$VAR*`   # testing senorge ls senorgepath/tx*
     # lists files on the form $RCM_rcp26_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_2100.nc4
     #local nbrfiles=`echo $filelist | wc -w`
-    let nbrfiles=$(( $refend-$refbegin+1 ))
+    let nbrfiles=$(( $REFEND-$REFBEGIN+1 ))
     echo $nbrfiles
-    #    $filedir_EQM/$RCM/$VAR/hist/
+    #    $IFILEDIR_EQM/$RCM/$VAR/hist/
         
     echo "Processing " $1
     # echo "Processing " $nbrfiles " files"
-    # echo "Landmask = " $landmask
+    # echo "LANDMASK = " $LANDMASK
     
 
     
@@ -125,11 +163,11 @@ function calc_indices {       # call this function with one input argument: file
     echo $scenario
     
     if [ $scenario == "hist" ]; then # | [ $period == "senorge" ]
-		firstyear=$refbegin
-		lastyear=$refend
+		firstyear=$REFBEGIN
+		lastyear=$REFEND
     elif [ $scenario == "rcp26" ] || [ $scenario == "rcp45" ]; then
-		firstyear=$scenbegin
-		lastyear=$scenend
+		firstyear=$SCENBEGIN
+		lastyear=$SCENEND
     else
 		echo "check if you are computing the right thing."
     fi
@@ -137,7 +175,7 @@ function calc_indices {       # call this function with one input argument: file
 	ofilestartlist=""
 	
     for yyyy in $( seq $firstyear $lastyear )   # list chosen years. NOTE: this only takes in the reference period.
-    #    for yyyy in $( seq $refbegin $refend ; seq $scenbegin $scenend )   # list chosen years.
+    #    for yyyy in $( seq $REFBEGIN $REFEND ; seq $SCENBEGIN $SCENEND )   # list chosen years.
     do
 		file=`ls "$1"/*$yyyy.nc4`      # cannot be "local".
 		local file=`basename $file`                   
@@ -150,7 +188,7 @@ function calc_indices {       # call this function with one input argument: file
 		# ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
 		# files by using this line of code in the if sentence below:
 		# Monthly mean of $VAR (no space to save this for all variables and models)	 
-		# cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean
+		# cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean
 
 
 
@@ -184,16 +222,16 @@ function calc_indices {       # call this function with one input argument: file
 			# ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`
 
 	 
-			# I guess it would make sense to crop the domain to mainland Norway before processing? I've added "-ifthen $landmask" in the lines below.
-			# Are there better ways to crop to the landmask? This is what "ifthen $landmask" does:
-			# cdo ifthen $landmask $filedir/$file '$filedir/$file_mainland_norway.nc4' 
+			# I guess it would make sense to crop the domain to mainland Norway before processing? I've added "-ifthen $LANDMASK" in the lines below.
+			# Are there better ways to crop to the landmask? This is what "ifthen $LANDMASK" does:
+			# cdo ifthen $LANDMASK $filedir/$file '$filedir/$file_mainland_norway.nc4' 
 
 			# vekstsesongens lengde, Mean annual growing season (days>=5C). Merk at senorge er i degC, derfor terskel på 5, ikke 278.15.
 			# mkdir -p "./senorge/growing/"                                                           # Testing senorge
 			# echo "Ofile_growing=" ."/senorge/growing/"$ofile_growing
-			# cdo timsum -gec,5 -ifthen $landmask $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
+			# cdo timsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
 			# trenger ikke månedsverdier:
-			# cdo monsum -gec,5 -ifthen $landmask $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
+			# cdo monsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
 
 			#ncatted -O -a standard_name,tg,o,c,"spell_length_of_days_with_air_temperature_above_threshold" ."/senorge/growing/"$ofile_growing
 			#ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
@@ -207,7 +245,7 @@ function calc_indices {       # call this function with one input argument: file
 				echo $ofile_tas_annual
 				pwd
 
-				cdo timmean   -ifthen $landmask $filedir/$file  ./$RCM/$VAR/$ofile_tas_annual
+				cdo timmean   -ifthen $LANDMASK $filedir/$file  ./$RCM/$VAR/$ofile_tas_annual
 
 				ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_annual
 				## ncrename -v tas,annual_avg_air_temperature ./$RCM/$VAR/$ofile_tas_annual ./$RCM/$VAR/$ofile_tas_annual
@@ -219,7 +257,7 @@ function calc_indices {       # call this function with one input argument: file
 			fi
 	    
  			if ! [ -f ./$RCM/$VAR/$ofile_tas_seasonal ]; then
-				cdo -L yseasmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
+				cdo -L yseasmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
 				ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal
 				## ncrename -v tas,seasonal_avg_air_temperature ./$RCM/$VAR/$ofile_tas_seasonal ./$RCM/$VAR/$ofile_tas_seasonal	 
 			else
@@ -233,14 +271,14 @@ function calc_indices {       # call this function with one input argument: file
 		# Denne er tricky fordi den skal beregnes fra en glattet kurve.
 		# Fra dynamisk dokument: "Midlere vekstsesong i 30-års perioder gjøres utfra glattet kurve for temperaturutvikling gjennom året." 
 		# den også tar inn filbane til landmaske. Og den skjønner ikke at jeg prøver å gi den to inputargumenter.
-		# cdo eca_gsl $file $landmask -gec,20 $file $RCM/$VAR/$ofile_gsl
+		# cdo eca_gsl $file $LANDMASK -gec,20 $file $RCM/$VAR/$ofile_gsl
 
 		# vinter- og sommersesong inn her?
 
 		# Avkjølingsgraddager, cooling days
 		# Antall dager med TAM>=22 (gec) over året
 
-		#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_cdd
+		#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
 		#ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
 		#ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
@@ -273,22 +311,22 @@ function calc_indices {       # call this function with one input argument: file
 			local ofile_summerd=`echo $ofile | sed s/tasmax/summerd/`
 
 
-			# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$refbegin'-'$refend'.nc'     ./$RCM'/land_tasmax'
-			# cdo ifthen $landmask -monmean ./$RCM/'/mergetime_norheatwave_'$refbegin'-'$refend'.nc'     ./$RCM'/land_norheatwave'
+			# cdo ifthen $LANDMASK -monmean ./$RCM/'/mergetime_norheatwave_'$REFBEGIN'-'$REFEND'.nc'     ./$RCM'/land_tasmax'
+			# cdo ifthen $LANDMASK -monmean ./$RCM/'/mergetime_norheatwave_'$REFBEGIN'-'$REFEND'.nc'     ./$RCM'/land_norheatwave'
 				
 	 
 			# Annual and seasonal mean of $VAR
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmax_annual ]; then   # check if the file exists
-				cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tasmax_annual
+				cdo timmean                -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_tasmax_annual
 				# flytt metadata hit når de er klare?
 			fi
 	 
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmax_seasonal ]; then   # check if the file exists
 
-				cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-				cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-				cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-				cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+				cdo timmean -selmon,12,1,2 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+				cdo timmean -selmon,3/5    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+				cdo timmean -selmon,6/8    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+				cdo timmean -selmon,9/11   -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"SONmean.nc"
 
 				cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
 				rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc"
@@ -296,7 +334,7 @@ function calc_indices {       # call this function with one input argument: file
 			fi
 	 
 			# Monthly mean of $VAR (no space to save this for all variables and models)	 
-			# cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
+			# cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
 
 			# Read in tasmin
 			local ifileN=`echo $file | sed s/tasmax/tasmin/`
@@ -310,23 +348,23 @@ function calc_indices {       # call this function with one input argument: file
 
 			# Annual and seasonal mean of $VAR
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmin_annual ]; then   # check if the file exists
-				cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tasmin_annual
+				cdo timmean                -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_tasmin_annual
 				# flytt metadata hit når de er klare?
 			fi
 	 
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmin_seasonal ]; then   # check if the file exists
 	     
-				#cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
+				#cdo timmean                -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
 
-				cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-				cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-				cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-				cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+				cdo timmean -selmon,12,1,2 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+				cdo timmean -selmon,3/5    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+				cdo timmean -selmon,6/8    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+				cdo timmean -selmon,9/11   -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"SONmean.nc"
 				cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
 				rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc"
 
 				# Monthly mean of $VAR (no space to save this for all variables and models)
-				# cdo -s monmean -ifthen $landmask $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
+				# cdo -s monmean -ifthen $LANDMASK $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
 				echo "Tasmin: done"
 				# flytt metadata hit når de er klare?
 			fi
@@ -342,7 +380,7 @@ function calc_indices {       # call this function with one input argument: file
 				#ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`
 
 				echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
-				cdo sub -ifthen $landmask $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
+				cdo sub -ifthen $LANDMASK $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
 			fi
 
 	 	 
@@ -352,7 +390,7 @@ function calc_indices {       # call this function with one input argument: file
 				local ofile_dzc_annual=`echo $ofile | sed s/tasmax/dzc_annual-mean/`
 				local ofile_dzc_seasonal=`echo $ofile | sed s/tasmax/dzc_seasonal-mean/`	 
 				echo "Ofile_dzc=" $RCM"/dzc/"$ofile_dzc	 
-				cdo monsum -mul -ltc,273.15 -ifthen $landmask $ifiledirN/$ifileN -gtc,273.15 -ifthen $landmask $filedir/$file ./$RCM/dzc/$ofile_dzc
+				cdo monsum -mul -ltc,273.15 -ifthen $LANDMASK $ifiledirN/$ifileN -gtc,273.15 -ifthen $LANDMASK $filedir/$file ./$RCM/dzc/$ofile_dzc
 			fi
 
 
@@ -360,7 +398,7 @@ function calc_indices {       # call this function with one input argument: file
 			if ! [ -f ./$RCM/$VAR/$ofile_fd ]; then   # check if the file exists
 				mkdir -p $RCM/fd/
 				echo "Ofile_fd=" $RCM"/fd/"$ofile_fd
-				cdo monsum -ltc,273.15 -ifthen $landmask $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
+				cdo monsum -ltc,273.15 -ifthen $LANDMASK $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
 			fi
 	 
 	 
@@ -368,28 +406,28 @@ function calc_indices {       # call this function with one input argument: file
 			if ! [ -f ./$RCM/$VAR/$ofile_tropnight ]; then   # check if the file exists
 				mkdir -p $RCM/tropnight/
 				echo "Ofile_tropnight=" $RCM"/tropnight/"$ofile_tropnight
-				cdo -s monsum -gec,293.15 -ifthen $landmask $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
+				cdo -s monsum -gec,293.15 -ifthen $LANDMASK $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
 			fi
 	 
 			# Nordiske sommerdager # over 20 grader
 			if ! [ -f ./$RCM/$VAR/$ofile_norsummer ]; then   # check if the file exists
 				mkdir -p  $RCM/norsummer/
 				echo "Ofile_norsummer=" $RCM"/norsummer/"$ofile_norsummer	 	 
-				cdo monsum -gec,293.15 -ifthen $landmask $filedir/$file ./$RCM/norsummer/$ofile_norsummer
+				cdo monsum -gec,293.15 -ifthen $LANDMASK $filedir/$file ./$RCM/norsummer/$ofile_norsummer
 			fi
 
 			# Nordiske sommerdager # over 25 grader
 			if ! [ -f ./$RCM/$VAR/$ofile_summerdays ]; then   # check if the file exists
 				mkdir -p  $RCM/summerdays/	 
 				echo "Ofile_summerdays=" $RCM"/summerdays/"$ofile_summerdays 	 
-				cdo monsum -gec,298.15 -ifthen $landmask $filedir/$file ./$RCM/summerdays/$ofile_summerdays
+				cdo monsum -gec,298.15 -ifthen $LANDMASK $filedir/$file ./$RCM/summerdays/$ofile_summerdays
 			fi
 	 
 			# norsk hetebølge # over 27 grader
 			#ofile_norheatwave=`echo $ofile | sed s/tasmax/norheatwave/`
 			if ! [ -f ./$RCM/$VAR/$ofile_norheatwave ]; then   # check if the file exists
 				mkdir -p $RCM/norheatwave/
-				cdo monsum -gec,300.15 -runmean,5 -ifthen $landmask $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
+				cdo monsum -gec,300.15 -runmean,5 -ifthen $LANDMASK $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
 				echo "norsk hetebølge: done"
 			fi    
 
@@ -456,21 +494,21 @@ function calc_indices {       # call this function with one input argument: file
 
 			# Annual and seasonal mean of $VAR
 			if ! [ -f ./$RCM/$VAR/$ofile_pr_annual ]; then   # check if the file exists
-				cdo timmean                -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_annual
+				cdo timmean                -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr_annual
 
 			fi
 
 			if ! [ -f ./$RCM/$VAR/$ofile_pr_seasonal ]; then   # check if the file exists
 	     
-				cdo timmean -selmon,12,1,2 -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_DJFsum
-				cdo timmean -selmon,3/5    -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_MAMsum
-				cdo timmean -selmon,6/8    -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_JJAsum
-				cdo timmean -selmon,9/11   -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_SONsum
+				cdo timmean -selmon,12,1,2 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr_DJFsum
+				cdo timmean -selmon,3/5    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr_MAMsum
+				cdo timmean -selmon,6/8    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr_JJAsum
+				cdo timmean -selmon,9/11   -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr_SONsum
 
 			fi
 	 
 			# Monthly sum of $VAR (no space to save this for all variables and models)
-			#cdo -s monsum -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
+			#cdo -s monsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
 			## cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_pr_monmean	 
 
 			#ncatted -O -a short_name,pr,o,c,"pr_monsum" 	        ./$RCM/$VAR/$ofile_pr_monsum
@@ -485,7 +523,7 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 ofile_hurs_monmean=`echo $ofile | sed s/hurs/hurs_monmean/`	 
 
 			# 	 # Monthly mean av hurs
-			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_hurs_monmean	 
+			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_hurs_monmean	 
 
 			# 	 ncatted -O -a short_name,hurs,o,c,"hurs_monmean" 		                ./$RCM/$VAR/$ofile_hurs_monmean	 
 			# 	 ncatted -O -a units,hurs,o,c,"W m-2" 		                        ./$RCM/$VAR/$ofile_hurs_monmean
@@ -498,7 +536,7 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 ofile_rlds_monmean=`echo $ofile | sed s/rlds/rlds_monmean/`	 
 			
 			# 	 # Monthly mean av rlds
-			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_rlds_monmean	 
+			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_rlds_monmean	 
 			
 			# 	 ncatted -O -a short_name,rlds,o,c,"rlds_monmean"                  	        ./$RCM/$VAR/$ofile_rlds_monmean	 
 			# 	 ncatted -O -a units,rlds,o,c,"W m-2" 		                        ./$RCM/$VAR/$ofile_rlds_monmean
@@ -511,7 +549,7 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 ofile_rsds_monmean=`echo $ofile | sed s/rsds/rsds_monmean/`	 
 			
 			# 	 # Monthly mean av rsds
-			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_rsds_monmean	 
+			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_rsds_monmean	 
 			
 			# 	 ncatted -O -a short_name,rsds,o,c,"rsds_monmean"         ./$RCM/$VAR/$ofile_rsds_monmean	 
 			# 	 ncatted -O -a units,rsds,o,c,"%"                         ./$RCM/$VAR/$ofile_rsds_monmean
@@ -524,7 +562,7 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 ofile_ps_monmean=`echo $ofile | sed s/ps/ps_monmean/`	 
 			
 			# 	 # Monthly mean av ps
-			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_ps_monmean	 
+			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_ps_monmean	 
 			
 			# 	 ncatted -O -a short_name,ps,o,c,"ps_monmean" 		./$RCM/$VAR/$ofile_ps_monmean	 
 			# 	 ncatted -O -a units,ps,o,c,"Pa" 		        ./$RCM/$VAR/$ofile_ps_monmean
@@ -538,7 +576,7 @@ function calc_indices {       # call this function with one input argument: file
 			# 	 ofile_sfcWind_monmean=`echo $ofile | sed s/sfcWind/sfcWind_monmean/`	 
 			
 			# 	 # Monthly mean av sfcWind
-			#    cdo -s monmean -ifthen $landmask $filedir/$file ./$RCM/$VAR/$ofile_sfcWind_monmean	 
+			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_sfcWind_monmean	 
 			
 			# 	 ncatted -O -a short_name,sfcWind,o,c,"sfcWind_monmean" ./$RCM/$VAR/$ofile_sfcWind_monmean	 
 			# 	 ncatted -O -a units,sfcWind,o,c,"m s-1" 		./$RCM/$VAR/$ofile_sfcWind_monmean
@@ -560,8 +598,8 @@ function calc_indices {       # call this function with one input argument: file
 
 function calc_periodmeans {
     # This function do mergetime and timmean over all selected years for annual indices. It needs several arguments in correct order:
-    #   $1 = reffbegin or scenbegin
-    #   $2 = refend or scenend
+    #   $1 = reffbegin or SCENBEGIN
+    #   $2 = REFEND or SCENEND
     #   $remaining = list of each substring common for all files for multiple years for which timmean should be computed
     #       A substring can be e.g. "cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_" (where the year and .nc(4) is removed)
     echo ""
@@ -574,8 +612,8 @@ function calc_periodmeans {
     local yeararray=($yearlist)
 
     local ifilestartlist=${@:3}
-    local ipath=$workdir/$RCM/$VAR/
-    local opath=$workdir/tmp/$USER/$RCM/$VAR/
+    local ipath=$WORKDIR/$RCM/$VAR/
+    local opath=$WORKDIR/tmp/$USER/$RCM/$VAR/
     mkdir -p $opath
     
 	ofilelist=""
@@ -600,105 +638,76 @@ function calc_periodmeans {
     echo ""
 
 } 
+#---------------------------------------------------#
 
-### Main script
-#Save current dir for return point
-currdir=$PWD
-echo "Current directory" $currdir
-echo "Workdir directory" $workdir
+#---------------------------------------------------#
+#### (3) Main script ####
 
-#Check provision of varname
+
+## Check provision of varname
 if [ -z "$VAR" ]; then
 	echo "Error: No variable specified! Add using --var varname."
 	exit 1
 fi
 
-
-
-if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
-	echo ""
-	echo "Running from " $HOSTNAME
-	workdir=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
-	filedir_EQM=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf
-	filedir_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
-	filedir_senorge=/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf
-	landmask=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/kss2023_mask1km_norway.nc4 # from our github repo
-elif [ $HOSTNAME == "lustre" ]; then
-	echo ""
-	echo "Running from " $HOSTNAME
-	workdir=/lustre/storeC-ext/users/kin2100/NVE/analyses/calc_indices/ #
-	filedir_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
-	filedir_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
-	#filedir_senorge=/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05 # <- check filepath! 
-	landmask=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4
-    
-fi
-
-
-echo "Workdir directory" $workdir
-#go to working dir
-mkdir -p $workdir
-cd $workdir
-
+## Make working directory and directory for temporary file if not already exist 
+mkdir -p $WORKDIR
 mkdir -p tmp/$USER
+
+## Go to working dir
+cd $WORKDIR
+
+
 ### seNorge 2018 v20.05
 # For the historical period (DP1), we need to process seNorge data. # Testing senorge
-# calc_indices $filedir_senorge        # files on the form tg_senorge2018_1957.nc or senorge2018_RR_1957.nc
+# calc_indices $IFILEDIR_SENORGE        # files on the form tg_senorge2018_1957.nc or senorge2018_RR_1957.nc
 
   
-#get list of RCMs
-#RCMLIST=`ls $filedir_EQM`
-#RCMLIST=`ls /lustre/storeC-ext/users/kin2100/NVE/EQM/`
-
-echo "Found the following RCMs:"
-echo ${rcmlist[@]}
-#echo $RCMLIST | tr " " "\n"
-echo -ne "======================"
 
 echo "Check if index files have already been created before computing indices (if needed)."
 
 if [ $VAR == "tas" ] || [ $VAR == "pr" ]; then
-	last_output_file=$workdir'/'${rcmlist[${#rcmlist[@]} - 1]}'/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_annual-mean_2098.nc4'
-	#last_output_file=$workdir'/cnrm-r1i1p1-aladin/'$VAR'/cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1961.nc4' #<-first 
-	#last_input_file=$filedir_3DBC'/noresm-r1i1p1-remo/'$VAR'/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_2098.nc4'
+	last_output_file=$WORKDIR'/'${RCMLIST[${#RCMLIST[@]} - 1]}'/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_annual-mean_2098.nc4'
+	#last_output_file=$WORKDIR'/cnrm-r1i1p1-aladin/'$VAR'/cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1961.nc4' #<-first 
+	#last_input_file=$IFILEDIR_3DBC'/noresm-r1i1p1-remo/'$VAR'/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_2098.nc4'
 	echo ""   # Blank line (or print $last_output_file)
 	# NOTE: I have tried replacing noresm with ${RCMLIST[9]}, but ALL RCMs are contained in ${RCMLIST[0]}, for some reason...
 elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then
-	last_output_file=$workdir'/noresm-r1i1p1-remo/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_2098.nc4'
+	last_output_file=$WORKDIR'/noresm-r1i1p1-remo/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_2098.nc4'
 	# eller tasmax_annual-mean
-	#last_input_file=$filedir_3DBC'/noresm-r1i1p1-remo/dtr/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_daily_2098.nc4'
+	#last_input_file=$IFILEDIR_3DBC'/noresm-r1i1p1-remo/dtr/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_daily_2098.nc4'
 else
 	echo "This if clause must be extended with the chosen variable."
 fi
 
 
 
-for RCM in $rcmlist  #$RCMLIST
+for RCM in $RCMLIST  #$RCMLIST
 do
 	### EQM
 	echo -ne "\n\nProcessing" $RCM "EQM" $VAR "\n"
 	mkdir -p $RCM/$VAR
 
 	#HIST
-	calc_indices $filedir_EQM/$RCM/$VAR/hist/
-	calc_periodmeans $refbegin $refend $ofilestartlist # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+	calc_indices $IFILEDIR_EQM/$RCM/$VAR/hist/
+	calc_periodmeans $REFBEGIN $REFEND $ofilestartlist # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
 	ofilelist_hist=($ofilelist)
 	echo "done hist period means"
 
-	#calc_indices $filedir_EQM_hist
+	#calc_indices $IFILEDIR_EQM_hist
 	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
 
 	#RCP2.6
-	calc_indices $filedir_EQM/$RCM/$VAR/rcp26/
-	calc_periodmeans $scenbegin $scenend $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+	calc_indices $IFILEDIR_EQM/$RCM/$VAR/rcp26/
+	calc_periodmeans $SCENBEGIN $SCENEND $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
 	ofilelist_rcp26=($ofilelist)
 	echo ""
 	echo "done rcp2.6 period means"
 	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
 
 	#RCP4.5
-	calc_indices $filedir_EQM/$RCM/$VAR/rcp45/
-	calc_periodmeans $scenbegin $scenend $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+	calc_indices $IFILEDIR_EQM/$RCM/$VAR/rcp45/
+	calc_periodmeans $SCENBEGIN $SCENEND $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
 	ofilelist_rcp45=($ofilelist)
 	echo ""
 	echo "done rcp4.5 period means"
@@ -712,8 +721,8 @@ do
 		ifile_hist=${ofilelist_hist[$i]}
 		ifile_rcp26=${ofilelist_rcp26[$i]}
 		ifile_rcp45=${ofilelist_rcp45[$i]}
-		ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/_periodmean/_periodmean_minus_hist${refbegin}-${refend}_periodmean/`
-		ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/_periodmean/_periodmean_minus_hist${refbegin}-${refend}_periodmean/`
+		ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
+		ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
 
 		echo "Index $i"
 		echo "	ifile_hist:        $(basename $ifile_hist)"
@@ -735,15 +744,15 @@ do
 	echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
 
 	#HIST
-	calc_indices $filedir_3DBC/$RCM/$VAR/hist/ 
+	calc_indices $IFILEDIR_3DBC/$RCM/$VAR/hist/ 
 	##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
 
 	#RCP2.6
-	calc_indices $filedir_3DBC/$RCM/$VAR/rcp26/
+	calc_indices $IFILEDIR_3DBC/$RCM/$VAR/rcp26/
 	##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
 
 	# RCP4.5
-	calc_indices $filedir_3DBC/$RCM/$VAR/rcp45/
+	calc_indices $IFILEDIR_3DBC/$RCM/$VAR/rcp45/
 	##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
 
 done
@@ -757,7 +766,7 @@ done
 # Change the name of the file and the variable name as shown in ncview:
 # See filename convensions in the modelling protocol, chapter 7.6. https://docs.google.com/document/d/1V9RBqdqUrMOYqfMVwcSHRwWP57fiS3R8/edit
 # Note here that bias-baseline could be either "eqm-sn2018v2005" or "3dbc-eqm-sn2018v2005", depending on the bias-adjustment method.
-## ncrename -v tas,tas_annual-mean  $workdir/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$refbegin'-'$refend'.nc' $workdir/$RCM/$VAR/$RCM_$RCP_eqm-sn2018v2005_none_norway_1km_tas_annual-mean_'$refbegin'-'$refend'.nc'
+## ncrename -v tas,tas_annual-mean  $WORKDIR/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$REFBEGIN'-'$REFEND'.nc' $WORKDIR/$RCM/$VAR/$RCM_$RCP_eqm-sn2018v2005_none_norway_1km_tas_annual-mean_'$REFBEGIN'-'$REFEND'.nc'
 
 #ncrename -v tg,growing .'/senorge/growing/growing_30-yrmean_mgtim_1961-1990.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1961-1990.nc4'
 #ncrename -v tg,growing .'/senorge/growing/growing_30-yrmean_mgtim_1991-2000.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1991-2020.nc4'
@@ -784,9 +793,10 @@ done
 echo "Add this when you have double-checked rm tmp/$USER/mergetime*"
 
 #return to starting dir
-cd $PWD
+cd $CURRDIR
 
 
 
 
 echo -ne "\n=====\nDone!\n"
+#---------------------------------------------------#
