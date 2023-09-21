@@ -28,6 +28,7 @@ set -e #exit on error
 #---------------------------------------------------#
 
 
+
 #---------------------------------------------------#
 #### (1) GLOBAL CONSTANTS ####
 
@@ -88,7 +89,7 @@ while (( $# )); do
 	shift
 done
 
-## LISTS OF VALID ITEMS IN CONSTANTS THAT CAN BE USER INPUT##
+## LISTS OF VALID ITEMS IN CONSTANTS ##
 VALID_RCMS=`ls $IFILEDIR_EQM` # list of RCMs (available for EQM). Can also be hard coded, e.g. RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm")
 VALID_REFBEGINS=$( seq 1961 2020 )
 VALID_REFENDS=$( seq 1961 2020 )
@@ -97,6 +98,7 @@ VALID_SCENENDS=$( seq 2021 2100 )
 VALID_VARS="tas" # later: "hurs pr ps rlds rsds sfcWind tas tasmax mrro swe esvpbls soilmoist"
 
 #---------------------------------------------------#
+
 
 
 #---------------------------------------------------#
@@ -657,11 +659,12 @@ function calc_periodmeans {
 #---------------------------------------------------#
 
 
+
 #---------------------------------------------------#
 #### (3) Main script ####
 
 
-## If verbose given by user, print input ##
+## If --verbose given by user, print input ##
 if [ $VERBOSE -eq 1 ]; then
 	echo "RCMLIST:   " ${RCMLIST[@]} # first and last are ${RCMLIST[0]} and ${RCMLIST[-1]}
 	echo "REFBEGIN:  " $REFBEGIN
@@ -694,25 +697,6 @@ exit
 # For the historical period (DP1), we need to process seNorge data. # Testing senorge
 # calc_indices $IFILEDIR_SENORGE        # files on the form tg_senorge2018_1957.nc or senorge2018_RR_1957.nc
 
-  
-
-echo "Check if index files have already been created before computing indices (if needed)."
-
-if [ $VAR == "tas" ] || [ $VAR == "pr" ]; then
-	last_output_file=$WORKDIR'/'${RCMLIST[${#RCMLIST[@]} - 1]}'/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_annual-mean_2098.nc4'
-	#last_output_file=$WORKDIR'/cnrm-r1i1p1-aladin/'$VAR'/cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1961.nc4' #<-first 
-	#last_input_file=$IFILEDIR_3DBC'/noresm-r1i1p1-remo/'$VAR'/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_'$VAR'_daily_2098.nc4'
-	echo ""   # Blank line (or print $last_output_file)
-	# NOTE: I have tried replacing noresm with ${RCMLIST[9]}, but ALL RCMs are contained in ${RCMLIST[0]}, for some reason...
-elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then
-	last_output_file=$WORKDIR'/noresm-r1i1p1-remo/'$VAR'/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_2098.nc4'
-	# eller tasmax_annual-mean
-	#last_input_file=$IFILEDIR_3DBC'/noresm-r1i1p1-remo/dtr/rcp45/noresm-r1i1p1-remo_rcp45_3dbc-eqm-sn2018v2005_rawbc_norway_1km_dtr_daily_2098.nc4'
-else
-	echo "This if clause must be extended with the chosen variable."
-fi
-
-
 
 for RCM in $RCMLIST  #$RCMLIST
 do
@@ -733,7 +717,6 @@ do
 	calc_indices $IFILEDIR_EQM/$RCM/$VAR/rcp26/
 	calc_periodmeans $SCENBEGIN $SCENEND $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
 	ofilelist_rcp26=($ofilelist)
-	echo ""
 	echo "done rcp2.6 period means"
 	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
 
@@ -741,7 +724,6 @@ do
 	calc_indices $IFILEDIR_EQM/$RCM/$VAR/rcp45/
 	calc_periodmeans $SCENBEGIN $SCENEND $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
 	ofilelist_rcp45=($ofilelist)
-	echo ""
 	echo "done rcp4.5 period means"
 	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/
 
