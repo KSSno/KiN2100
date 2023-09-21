@@ -119,6 +119,7 @@ function list_include_item {
 	fi
 }
 
+
 function ProgressBar {
 	# ProgressBar function (from https://github.com/fearside/ProgressBar/)
 	# to show the current progress while running
@@ -614,6 +615,7 @@ function calc_indices {       # call this function with one input argument: file
    
 }                    # end function calc_indices
 
+
 function calc_periodmeans {
     # This function do mergetime and timmean over all selected years for annual indices. It needs several arguments in correct order:
     #   $1 = reffbegin or SCENBEGIN
@@ -686,12 +688,12 @@ done
 echo "Accepted all (default and user) inputs of rcms, periods and variables. Proceed"
 
 
-## Make working directory, go there, and make directory for temporary files if not already exist ## 
+## Make working directory if not exists, go there, and make directory for temporary files if not exists ## 
 mkdir -p $WORKDIR
 cd $WORKDIR
 mkdir -p tmp/$USER
 
-exit
+
 
 ### seNorge 2018 v20.05
 # For the historical period (DP1), we need to process seNorge data. # Testing senorge
@@ -700,74 +702,72 @@ exit
 
 for RCM in $RCMLIST  #$RCMLIST
 do
-	### EQM
-	echo -ne "\n\nProcessing" $RCM "EQM" $VAR "\n"
-	mkdir -p $RCM/$VAR
-
-	#HIST
-	calc_indices $IFILEDIR_EQM/$RCM/$VAR/hist/
-	calc_periodmeans $REFBEGIN $REFEND $ofilestartlist # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
-	ofilelist_hist=($ofilelist)
-	echo "done hist period means"
-
-	#calc_indices $IFILEDIR_EQM_hist
-	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/hist/
-
-	#RCP2.6
-	calc_indices $IFILEDIR_EQM/$RCM/$VAR/rcp26/
-	calc_periodmeans $SCENBEGIN $SCENEND $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
-	ofilelist_rcp26=($ofilelist)
-	echo "done rcp2.6 period means"
-	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp26/
-
-	#RCP4.5
-	calc_indices $IFILEDIR_EQM/$RCM/$VAR/rcp45/
-	calc_periodmeans $SCENBEGIN $SCENEND $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
-	ofilelist_rcp45=($ofilelist)
-	echo "done rcp4.5 period means"
-	## calc_indices /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/rcp45/
-
-	# ---------- Computing difference ---------- #
-	echo ""
-	echo "EQM files: Computing change = scenario - historical"
-	for (( i=0; i<${#ofilelist_hist[@]}; i++ ))
+	for bias_path in $IFILEDIR_EQM $IFILEDIR_3DBC
 	do
-		ifile_hist=${ofilelist_hist[$i]}
-		ifile_rcp26=${ofilelist_rcp26[$i]}
-		ifile_rcp45=${ofilelist_rcp45[$i]}
-		ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
-		ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
+		echo -ne "\n\nProcessing" $RCM $VAR "in" $bias_path"\n"
+		mkdir -p $RCM/$VAR
 
-		echo "Index $i"
-		echo "	ifile_hist:        $(basename $ifile_hist)"
-		echo "	ifile_rcp2.6:      $(basename $ifile_rcp26)"
-		echo "	ofile_rcp2.6-hist: $(basename $ofile_rcp26_minus_hist)"
-		echo "	ofile_rcp4.5-hist: $(basename $ofile_rcp45_minus_hist)"
+		#HIST
+		calc_indices $bias_path/$RCM/$VAR/hist/
+		calc_periodmeans $REFBEGIN $REFEND $ofilestartlist # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+		ofilelist_hist=($ofilelist)
+		echo "done hist period means"
 
-		cdo sub $ifile_rcp26 $ifile_hist $ofile_rcp26_minus_hist
-		cdo sub $ifile_rcp45 $ifile_hist $ofile_rcp45_minus_hist
 
-		ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp26_minus_hist
-		ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_minus_hist
+		#RCP2.6
+		calc_indices $bias_path/$RCM/$VAR/rcp26/
+		calc_periodmeans $SCENBEGIN $SCENEND $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+		ofilelist_rcp26=($ofilelist)
+		echo "done rcp2.6 period means"
 
+		#RCP4.5
+		calc_indices $bias_path/$RCM/$VAR/rcp45/
+		calc_periodmeans $SCENBEGIN $SCENEND $ofilestartlist  # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+		ofilelist_rcp45=($ofilelist)
+		echo "done rcp4.5 period means"
+
+		# ---------- Computing difference ---------- #
+		echo ""
+		echo "Computing change = scenario - historical"
+		for (( i=0; i<${#ofilelist_hist[@]}; i++ ))
+		do
+			ifile_hist=${ofilelist_hist[$i]}
+			ifile_rcp26=${ofilelist_rcp26[$i]}
+			ifile_rcp45=${ofilelist_rcp45[$i]}
+			ofile_rcp26_minus_hist=`echo $ifile_rcp26 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
+			ofile_rcp45_minus_hist=`echo $ifile_rcp45 | sed s/_periodmean/_periodmean_minus_hist${REFBEGIN}-${REFEND}_periodmean/`
+
+			echo "Index $i"
+			echo "	ifile_hist:        $(basename $ifile_hist)"
+			echo "	ifile_rcp2.6:      $(basename $ifile_rcp26)"
+			echo "	ofile_rcp2.6-hist: $(basename $ofile_rcp26_minus_hist)"
+			echo "	ofile_rcp4.5-hist: $(basename $ofile_rcp45_minus_hist)"
+
+			cdo sub $ifile_rcp26 $ifile_hist $ofile_rcp26_minus_hist
+			cdo sub $ifile_rcp45 $ifile_hist $ofile_rcp45_minus_hist
+
+			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp26_minus_hist
+			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_minus_hist
+
+		done
 	done
 	# ------------------------------------------ #
 	exit
 
-	### 3DBC
-	echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
+	# ### 3DBC
+	# echo -ne "\n\nProcessing" $RCM "3DBC" $VAR "\n"
 
-	#HIST
-	calc_indices $IFILEDIR_3DBC/$RCM/$VAR/hist/ 
-	##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
+	# #HIST
+	# calc_indices $IFILEDIR_3DBC/$RCM/$VAR/hist/ 
+	# ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/hist/
 
-	#RCP2.6
-	calc_indices $IFILEDIR_3DBC/$RCM/$VAR/rcp26/
-	##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
+	# #RCP2.6
+	# calc_indices $IFILEDIR_3DBC/$RCM/$VAR/rcp26/
+	# ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp26/
 
-	# RCP4.5
-	calc_indices $IFILEDIR_3DBC/$RCM/$VAR/rcp45/
-	##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
+	# # RCP4.5
+	# calc_indices $IFILEDIR_3DBC/$RCM/$VAR/rcp45/
+	# ##calc_indices /lustre/storeC-ext/users/kin2100/MET/3DBC/application/$RCM/$VAR/rcp45/
 
 done
 
