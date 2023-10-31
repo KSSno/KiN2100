@@ -8,7 +8,7 @@ set -e #exit on error
 #### DESCRIPTION OF SCRIPT ####
 ## Script to calculate annual and seasonal values for various indices from the bias-adjusted RCM data
 # EQM and 3DBC
-# Hist, rcp26 and rcp45 so far, ssp3.70 to follow
+# Hist, rcp26 and rcp45 so far, ssp3-7.0 and seNorge to follow
 #
 ## Call: 
 #  ./calc_generalised_indices.sh --var VAR --refbegin 1991 --refend 2020 --scenbegin 2071 --scenend 2100 --rcm modelA,modelB,modelC,etc.
@@ -17,9 +17,10 @@ set -e #exit on error
 #  A selection of RCMs can be made using --rcm followed by a list of RCMs separated by comma (no space between).
 #  For additional status messages you may use --verbose.
 #
-## Output:
-#  - from tas is cdd (cooling days) and tas_monmean
-#  - from tasmax is dtr, dzc, fd, norheatwave, norsummer, summerdays, tasmax, tasmin, tropnight.  
+## Output indices:
+#  - from tas: tas_annual_mean, tas_seaonal_mean, and more 
+#  - from tasmax: more to come (dtr, dzc, fd, norheatwave, norsummer, summerdays, tasmax, tasmin, tropnight).  
+#  - from tasmin: same as tasmax
 #
 ## Structure:
 #  (1) Global constants, including variables that can be changed by optional user arguments
@@ -178,7 +179,7 @@ function calc_indices {       # call this function with one input argument: file
 
     
 
-    local scenario=`basename $1`   #extract characters  
+    local scenario=`basename $1`
     echo $scenario
     
     if [ $scenario == "hist" ]; then # | [ $period == "senorge" ]
@@ -220,7 +221,7 @@ function calc_indices {       # call this function with one input argument: file
 			local ofile_tas_seasonal=`echo $ofile | sed s/tas/tas_seasonal-mean/` # orig. Roll back to this.
 			local ofile_cdd=`echo $ofile | sed s/tas/cdd/`                        # orig. Roll back to this.
 			local ofile_gsl=`echo $ofile | sed s/tas/gsl/`                        # orig. Roll back to this. 
-			#-# NEW INDEX? Add line (as above) here #-#
+			#-# NEW INDEX from tas? Add line (as above) here #-#
 
 			#ofile_tas_annual=`echo $ofile | sed s/tg/tg_annual-mean/`      # Testing senorge
 			#ofile_tas_seasonal=`echo $ofile | sed s/tg/tg_seasonal-mean/`  # Testing senorge 
@@ -234,7 +235,7 @@ function calc_indices {       # call this function with one input argument: file
 				get_filenamestart $ofile_tas_seasonal $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
 
-				#-# NEW INDEX? Add two lines (as above) here #-#
+				#-# NEW INDEX from tas? Add two lines (as above) here #-#
 			fi
 
 	 
@@ -683,12 +684,16 @@ mkdir -p tmp/$USER
 
 
 
-### seNorge 2018 v20.05
-# For the historical period (DP1), we need to process seNorge data. # Testing senorge
-# calc_indices $IFILEDIR_SENORGE        # files on the form tg_senorge2018_1957.nc or senorge2018_RR_1957.nc
+#SENORGE-HIST
+### For the historical period (DP1), we need to process seNorge data.
+### need to enable calc_indices for seNorge data. (seNorge 2018 v20.05)
+### includes making variable names (e.g. tg instead of tas), and potentially other stuff (filenames, paths?) more flexible in calc_indices
+### files on the form tg_senorge2018_1957.nc or senorge2018_RR_1957.nc
+#calc_indices $IFILEDIR_SENORGE       
+#calc_periodmeans $REFBEGIN $REFEND $ofilestartlist # ofilestartlist is made in calc_indices, and can be printed using: echo ${ofilestartlist[@]}
+#echo "done senorge-hist period means"
 
-
-for RCM in $RCMLIST  #$RCMLIST
+for RCM in $RCMLIST
 do
 	for bias_path in $IFILEDIR_EQM $IFILEDIR_3DBC
 	do
