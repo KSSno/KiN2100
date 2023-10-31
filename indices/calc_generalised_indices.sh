@@ -38,11 +38,11 @@ if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
 	echo ""
 	echo "Running from " $HOSTNAME
 	WORKDIR=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
-	INIFILE="test_config.ini" # Config file with metadata to be added to the final nc-files. 
 	IFILEDIR_EQM=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf
 	IFILEDIR_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
 	IFILEDIR_SENORGE=/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf
 	LANDMASK=/hdata/hmdata/KiN2100/analyses/github/KiN2100/geoinfo/kss2023_mask1km_norway.nc4 # from our github repo
+	INIFILE="config_for_calc_generalised_indices.ini" # Config file with metadata to be added to the final nc-files. 
 elif [ $HOSTNAME == "lustre" ]; then
 	echo ""
 	echo "Running from " $HOSTNAME
@@ -50,8 +50,8 @@ elif [ $HOSTNAME == "lustre" ]; then
 	IFILEDIR_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
 	IFILEDIR_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
 	#IFILEDIR_SENORGE=/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05 # <- check filepath! 
-	INIFILE="test_config.ini" # Config file with metadata to be added to the final nc-files. 
 	LANDMASK=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4
+	INIFILE="config_for_calc_generalised_indices.ini" # Config file with metadata to be added to the final nc-files. 
 else
 	echo ""
 	echo "Currently, the script can be run from hosts l-klima-app05 (NVE) and lustre (MET)."
@@ -66,10 +66,10 @@ echo "Working directory: " $WORKDIR
 ## CONSTANTS THAT CAN BE USER INPUT ##
 # Default values (used if not specified by the input arguments):
 RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # list of RCMs (available for EQM). Can also be hard coded, e.g. RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm")
-REFBEGIN=1996  #1991
-REFEND=1997    #2020
-SCENBEGIN=2073 #2071
-SCENEND=2074   #2100
+REFBEGIN=2016  #1991
+REFEND=2017    #2020
+SCENBEGIN=2082 #2071
+SCENEND=2083   #2100
 VERBOSE=0
 VAR=tas
 
@@ -259,7 +259,7 @@ function calc_indices {       # call this function with one input argument: file
 			if ! [ -f ./$RCM/$VAR/$ofile_tas_annual ]; then   # check that the file does not exist
 				cdo timmean   -ifthen $LANDMASK $filedir/$file  ./$RCM/$VAR/$ofile_tas_annual
 				#ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_annual
-				#ncrename -v tas,tas ./$RCM/$VAR/$ofile_tas_annual ./$RCM/$VAR/$ofile_tas_annual
+				#ncrename -v tas,tas ./$RCM/$VAR/$ofile_tas_annual #https://linux.die.net/man/1/ncrename
 			else
 				echo "file" ./$RCM/$VAR/$ofile_tas_annual "already exists. Skipping computations."
 			fi
