@@ -38,6 +38,7 @@ if [ $HOSTNAME == "l-klima-app05" ]; then      # if DISK="hmdata"
 	echo ""
 	echo "Running from " $HOSTNAME
 	WORKDIR=/hdata/hmdata/KiN2100/analyses/indicators/calc_gen_indices/
+	INIFILE="test_config.ini" # Config file with metadata to be added to the final nc-files. 
 	IFILEDIR_EQM=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf
 	IFILEDIR_3DBC=/hdata/hmdata/KiN2100/ForcingData/BiasAdjust/3dbc-eqm/netcdf
 	IFILEDIR_SENORGE=/hdata/hmdata/KiN2100/ForcingData/ObsData/seNorge2018_v20.05/netcdf
@@ -49,6 +50,7 @@ elif [ $HOSTNAME == "lustre" ]; then
 	IFILEDIR_EQM=/lustre/storeC-ext/users/kin2100/NVE/EQM/  # $RCM/$VAR/hist/
 	IFILEDIR_3DBC=/lustre/storeC-ext/users/kin2100/MET/3DBC/application/ #$RCM/$VAR/hist/
 	#IFILEDIR_SENORGE=/lustre/storeA/project/metkl/senorge2/archive/seNorge_2018_v20_05 # <- check filepath! 
+	INIFILE="test_config.ini" # Config file with metadata to be added to the final nc-files. 
 	LANDMASK=/lustre/storeC-ext/users/kin2100/NVE/analyses/kss2023_mask1km_norway.nc4
 else
 	echo ""
@@ -60,7 +62,6 @@ CURRDIR=$PWD #Save current path for return point
 
 echo "Current directory: " $CURRDIR
 echo "Working directory: " $WORKDIR
-
 
 ## CONSTANTS THAT CAN BE USER INPUT ##
 # Default values (used if not specified by the input arguments):
@@ -604,6 +605,30 @@ function calc_indices {       # call this function with one input argument: file
 }                    # end function calc_indices
 
 
+function add_attributes_to_file()
+{
+    #For input nc-file, extract variable name, get corresponding attributes from ini-file and add to nc-file.
+    local chosen_filename=$1
+    chosen_indexname=$(cdo showname $chosen_filename) #extract variable name from ncfile (only allow one variable per file)
+    chosen_indexname=${chosen_indexname[@]} #removes problem with space that appears in section_name below. Cannot be local.
+
+    ## Add variable attributes to ncfile of $chosen_indexname
+    section_name="varattr_$chosen_indexname"
+    eval "keys=( \"\${${section_name}_keys[@]}\" )"
+    for i in "${!keys[@]}"; do
+        local key=${keys[$i]}
+        ncatted -O -h -a $key,$chosen_indexname,o,c,"$(get_value $section_name $key)" $chosen_filename #echo "$key:" $(get_value $section_name $key)
+    done
+
+    ## Add global attributes to ncfile of $chosen_indexname
+    section_name="globattr_$chosen_indexname"
+    eval "keys=( \"\${${section_name}_keys[@]}\" )"
+    for i in "${!keys[@]}"; do
+        local key=${keys[$i]}
+        ncatted -O -h -a $key,global,o,c,"$(get_value $section_name $key)" $chosen_filename #echo "$key:" $(get_value $section_name $key)
+    done
+}
+
 function calc_periodmeans {
     # This function do mergetime and timmean over all selected years for annual indices. It needs several arguments in correct order:
     #   $1 = reffbegin or SCENBEGIN
@@ -676,6 +701,9 @@ do
 done
 echo "Accepted all (default and user) inputs of rcms, periods and variables. Proceed"
 
+# Load files neccessary for metadata
+source ini_file_parser.sh # Load in the ini file parser file (https://github.com/DevelopersToolbox/ini-file-parser)
+process_ini_file $INIFILE # Load and process the ini/config file
 
 ## Make working directory if not exists, go there, and make directory for temporary files if not exists ## 
 mkdir -p $WORKDIR
