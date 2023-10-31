@@ -11,7 +11,7 @@ set -e #exit on error
 # Hist, rcp26 and rcp45 so far, ssp3.70 to follow
 #
 ## Call: 
-#  ./calc_generalised_indices.sh --var VAR --refbegin 1991 --refend 2020 --scenbegin 2071 --scenend 2100 --rcm modelA modelB modelC etc.
+#  ./calc_generalised_indices.sh --var VAR --refbegin 1991 --refend 2020 --scenbegin 2071 --scenend 2100 --rcm modelA,modelB,modelC,etc.
 #  where VAR is one of hurs, pr, ps, rlds, rsds, sfcWind, tas, tasmax; later also mrro (runoff), swe (snow), esvpbls (evapotranspiration), soilmoist (soil moisture deficit)
 #  and reference and scenario begin and end years are set using the corresponding arguments.
 #  A selection of RCMs can be made using --rcm followed by a list of RCMs separated by comma (no space between).
@@ -193,15 +193,14 @@ function calc_indices {       # call this function with one input argument: file
 	
 	ofilestartlist=""
 	
-    for yyyy in $( seq $firstyear $lastyear )   # list chosen years. NOTE: this only takes in the reference period.
-    #    for yyyy in $( seq $REFBEGIN $REFEND ; seq $SCENBEGIN $SCENEND )   # list chosen years.
+    for yyyy in $( seq $firstyear $lastyear )   # list chosen years.
     do
 		file=`ls "$1"/*$yyyy.nc4`      # cannot be "local".
 		local file=`basename $file`                   
-		echo "file is: " $file
-		local ofile=`echo $file | sed s/daily_//`                   # later, this text is replaced with the variable name etc.
+		echo "Ifile is: " $file
+		local ofile=`echo $file | sed s/daily_//`
 		echo "Ofile is: " $ofile
-		###ofile=`basename $file | sed s/senorge2018_//`          # Testing this for seNorge. Format: tg_senorge2018_2008.nc
+		###ofile=`basename $file | sed s/senorge2018_//`          # Testing senorge. Format: tg_senorge2018_2008.nc
 
 		# $file = cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_1960.nc4
 		# ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
@@ -212,38 +211,34 @@ function calc_indices {       # call this function with one input argument: file
 
 
         #if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
-		if [ $VAR == "tas" ]; then                             # orig. Roll back to this.
+		if [ $VAR == "tas" ]; then
 			echo ""
 			echo "tas chosen. Now processing file " $file ", which is number " $(( $count+1 )) " out of " $nbrfiles " (from one model, RCM and RCP only)."
+			
+			## For each index: Make ofilenames by substituting varname with indexname (potentially with time resolution)
 			local ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`     # orig. Roll back to this.
 			local ofile_tas_seasonal=`echo $ofile | sed s/tas/tas_seasonal-mean/` # orig. Roll back to this.
-
 			local ofile_cdd=`echo $ofile | sed s/tas/cdd/`                        # orig. Roll back to this.
 			local ofile_gsl=`echo $ofile | sed s/tas/gsl/`                        # orig. Roll back to this. 
+			#-# NEW INDEX? Add line (as above) here #-#
 
 			#ofile_tas_annual=`echo $ofile | sed s/tg/tg_annual-mean/`      # Testing senorge
 			#ofile_tas_seasonal=`echo $ofile | sed s/tg/tg_seasonal-mean/`  # Testing senorge 
+			#ofile_growing=`echo $ofile | sed s/tg/growing/`                # Testing senorge: vekstsesong
 
-			#ofile_growing=`echo $ofile | sed s/tg/growing/`                 # Testing senorge: vekstsesong
-
-			# for first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
+			## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 			if [ $count == 0 ]; then
 				get_filenamestart $ofile_tas_annual $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
 				
 				get_filenamestart $ofile_tas_seasonal $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
+
+				#-# NEW INDEX? Add two lines (as above) here #-#
 			fi
 
-
-			# echo "ofile is" $ofilelist
-			# cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_1993.nc4
-			# ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`
-
 	 
-			# I guess it would make sense to crop the domain to mainland Norway before processing? I've added "-ifthen $LANDMASK" in the lines below.
-			# Are there better ways to crop to the landmask? This is what "ifthen $LANDMASK" does:
-			# cdo ifthen $LANDMASK $filedir/$file '$filedir/$file_mainland_norway.nc4' 
+			# crop domain to mainland Norway before processing by "-ifthen $LANDMASK"
 
 			# vekstsesongens lengde, Mean annual growing season (days>=5C). Merk at senorge er i degC, derfor terskel på 5, ikke 278.15.
 			# mkdir -p "./senorge/growing/"                                                           # Testing senorge
@@ -256,33 +251,25 @@ function calc_indices {       # call this function with one input argument: file
 			#ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
 			#ncatted -O -a long_name,tg,o,c,"Mean annual growing season length (days TAS >=5 °C)"           ."/senorge/growing/"$ofile_growing
 			##ncatted -O -a short_name,tg,o,c,"growing"                                                   ."/senorge/growing/"$ofile_growing
-				## ncrename -v tg,growing .'/senorge/growing/'$ofile_growing .'/senorge/growing/'$ofile_growing
+			## ncrename -v tg,growing .'/senorge/growing/'$ofile_growing .'/senorge/growing/'$ofile_growing
 
-				# Compute annual and seasonal mean of $VAR
-			if ! [ -f ./$RCM/$VAR/$ofile_tas_annual ]; then   # check if the file exists
-
-				echo $ofile_tas_annual
-				pwd
-
+			# Compute annual and seasonal mean of $VAR
+			if ! [ -f ./$RCM/$VAR/$ofile_tas_annual ]; then   # check that the file does not exist
 				cdo timmean   -ifthen $LANDMASK $filedir/$file  ./$RCM/$VAR/$ofile_tas_annual
-
-				ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_annual
-				## ncrename -v tas,annual_avg_air_temperature ./$RCM/$VAR/$ofile_tas_annual ./$RCM/$VAR/$ofile_tas_annual
-
-				echo "done adding metadata to the annual file. Proceed to seasonal."
-
+				#ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_annual
+				#ncrename -v tas,tas ./$RCM/$VAR/$ofile_tas_annual ./$RCM/$VAR/$ofile_tas_annual
 			else
 				echo "file" ./$RCM/$VAR/$ofile_tas_annual "already exists. Skipping computations."
 			fi
 	    
  			if ! [ -f ./$RCM/$VAR/$ofile_tas_seasonal ]; then
 				cdo -L yseasmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
-				ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal
-				## ncrename -v tas,seasonal_avg_air_temperature ./$RCM/$VAR/$ofile_tas_seasonal ./$RCM/$VAR/$ofile_tas_seasonal	 
+				#ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal
+				## ncrename -v tas,tas ./$RCM/$VAR/$ofile_tas_seasonal ./$RCM/$VAR/$ofile_tas_seasonal	 
 			else
 				echo "file" ./$RCM/$VAR/$ofile_tas_seasonal "already exists. Skipping computations."
-
 			fi 
+			#-# NEW INDEX from tas? Add if test, cdo-command and ncrename (as above) here #-#
 	 
  	 
 	 
