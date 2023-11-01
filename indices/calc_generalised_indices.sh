@@ -156,8 +156,11 @@ function get_filenamestart {
 }
 
 
-function calc_indices {       # call this function with one input argument: filedir 
-
+function calc_indices {       
+	# Function to calculate indices derived from variable $VAR from $RCM, for each year in period ($REFBEGIN-$REFEND for hist and $SCENBEGIN-$SCENEND for future)
+	# reads daily data of variable $VAR, one file per year
+	# makes indices derived from $VAR, one file per year 
+	# call this function with one input argument: filedir 
     # on the form /lustre/storeC-ext/users/kin2100/NVE/EQM/$RCM/$VAR/
     # or          /hdata/hmdata/KiN2100/ForcingData/BiasAdjust/eqm/netcdf/cnrm-r1i1p1-aladin/tas/rcp26/ 
     # I tried adding two input arguments:  filedir and $LANDMASK, but that did not work.
@@ -204,11 +207,6 @@ function calc_indices {       # call this function with one input argument: file
 		echo "Ofile is: " $ofile
 		###ofile=`basename $file | sed s/senorge2018_//`          # Testing senorge. Format: tg_senorge2018_2008.nc
 
-		# $file = cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_1960.nc4
-		# ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
-		# files by using this line of code in the if sentence below:
-		# Monthly mean of $VAR (no space to save this for all variables and models)	 
-		# cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean
 
 
 
@@ -217,7 +215,7 @@ function calc_indices {       # call this function with one input argument: file
 			echo ""
 			echo "tas chosen. Now processing file " $file ", which is number " $(( $count+1 )) " out of " $nbrfiles " (from one model, RCM and RCP only)."
 			
-			## For each index: Make ofilenames by substituting varname with indexname (potentially with time resolution)
+			## For each index: Make ofilenames by substituting varname (here: tas) with indexname (potentially with time resolution)
 			local ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`     # orig. Roll back to this.
 			local ofile_tas_seasonal=`echo $ofile | sed s/tas/tas_seasonal-mean/` # orig. Roll back to this.
 			local ofile_cdd=`echo $ofile | sed s/tas/cdd/`                        # orig. Roll back to this.
@@ -239,21 +237,6 @@ function calc_indices {       # call this function with one input argument: file
 				#-# NEW INDEX from tas? Add two lines (as above) here #-#
 			fi
 
-	 
-			# crop domain to mainland Norway before processing by "-ifthen $LANDMASK"
-
-			# vekstsesongens lengde, Mean annual growing season (days>=5C). Merk at senorge er i degC, derfor terskel på 5, ikke 278.15.
-			# mkdir -p "./senorge/growing/"                                                           # Testing senorge
-			# echo "Ofile_growing=" ."/senorge/growing/"$ofile_growing
-			# cdo timsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
-			# trenger ikke månedsverdier:
-			# cdo monsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
-
-			#ncatted -O -a standard_name,tg,o,c,"spell_length_of_days_with_air_temperature_above_threshold" ."/senorge/growing/"$ofile_growing
-			#ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
-			#ncatted -O -a long_name,tg,o,c,"Mean annual growing season length (days TAS >=5 °C)"           ."/senorge/growing/"$ofile_growing
-			##ncatted -O -a short_name,tg,o,c,"growing"                                                   ."/senorge/growing/"$ofile_growing
-			## ncrename -v tg,growing .'/senorge/growing/'$ofile_growing .'/senorge/growing/'$ofile_growing
 
 			# Compute annual and seasonal mean of $VAR
 			if ! [ -f ./$RCM/$VAR/$ofile_tas_annual ]; then   # check that the file does not exist
@@ -271,26 +254,9 @@ function calc_indices {       # call this function with one input argument: file
 			else
 				echo "file" ./$RCM/$VAR/$ofile_tas_seasonal "already exists. Skipping computations."
 			fi 
-			#-# NEW INDEX from tas? Add if test, cdo-command and ncrename (as above) here #-#
+			#-# NEW INDEX from tas? Add the if-block with cdo-command and ncrename (as above) here #-#
+			#-# crop domain to mainland Norway before processing by "-ifthen $LANDMASK" (as above) #-#
 	 
- 	 
-	 
-		# vekstsesongens lengde
-		# Denne er tricky fordi den skal beregnes fra en glattet kurve.
-		# Fra dynamisk dokument: "Midlere vekstsesong i 30-års perioder gjøres utfra glattet kurve for temperaturutvikling gjennom året." 
-		# den også tar inn filbane til landmaske. Og den skjønner ikke at jeg prøver å gi den to inputargumenter.
-		# cdo eca_gsl $file $LANDMASK -gec,20 $file $RCM/$VAR/$ofile_gsl
-
-		# vinter- og sommersesong inn her?
-
-		# Avkjølingsgraddager, cooling days
-		# Antall dager med TAM>=22 (gec) over året
-
-		#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_cdd
-
-		#ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
-		#ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
-		#ncatted -O -a long_name,tas,o,c,"cooling_degree-days"           ./$RCM/$VAR/$ofile_cdd
 
 
 		# elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
@@ -816,3 +782,43 @@ echo "Add this when you have double-checked rm tmp/$USER/mergetime*"
 cd $CURRDIR
 echo -ne "\n=====\nDone!\n"
 #---------------------------------------------------#
+
+#Notes from ibni:
+
+
+# $file = cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_1960.nc4
+# ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
+# files by using this line of code in the if sentence below:
+# Monthly mean of $VAR (no space to save this for all variables and models)	 
+# cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean 	 
+
+# vekstsesongens lengde
+	# Denne er tricky fordi den skal beregnes fra en glattet kurve.
+	# Fra dynamisk dokument: "Midlere vekstsesong i 30-års perioder gjøres utfra glattet kurve for temperaturutvikling gjennom året." 
+	# den også tar inn filbane til landmaske. Og den skjønner ikke at jeg prøver å gi den to inputargumenter.
+	# cdo eca_gsl $file $LANDMASK -gec,20 $file $RCM/$VAR/$ofile_gsl
+
+	# vinter- og sommersesong inn her?
+
+	# Avkjølingsgraddager, cooling days
+	# Antall dager med TAM>=22 (gec) over året
+
+	#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_cdd
+
+	#ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
+	#ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
+	#ncatted -O -a long_name,tas,o,c,"cooling_degree-days"           ./$RCM/$VAR/$ofile_cdd
+	 
+
+# vekstsesongens lengde, Mean annual growing season (days>=5C). Merk at senorge er i degC, derfor terskel på 5, ikke 278.15.
+	# mkdir -p "./senorge/growing/"                                                           # Testing senorge
+	# echo "Ofile_growing=" ."/senorge/growing/"$ofile_growing
+	# cdo timsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
+	# trenger ikke månedsverdier:
+	# cdo monsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
+
+	#ncatted -O -a standard_name,tg,o,c,"spell_length_of_days_with_air_temperature_above_threshold" ."/senorge/growing/"$ofile_growing
+	#ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
+	#ncatted -O -a long_name,tg,o,c,"Mean annual growing season length (days TAS >=5 °C)"           ."/senorge/growing/"$ofile_growing
+	##ncatted -O -a short_name,tg,o,c,"growing"                                                   ."/senorge/growing/"$ofile_growing
+	## ncrename -v tg,growing .'/senorge/growing/'$ofile_growing .'/senorge/growing/'$ofile_growing
