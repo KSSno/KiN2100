@@ -68,8 +68,8 @@ echo "Working directory: " $WORKDIR
 RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # list of RCMs (available for EQM). Can also be hard coded, e.g. RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm")
 REFBEGIN=2016  #1991
 REFEND=2017    #2020
-SCENBEGIN=2082 #2071
-SCENEND=2083   #2100
+SCENBEGIN=2083 #2071
+SCENEND=2084   #2100
 VERBOSE=0
 VAR=tas
 
@@ -666,6 +666,7 @@ function calc_periodmeans {
 			cdo yseasmean $ofilepath1 $ofilepath2 #yseasmean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
             echo Saved: "$(basename $ofilepath2)"
         fi
+		add_attributes_to_file $ofilepath2
 		rm $ofilepath1
 		ofilelist="$ofilelist $ofilepath2"
     done
