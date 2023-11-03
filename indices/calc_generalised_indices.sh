@@ -66,10 +66,10 @@ echo "Working directory: " $WORKDIR
 ## CONSTANTS THAT CAN BE USER INPUT ##
 # Default values (used if not specified by the input arguments):
 RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # list of RCMs (available for EQM). Can also be hard coded, e.g. RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm")
-REFBEGIN=2018  #1991
-REFEND=2019    #2020
-SCENBEGIN=2085 #2071
-SCENEND=2086   #2100
+REFBEGIN=2000  #1991
+REFEND=2001    #2020
+SCENBEGIN=2087 #2071
+SCENEND=2088   #2100
 VERBOSE=0
 VAR=tas
 
@@ -151,7 +151,7 @@ function get_filenamestart {
     #   $2 = 1992
     #   output = "cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_"
     filestart=`echo $1 | cut -d "." -f 1` # delete everything in string from (including) "."
-    filestart=`echo $filestart | sed s/_$2/_/`   # replace _year with _ in string (added underscore to avoid issue with 2018 due to 2018 included elsewhere in filename)
+    filestart=`echo $filestart | sed s/_$2/_/`   # replace _year with _ in string (added underscore to avoid issue with 2018 and 2005 due to those numbers included elsewhere in filename "*sn2018v2005*")
 
 }
 
@@ -215,16 +215,16 @@ function calc_indices {
 			echo ""
 			echo "tas chosen. Now processing file " $file ", which is number " $(( $count+1 )) " out of " $nbrfiles " (from one model, RCM and RCP only)."
 			
-			## For each index: Make ofilenames by substituting varname (here: tas) with indexname (potentially with time resolution)
-			local ofile_tas_annual=`echo $ofile | sed s/tas/tas_annual-mean/`     # orig. Roll back to this.
-			local ofile_tas_seasonal=`echo $ofile | sed s/tas/tas_seasonal-mean/` # orig. Roll back to this.
-			local ofile_cdd=`echo $ofile | sed s/tas/cdd/`                        # orig. Roll back to this.
-			local ofile_gsl=`echo $ofile | sed s/tas/gsl/`                        # orig. Roll back to this. 
+			## For each index: Make ofilenames by substituting _varname_ (here: _tas_) with _indexname_ (potentially with time resolution)
+			local ofile_tas_annual=`echo $ofile | sed s/_tas_/_tas_annual-mean_/`     # orig. Roll back to this.
+			local ofile_tas_seasonal=`echo $ofile | sed s/_tas_/_tas_seasonal-mean_/` # orig. Roll back to this.
+			local ofile_cdd=`echo $ofile | sed s/_tas_/_cdd_/`                        # orig. Roll back to this.
+			local ofile_gsl=`echo $ofile | sed s/_tas_/_gsl_/`                        # orig. Roll back to this. 
 			#-# NEW INDEX from tas? Add line (as above) here #-#
 
-			#ofile_tas_annual=`echo $ofile | sed s/tg/tg_annual-mean/`      # Testing senorge
-			#ofile_tas_seasonal=`echo $ofile | sed s/tg/tg_seasonal-mean/`  # Testing senorge 
-			#ofile_growing=`echo $ofile | sed s/tg/growing/`                # Testing senorge: vekstsesong
+			#ofile_tas_annual=`echo $ofile | sed s/_tg_/_tg_annual-mean_/`      # Testing senorge
+			#ofile_tas_seasonal=`echo $ofile | sed s/_tg_/_tg_seasonal-mean_/`  # Testing senorge 
+			#ofile_growing=`echo $ofile | sed s/_tg_/_growing_/`                # Testing senorge: vekstsesong
 
 			## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 			if [ $count == 0 ]; then
@@ -271,18 +271,18 @@ function calc_indices {
 
 			# Gjennomsnitt av tasmax
 			mkdir -p  $RCM/tasmax/
-			local ofile_tasmax_annual=`echo $ofile | sed s/tasmax/tasmax_annual-mean/`
-			local ofile_tasmax_seasonal=`echo $ofile | sed s/tasmax/tasmax_seasonal-mean/`	 
-			#ofile_tasmax_monmean=`echo $ofile | sed s/tasmax/tasmax_monmean/`
-			#ofile_tasmin_monmean=`echo $ofile | sed s/tasmax/tasmin_monmean/`
+			local ofile_tasmax_annual=`echo $ofile | sed s/_tasmax_/_tasmax_annual-mean_/`
+			local ofile_tasmax_seasonal=`echo $ofile | sed s/_tasmax_/_tasmax_seasonal-mean_/`	 
+			#ofile_tasmax_monmean=`echo $ofile | sed s/_tasmax_/_tasmax_monmean_/`
+			#ofile_tasmin_monmean=`echo $ofile | sed s/_tasmax_/_tasmin_monmean_/`
 
-			#ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`
-			#ofile_dzc=`echo $ofile | sed s/tasmax/dzc/`
-			local ofile_fd=`echo $ofile | sed s/tasmax/fd/`
-			local ofile_tropnight=`echo $ofile | sed s/tasmax/tropnight/`
-			local ofile_norheatwave=`echo $ofile | sed s/tasmax/norheatwave/`
-			local ofile_summerdnor=`echo $ofile | sed s/tasmax/summerdnor/`
-			local ofile_summerd=`echo $ofile | sed s/tasmax/summerd/`
+			#ofile_dtr=`echo $ofile | sed s/_tasmax_/_dtr_/`
+			#ofile_dzc=`echo $ofile | sed s/_tasmax_/_dzc_/`
+			local ofile_fd=`echo $ofile | sed s/_tasmax_/_fd_/`
+			local ofile_tropnight=`echo $ofile | sed s/_tasmax_/_tropnight_/`
+			local ofile_norheatwave=`echo $ofile | sed s/_tasmax_/_norheatwave_/`
+			local ofile_summerdnor=`echo $ofile | sed s/_tasmax_/_summerdnor_/`
+			local ofile_summerd=`echo $ofile | sed s/_tasmax_/_summerd_/`
 
 
 			# cdo ifthen $LANDMASK -monmean ./$RCM/'/mergetime_norheatwave_'$REFBEGIN'-'$REFEND'.nc'     ./$RCM'/land_tasmax'
@@ -311,14 +311,14 @@ function calc_indices {
 			# cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
 
 			# Read in tasmin
-			local ifileN=`echo $file | sed s/tasmax/tasmin/`
-			local ifiledirN=`echo $filedir | sed s/tasmax/tasmin/`
+			local ifileN=`echo $file | sed s/_tasmax_/_tasmin_/`
+			local ifiledirN=`echo $filedir | sed s/_tasmax_/_tasmin_/`
 			echo $ifiledirN/$ifileN
 
 			# Gjennomsnitt av tasmin
 			mkdir -p  $RCM/tasmin/
-			local ofile_tasmin_annual=`echo $ofile | sed s/tasmax/tasmin_annual-mean/`
-			local ofile_tasmin_seasonal=`echo $ofile | sed s/tasmax/tasmin_seasonal-mean/`	 
+			local ofile_tasmin_annual=`echo $ofile | sed s/_tasmax_/_tasmin_annual-mean_/`
+			local ofile_tasmin_seasonal=`echo $ofile | sed s/_tasmax_/_tasmin_seasonal-mean_/`	 
 
 			# Annual and seasonal mean of $VAR
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmin_annual ]; then   # check if the file exists
@@ -347,11 +347,11 @@ function calc_indices {
 			# DTR
 			if ! [ -f ./$RCM/$VAR/$ofile_dtr ]; then   # check if the file exists
 
-				#ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`  # <- this is written higher up
+				#ofile_dtr=`echo $ofile | sed s/_tasmax_/_dtr_/`  # <- this is written higher up
 				mkdir -p  $RCM/dtr/
-				local ofile_dtr_annual=`echo $ofile | sed s/tasmax/dtr_annual-mean/`
-				local ofile_dtr_seasonal=`echo $ofile | sed s/tasmax/dtr_seasonal-mean/`	 
-				#ofile_dtr=`echo $ofile | sed s/tasmax/dtr/`
+				local ofile_dtr_annual=`echo $ofile | sed s/_tasmax_/_dtr_annual-mean_/`	 
+				local ofile_dtr_seasonal=`echo $ofile | sed s/_tasmax_/_dtr_seasonal-mean_/`
+				#ofile_dtr=`echo $ofile | sed s/_tasmax_/_dtr_/`
 
 				echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
 				cdo sub -ifthen $LANDMASK $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
@@ -361,8 +361,8 @@ function calc_indices {
 			# DZC, nullgradspasseringer
 			if ! [ -f ./$RCM/$VAR/$ofile_dzc ]; then   # check if the file exists
 				mkdir -p  $RCM/dzc/
-				local ofile_dzc_annual=`echo $ofile | sed s/tasmax/dzc_annual-mean/`
-				local ofile_dzc_seasonal=`echo $ofile | sed s/tasmax/dzc_seasonal-mean/`	 
+				local ofile_dzc_annual=`echo $ofile | sed s/_tasmax_/_dzc_annual-mean_/`
+				local ofile_dzc_seasonal=`echo $ofile | sed s/_tasmax_/_dzc_seasonal-mean_/`	 
 				echo "Ofile_dzc=" $RCM"/dzc/"$ofile_dzc	 
 				cdo monsum -mul -ltc,273.15 -ifthen $LANDMASK $ifiledirN/$ifileN -gtc,273.15 -ifthen $LANDMASK $filedir/$file ./$RCM/dzc/$ofile_dzc
 			fi
@@ -398,7 +398,7 @@ function calc_indices {
 			fi
 	 
 			# norsk hetebølge # over 27 grader
-			#ofile_norheatwave=`echo $ofile | sed s/tasmax/norheatwave/`
+			#ofile_norheatwave=`echo $ofile | sed s/_tasmax_/_norheatwave_/`
 			if ! [ -f ./$RCM/$VAR/$ofile_norheatwave ]; then   # check if the file exists
 				mkdir -p $RCM/norheatwave/
 				cdo monsum -gec,300.15 -runmean,5 -ifthen $LANDMASK $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
@@ -463,8 +463,8 @@ function calc_indices {
 			echo "pr chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
 
 			# Sum av pr
-			local ofile_pr_annual=`echo $ofile | sed s/pr/pr_annual-sum/`
-			local ofile_pr_seasonal=`echo $ofile | sed s/pr/pr_seasonal-sum/`
+			local ofile_pr_annual=`echo $ofile | sed s/_pr_/_pr_annual-sum_/`
+			local ofile_pr_seasonal=`echo $ofile | sed s/_pr_/_pr_seasonal-sum_/`
 
 			# Annual and seasonal mean of $VAR
 			if ! [ -f ./$RCM/$VAR/$ofile_pr_annual ]; then   # check if the file exists
@@ -494,7 +494,7 @@ function calc_indices {
 		# elif [ $VAR == "hurs" ]; then
 			# 	 echo ""
 			#    echo "hurs chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
-			# 	 ofile_hurs_monmean=`echo $ofile | sed s/hurs/hurs_monmean/`	 
+			# 	 ofile_hurs_monmean=`echo $ofile | sed s/_hurs_/_hurs_monmean_/`	 
 
 			# 	 # Monthly mean av hurs
 			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_hurs_monmean	 
@@ -507,7 +507,7 @@ function calc_indices {
 		# elif [ $VAR == "rlds" ]; then
 			# 	 echo ""
 			#    echo "rlds chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
-			# 	 ofile_rlds_monmean=`echo $ofile | sed s/rlds/rlds_monmean/`	 
+			# 	 ofile_rlds_monmean=`echo $ofile | sed s/_rlds_/_rlds_monmean_/`	 
 			
 			# 	 # Monthly mean av rlds
 			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_rlds_monmean	 
@@ -520,7 +520,7 @@ function calc_indices {
 		#  elif [ $VAR == "rsds" ]; then
 			# 	 echo ""
 			#    echo "rsds chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
-			# 	 ofile_rsds_monmean=`echo $ofile | sed s/rsds/rsds_monmean/`	 
+			# 	 ofile_rsds_monmean=`echo $ofile | sed s/_rsds_/_rsds_monmean_/`	 
 			
 			# 	 # Monthly mean av rsds
 			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_rsds_monmean	 
@@ -533,7 +533,7 @@ function calc_indices {
 		#  elif [ $VAR == "ps" ]; then
 			# 	 echo ""
 			#    echo "ps chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
-			# 	 ofile_ps_monmean=`echo $ofile | sed s/ps/ps_monmean/`	 
+			# 	 ofile_ps_monmean=`echo $ofile | sed s/_ps_/_ps_monmean_/`	 
 			
 			# 	 # Monthly mean av ps
 			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_ps_monmean	 
@@ -547,7 +547,7 @@ function calc_indices {
 		#  elif [ $VAR == "sfcWind" ]; then
 			# 	 echo ""
 			#    echo "sfcWind chosen. Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
-			# 	 ofile_sfcWind_monmean=`echo $ofile | sed s/sfcWind/sfcWind_monmean/`	 
+			# 	 ofile_sfcWind_monmean=`echo $ofile | sed s/_sfcWind_/_sfcWind_monmean_/`	 
 			
 			# 	 # Monthly mean av sfcWind
 			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_sfcWind_monmean	 
