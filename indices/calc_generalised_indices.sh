@@ -66,10 +66,10 @@ echo "Working directory: " $WORKDIR
 ## CONSTANTS THAT CAN BE USER INPUT ##
 # Default values (used if not specified by the input arguments):
 RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm") # list of RCMs (available for EQM). Can also be hard coded, e.g. RCMLIST=("cnrm-r1i1p1-aladin" "ecearth-r12i1p1-cclm")
-REFBEGIN=2016  #1991
-REFEND=2017    #2020
-SCENBEGIN=2083 #2071
-SCENEND=2084   #2100
+REFBEGIN=2018  #1991
+REFEND=2019    #2020
+SCENBEGIN=2085 #2071
+SCENEND=2086   #2100
 VERBOSE=0
 VAR=tas
 
@@ -151,7 +151,7 @@ function get_filenamestart {
     #   $2 = 1992
     #   output = "cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_annual-mean_"
     filestart=`echo $1 | cut -d "." -f 1` # delete everything in string from (including) "."
-    filestart=`echo $filestart | sed s/$2//`   # replace year with nothing in string
+    filestart=`echo $filestart | sed s/_$2/_/`   # replace _year with _ in string (added underscore to avoid issue with 2018 due to 2018 included elsewhere in filename)
 
 }
 
