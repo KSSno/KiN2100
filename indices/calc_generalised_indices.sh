@@ -740,8 +740,19 @@ do
 			echo "	ofile_rcp2.6-hist: $(basename $ofile_rcp26_vs_hist)"
 			echo "	ofile_rcp4.5-hist: $(basename $ofile_rcp45_vs_hist)"
 
-			cdo sub $ifile_rcp26 $ifile_hist $ofile_rcp26_vs_hist
-			cdo sub $ifile_rcp45 $ifile_hist $ofile_rcp45_vs_hist
+			# Compute difference or relative difference (between future and reference) depending on index:
+    		indexname=$(cdo showname $ifile_hist) #extract variable name from ncfile (only allow one variable per file)
+    		indexname=${indexname[@]} #removes problem with space that may appear
+			if [ $indexname == "prsum" ] || [ $indexname == "sdii" ]; then #add indices that need percentage change here
+				cdo -mulc,100 -div -sub $ifile_rcp26 $ifile_hist $ifile_hist $ofile_rcp26_vs_hist #percentage change: double check if correct
+				cdo -mulc,100 -div -sub $ifile_rcp45 $ifile_hist $ifile_hist $ofile_rcp45_vs_hist #percentage change: double check if correct
+				
+				ncatted -O -a units,$indexname,o,c,"%" $ofile_rcp26_vs_hist #change units to percent: double check if correct
+				ncatted -O -a units,$indexname,o,c,"%" $ofile_rcp45_vs_hist #change units to percent: double check if correct
+			else
+				cdo sub $ifile_rcp26 $ifile_hist $ofile_rcp26_vs_hist #simple difference
+				cdo sub $ifile_rcp45 $ifile_hist $ofile_rcp45_vs_hist #simple difference
+			fi
 
 			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp26_vs_hist
 			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_vs_hist
