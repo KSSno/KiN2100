@@ -464,49 +464,39 @@ function calc_indices {
 			echo "pr chosen. Now processing ifile " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
 
 			## For each index: Make ofilenames by substituting _varname_ (here: _pr_) with _indexname_ (potentially with time resolution)
-			local ofile_pr_annual=`echo $ofile | sed s/_pr_/_pr_annual-sum_/` # annual pr sum
-			local ofile_pr_seasonal=`echo $ofile | sed s/_pr_/_pr_seasonal-sum_/` #seasonal pr sum 
+			local ofile_prsum_annual=`echo $ofile | sed s/_pr_/_prsum_annual_/` # sum of pr over year
+			local ofile_prsum_seasonal=`echo $ofile | sed s/_pr_/_prsum_seasonal_/` #sum of pr over seasons 
 			#-# NEW INDEX from pr? Add line (as above) here #-#
 
 			## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 			if [ $count == 0 ]; then
-				get_filenamestart $ofile_pr_annual $yyyy
+				get_filenamestart $ofile_prsum_annual $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
 				
-				get_filenamestart $ofile_pr_seasonal $yyyy
+				get_filenamestart $ofile_prsum_seasonal $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
 
 				#-# NEW INDEX from pr? Add two lines (as above) here #-#
 			fi
 
-			# Compute pr_annual
-			if ! [ -f ./$RCM/$VAR/$ofile_pr_annual ]; then   # check if the file exists
-				cdo timsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr_annual
-				#ncrename -v pr,pr ./$RCM/$VAR/$ofile_pr_annual #https://linux.die.net/man/1/ncrename
+			# Compute prsum_annual
+			if ! [ -f ./$RCM/$VAR/$ofile_prsum_annual ]; then   # check if the file exists
+				cdo timsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_prsum_annual
+				ncrename -v pr,prsum ./$RCM/$VAR/$ofile_prsum_annual #https://linux.die.net/man/1/ncrename
 			else
-				echo "Skip computation of pr_annual from daily data, because ofile already exists for year " $yyyy
+				echo "Skip computation from daily data, because ofile already exists for" "prsum_annual" $yyyy
 			fi
 
-			# Compute pr_seasonal
-			if ! [ -f ./$RCM/$VAR/$ofile_pr_seasonal ]; then   # check if the file exists
-				cdo -L yseassum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr_seasonal
-				#ncrename -v pr,pr ./$RCM/$VAR/$ofile_pr_seasonal #https://linux.die.net/man/1/ncrename
+			# Compute prsum_seasonal
+			if ! [ -f ./$RCM/$VAR/$ofile_prsum_seasonal ]; then   # check if the file exists
+				cdo -L yseassum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_prsum_seasonal
+				ncrename -v pr,prsum ./$RCM/$VAR/$ofile_prsum_seasonal #https://linux.die.net/man/1/ncrename
 			else
-				echo "Skip computation of pr_seasonal from daily data, because ofile already exists for year " $yyyy
+				echo "Skip computation from daily data, because ofile already exists for" "prsum_seasonal" $yyyy
 			fi
 	 
 			#-# NEW INDEX from pr? Add the if-block with cdo-command and ncrename (as above) here #-#
 			#-# crop domain to mainland Norway before processing by "-ifthen $LANDMASK" (as above) #-#
-
-
-			# Monthly sum of $VAR (no space to save this for all variables and models)
-			#cdo -s monsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr_monsum
-			## cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_pr_monmean	 
-
-			#ncatted -O -a short_name,pr,o,c,"pr_monsum" 	        ./$RCM/$VAR/$ofile_pr_monsum
-			##ncatted -O -a short_name,pr,o,c,"pr_monmean" 		./$RCM/$VAR/$ofile_pr_monmean	 
-			#ncatted -O -a units,pr,o,c,"kg m-2 month-1"  		./$RCM/$VAR/$ofile_pr_monsum
-			#ncatted -O -a long_name,pr,o,c,"sum_of_precipitation"	./$RCM/$VAR/$ofile_pr_monsum
 
 
 		# elif [ $VAR == "hurs" ]; then
