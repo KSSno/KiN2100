@@ -466,6 +466,16 @@ function calc_indices {
 			## For each index: Make ofilenames by substituting _varname_ (here: _pr_) with _indexname_ (potentially with time resolution)
 			local ofile_prsum_annual=`echo $ofile | sed s/_pr_/_prsum_annual_/` # sum of pr over year
 			local ofile_prsum_seasonal=`echo $ofile | sed s/_pr_/_prsum_seasonal_/` #sum of pr over seasons 
+			local ofile_pr01mm_annual=`echo $ofile | sed s/_pr_/_pr01mm_annual_/`
+			local ofile_pr01mm_seasonal=`echo $ofile | sed s/_pr_/_pr01mm_seasonal_/`
+			local ofile_pr1mm_annual=`echo $ofile | sed s/_pr_/_pr1mm_annual_/`
+			local ofile_pr1mm_seasonal=`echo $ofile | sed s/_pr_/_pr1mm_seasonal_/`
+			local ofile_sdii_annual=`echo $ofile | sed s/_pr_/_sdii_annual_/`
+			local ofile_sdii_seasonal=`echo $ofile | sed s/_pr_/_sdii_seasonal_/`
+			local ofile_pr20mm_annual=`echo $ofile | sed s/_pr_/_pr20mm_annual_/`
+			local ofile_pr20mm_seasonal=`echo $ofile | sed s/_pr_/_pr20mm_seasonal_/`
+			local ofile_prmax5day=`echo $ofile | sed s/_pr_/_prmax5day_/`
+
 			#-# NEW INDEX from pr? Add line (as above) here #-#
 
 			## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
@@ -475,6 +485,34 @@ function calc_indices {
 				
 				get_filenamestart $ofile_prsum_seasonal $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
+
+				get_filenamestart $ofile_pr01mm_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+				
+				get_filenamestart $ofile_pr01mm_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
+				get_filenamestart $ofile_pr1mm_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+				
+				get_filenamestart $ofile_pr1mm_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
+				get_filenamestart $ofile_sdii_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+				
+				get_filenamestart $ofile_sdii_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
+				get_filenamestart $ofile_pr20mm_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+				
+				get_filenamestart $ofile_pr20mm_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
+				get_filenamestart $ofile_prmax5day $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
 
 				#-# NEW INDEX from pr? Add two lines (as above) here #-#
 			fi
@@ -493,6 +531,82 @@ function calc_indices {
 				ncrename -v pr,prsum ./$RCM/$VAR/$ofile_prsum_seasonal #https://linux.die.net/man/1/ncrename
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "prsum_seasonal" $yyyy
+			fi
+	 
+
+			# Compute pr01mm_annual
+			if ! [ -f ./$RCM/$VAR/$ofile_pr01mm_annual ]; then   # check if the file exists
+				cdo yearsum -gtc,0.1 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr01mm_annual
+				ncrename -v pr,pr01mm ./$RCM/$VAR/$ofile_pr01mm_annual
+			else
+				echo "Skip computation from daily data, because ofile already exists for" "pr01mm_annual" $yyyy
+			fi
+
+			# Compute pr01mm_seasonal
+			if ! [ -f ./$RCM/$VAR/$ofile_pr01mm_seasonal ]; then   # check if the file exists
+				cdo -L seassum -gtc,0.1 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr01mm_seasonal
+				ncrename -v pr,pr01mm ./$RCM/$VAR/$ofile_pr01mm_seasonal
+			else
+				echo "Skip computation from daily data, because ofile already exists for" "pr01mm_seasonal" $yyyy
+			fi
+
+			# Compute pr1mm_annual
+			if ! [ -f ./$RCM/$VAR/$ofile_pr1mm_annual ]; then   # check if the file exists
+				cdo yearsum -gec,1 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr1mm_annual
+				ncrename -v pr,pr1mm ./$RCM/$VAR/$ofile_pr1mm_annual
+			else
+				echo "Skip computation from daily data, because ofile already exists for" "pr1mm_annual" $yyyy
+			fi
+
+			# Compute pr1mm_seasonal
+			if ! [ -f ./$RCM/$VAR/$ofile_pr1mm_seasonal ]; then   # check if the file exists
+				cdo -L seassum -gec,1 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr1mm_seasonal
+				ncrename -v pr,pr1mm ./$RCM/$VAR/$ofile_pr1mm_seasonal
+			else
+				echo "Skip computation from daily data, because ofile already exists for" "pr1mm_seasonal" $yyyy
+			fi
+
+			# Compute sdii_annual
+			if ! [ -f ./$RCM/$VAR/$ofile_sdii_annual ]; then   # check if the file exists
+				cdo -L yearmean -setctomiss,0 -expr,"sdii=pr*(pr>=1)" -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_sdii_annual
+				#ncrename -v pr,sdii ./$RCM/$VAR/$ofile_sdii_annual #endres i expr over
+			else
+				echo "Skip computation from daily data, because ofile already exists for" "sdii_annual" $yyyy
+			fi
+
+			# Compute sdii_seasonal
+			if ! [ -f ./$RCM/$VAR/$ofile_sdii_seasonal ]; then   # check if the file exists
+				cdo -L seasmean -setctomiss,0 -expr,"sdii=pr*(pr>=1)" -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_sdii_seasonal
+				#ncrename -v pr,sdii ./$RCM/$VAR/$ofile_sdii_seasonal #endres i expr over
+			else
+				echo "Skip computation from daily data, because ofile already exists for" "sdii_seasonal" $yyyy
+			fi
+
+			# Compute pr20mm_annual
+			if ! [ -f ./$RCM/$VAR/$ofile_pr20mm_annual ]; then   # check if the file exists
+				cdo yearsum -gec,20 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr20mm_annual
+				ncrename -v pr,pr20mm ./$RCM/$VAR/$ofile_pr20mm_annual
+			else
+				echo "Skip computation from daily data, because ofile already exists for" "pr20mm_annual" $yyyy
+			fi
+
+			# Compute pr20mm_seasonal
+			if ! [ -f ./$RCM/$VAR/$ofile_pr20mm_seasonal ]; then   # check if the file exists
+				cdo -L seassum -gec,20 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr20mm_seasonal
+				ncrename -v pr,pr20mm ./$RCM/$VAR/$ofile_pr20mm_seasonal
+			else
+				echo "Skip computation from daily data, because ofile already exists for" "pr20mm_seasonal" $yyyy
+			fi
+
+			# Compute prmax5day
+			if ! [ -f ./$RCM/$VAR/$ofile_prmax5day ]; then   # check if the file exists
+				#cdo timsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_prmax5day
+				cdo runsum,5 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/temp_prmax5day.nc
+				cdo timmax ./$RCM/$VAR/temp_prmax5day.nc ./$RCM/$VAR/$ofile_prmax5day
+				rm ./$RCM/$VAR/temp_prmax5day.nc
+				ncrename -v pr,prmax5day ./$RCM/$VAR/$ofile_prmax5day
+			else
+				echo "Skip computation from daily data, because ofile already exists for" "prmax5day" $yyyy
 			fi
 	 
 			#-# NEW INDEX from pr? Add the if-block with cdo-command and ncrename (as above) here #-#
