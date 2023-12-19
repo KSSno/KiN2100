@@ -208,7 +208,25 @@ function calc_indices {
 		###ofile=`basename $file | sed s/senorge2018_//`          # Testing senorge. Format: tg_senorge2018_2008.nc
 
 
+		##TEST##
+		echo "in test"
+		local refyearlist="$(seq $REFBEGIN $REFEND)"
+    	local refyeararray=($refyearlist)
+		get_filenamestart $file $yyyy
+		local ifiles_reference=( "${refyeararray[@]/#/$filedir$filestart}" )
+        local ifilepathlist_periodyears="${ifiles_reference[@]/%/.nc4}"
+		for f in $ifilepathlist_periodyears
+		do
+			echo $f
+		done
+		cdo mergetime $ifilepathlist_periodyears ./$RCM/$VAR/temp_test_merge_ref_period.nc4
+		echo
+		pwd
+		echo $/$RCM/$VAR/$temp_test_merge_ref_period.nc4
+		echo "exit now"
+		exit
 
+		##TEST END##
 
         #if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
 		if [ $VAR == "tas" ]; then
@@ -475,6 +493,16 @@ function calc_indices {
 			local ofile_pr20mm_annual=`echo $ofile | sed s/_pr_/_pr20mm_annual_/`
 			local ofile_pr20mm_seasonal=`echo $ofile | sed s/_pr_/_pr20mm_seasonal_/`
 			local ofile_prmax5day=`echo $ofile | sed s/_pr_/_prmax5day_/`
+			#local ofile_pr95p_annual=`echo $ofile | sed s/_pr_/_pr95p_annual_/`            # Dager med pr > 95-persentilen av døgnmengder (i referanseperioden)
+			#local ofile_pr95p_seasonal=`echo $ofile | sed s/_pr_/_pr95p_seasonal_/`
+			#local ofile_pr95ptot_annual=`echo $ofile | sed s/_pr_/_pr95ptot_annual_/`      # Andel (%) dager med PR>95-persentilen av døgnmengde (veldig våte dager)
+			#local ofile_pr95ptot_seasonal=`echo $ofile | sed s/_pr_/_pr95ptot_seasonal_/`
+			#local ofile_pr997_annual=`echo $ofile | sed s/_pr_/_pr997_annual_/`            # 99,7 persentil for døgnverdi (mm)
+			#local ofile_pr997_seasonal=`echo $ofile | sed s/_pr_/_pr997_seasonal_/`
+			#local ofile_pr997p_annual=`echo $ofile | sed s/_pr_/_pr997p_annual_/`          # Antall dager pr. år i scenario-periodene med døgnnedbør> 99,7 persentilen for kontrollperioden
+			#local ofile_pr997p_seasonal=`echo $ofile | sed s/_pr_/_pr997p_seasonal_/`
+
+			
 
 			#-# NEW INDEX from pr? Add line (as above) here #-#
 
@@ -512,7 +540,30 @@ function calc_indices {
 
 				get_filenamestart $ofile_prmax5day $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
+				
+				# get_filenamestart $ofile_pr95p_annual $yyyy
+				# ofilestartlist="$ofilestartlist $filestart"
 
+				# get_filenamestart $ofile_pr95p_seasonal $yyyy
+				# ofilestartlist="$ofilestartlist $filestart"
+				
+				# get_filenamestart $ofile_pr95ptot_annual $yyyy
+				# ofilestartlist="$ofilestartlist $filestart"
+
+				# get_filenamestart $ofile_pr95ptot_seasonal $yyyy
+				# ofilestartlist="$ofilestartlist $filestart"
+				
+				# get_filenamestart $ofile_pr997_annual $yyyy
+				# ofilestartlist="$ofilestartlist $filestart"
+
+				# get_filenamestart $ofile_pr997_seasonal $yyyy
+				# ofilestartlist="$ofilestartlist $filestart"
+				
+				# get_filenamestart $ofile_pr997p_annual $yyyy
+				# ofilestartlist="$ofilestartlist $filestart"
+
+				# get_filenamestart $ofile_pr997p_seasonal $yyyy
+				# ofilestartlist="$ofilestartlist $filestart"
 
 				#-# NEW INDEX from pr? Add two lines (as above) here #-#
 			fi
@@ -609,6 +660,8 @@ function calc_indices {
 				echo "Skip computation from daily data, because ofile already exists for" "prmax5day" $yyyy
 			fi
 	 
+			
+			
 			#-# NEW INDEX from pr? Add the if-block with cdo-command and ncrename (as above) here #-#
 			#-# crop domain to mainland Norway before processing by "-ifthen $LANDMASK" (as above) #-#
 
@@ -872,6 +925,92 @@ do
 			fi
 
 			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp26_vs_hist
+			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_vs_hist
+
+		done
+	exit
+	done
+	# ------------------------------------------ #
+done
+
+
+# Continue here. The rest of the script is a proof-of-concept, outlining the order of commands, but they do not run.
+# Before they can run, there many special cases to treat: variable names/metadata, year selection, the fact that models cover different years etc.  
+
+
+
+# Change the name of the file and the variable name as shown in ncview:
+# See filename convensions in the modelling protocol, chapter 7.6. https://docs.google.com/document/d/1V9RBqdqUrMOYqfMVwcSHRwWP57fiS3R8/edit
+# Note here that bias-baseline could be either "eqm-sn2018v2005" or "3dbc-eqm-sn2018v2005", depending on the bias-adjustment method.
+## ncrename -v tas,tas_annual-mean  $WORKDIR/$RCM/$VAR'/tas_annual-mean_30-yrmean_mgtim_'$REFBEGIN'-'$REFEND'.nc' $WORKDIR/$RCM/$VAR/$RCM_$RCP_eqm-sn2018v2005_none_norway_1km_tas_annual-mean_'$REFBEGIN'-'$REFEND'.nc'
+
+#ncrename -v tg,growing .'/senorge/growing/growing_30-yrmean_mgtim_1961-1990.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1961-1990.nc4'
+#ncrename -v tg,growing .'/senorge/growing/growing_30-yrmean_mgtim_1991-2000.nc' .'/senorge/growing/sn2018v2005_hist_none_none_norway_1km_growing_annual-mean_1991-2020.nc4'
+
+
+
+
+#  for pctls in 10 25 50 75 90; do
+#     cdo enspctl,$pctls  $filedir/*/$var*_30-yrmean_mgtim_1991-2020.nc $savedir/'common_ensemble_enspctl-'$pctls'_1991-2020_'$var'.nc'
+	
+#     cdo fldmean $savedir/'common_ensemble_enspctl-'$pctls'_1991-2020_'$var'.nc' $savedir/'fldmean_1991-2020_enspctl-'$pctls'.nc'
+	
+#     echo 
+#     echo 'Printing fieldmean for 1991-2020, enspctl=' $enspctl
+#     echo 
+	
+#     cdo info $savedir/'fldmean_1991-2020_enspctl-'$pctls'.nc'
+
+# done   # Done looping over percentiles: 10,25,50,75,90
+
+
+
+echo "Add this when you have double-checked rm tmp/$USER/mergetime*"
+
+#return to starting dir
+cd $CURRDIR
+echo -ne "\n=====\nDone!\n"
+#---------------------------------------------------#
+
+#Notes from ibni:
+
+
+# $file = cnrm-r1i1p1-aladin_hist_eqm-sn2018v2005_rawbc_norway_1km_tas_daily_1960.nc4
+# ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
+# files by using this line of code in the if sentence below:
+# Monthly mean of $VAR (no space to save this for all variables and models)	 
+# cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean 	 
+
+# vekstsesongens lengde
+	# Denne er tricky fordi den skal beregnes fra en glattet kurve.
+	# Fra dynamisk dokument: "Midlere vekstsesong i 30-års perioder gjøres utfra glattet kurve for temperaturutvikling gjennom året." 
+	# den også tar inn filbane til landmaske. Og den skjønner ikke at jeg prøver å gi den to inputargumenter.
+	# cdo eca_gsl $file $LANDMASK -gec,20 $file $RCM/$VAR/$ofile_gsl
+
+	# vinter- og sommersesong inn her?
+
+	# Avkjølingsgraddager, cooling days
+	# Antall dager med TAM>=22 (gec) over året
+
+	#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_cdd
+
+	#ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
+	#ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
+	#ncatted -O -a long_name,tas,o,c,"cooling_degree-days"           ./$RCM/$VAR/$ofile_cdd
+	 
+
+# vekstsesongens lengde, Mean annual growing season (days>=5C). Merk at senorge er i degC, derfor terskel på 5, ikke 278.15.
+	# mkdir -p "./senorge/growing/"                                                           # Testing senorge
+	# echo "Ofile_growing=" ."/senorge/growing/"$ofile_growing
+	# cdo timsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
+	# trenger ikke månedsverdier:
+	# cdo monsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
+
+	#ncatted -O -a standard_name,tg,o,c,"spell_length_of_days_with_air_temperature_above_threshold" ."/senorge/growing/"$ofile_growing
+	#ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
+	#ncatted -O -a long_name,tg,o,c,"Mean annual growing season length (days TAS >=5 °C)"           ."/senorge/growing/"$ofile_growing
+	##ncatted -O -a short_name,tg,o,c,"growing"                                                   ."/senorge/growing/"$ofile_growing
+	## ncrename -v tg,growing .'/senorge/growing/'$ofile_growing .'/senorge/growing/'$ofile_growing                                                                                                                                                                                                                                                         t
 			ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_vs_hist
 
 		done
