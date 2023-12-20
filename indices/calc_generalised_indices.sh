@@ -210,19 +210,22 @@ function calc_indices {
 
 		##TEST##
 		echo "in test"
+		local refperiodstring="$REFBEGIN-$REFEND"
 		local refyearlist="$(seq $REFBEGIN $REFEND)"
     	local refyeararray=($refyearlist)
 		get_filenamestart $file $yyyy
 		local ifiles_reference=( "${refyeararray[@]/#/$filedir$filestart}" )
-        local ifilepathlist_periodyears="${ifiles_reference[@]/%/.nc4}"
-		for f in $ifilepathlist_periodyears
+        local ifiles_reference="${ifiles_reference[@]/%/.nc4}"
+		for f in $ifiles_reference
 		do
 			echo $f
 		done
-		cdo mergetime $ifilepathlist_periodyears ./$RCM/$VAR/temp_test_merge_ref_period.nc4
+		mergetime_refperiod_file=temp_test.nc4 #temp_mergetime_ref_period_$refperiodstring.nc4
+		echo $mergetime_refperiod_file
+		cdo timmean ./$RCM/$VAR/$file ./$RCM/$VAR/$mergetime_refperiod_file
 		echo
 		pwd
-		echo $/$RCM/$VAR/$temp_test_merge_ref_period.nc4
+		echo $/$RCM/$VAR/$mergetime_refperiod_file
 		echo "exit now"
 		exit
 
@@ -841,7 +844,7 @@ for rcm in $RCMLIST
 do
 	list_include_item "$VALID_RCMS" $rcm 'rcm'
 done
-echo "Accepted all (default and user) inputs of rcms, periods and variables. Proceed"
+echo "Accepted all (default and user) inputs of rcms, periods and variables. Proceed."
 
 # Load files neccessary for metadata
 source ini_file_parser.sh # Load in the ini file parser file (https://github.com/DevelopersToolbox/ini-file-parser)
