@@ -11,7 +11,7 @@
 
 import pandas as pd
 
-ifile_csv = "Metadata_KiN-2025_231103.csv" #input  file of type csv
+ifile_csv = "Metadata_KiN-2025_20231214.csv" #input  file of type csv
 ofile_ini = "config_for_calc_generalised_indices.ini"              #output file of type ini
 ifile_separator_char = ";"  #separator in input file
 ifile_encoding="iso8859_10" #iso8859_10 allow scandinavian characters #https://docs.python.org/3/library/codecs.html#standard-encodings
