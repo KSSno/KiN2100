@@ -208,28 +208,6 @@ function calc_indices {
 		###ofile=`basename $file | sed s/senorge2018_//`          # Testing senorge. Format: tg_senorge2018_2008.nc
 
 
-		##TEST##
-		echo "in test"
-		local refperiodstring="$REFBEGIN-$REFEND"
-		local refyearlist="$(seq $REFBEGIN $REFEND)"
-    	local refyeararray=($refyearlist)
-		get_filenamestart $file $yyyy
-		local ifiles_reference=( "${refyeararray[@]/#/$filedir$filestart}" )
-        local ifiles_reference="${ifiles_reference[@]/%/.nc4}"
-		for f in $ifiles_reference
-		do
-			echo $f
-		done
-		mergetime_refperiod_file=temp_test.nc4 #temp_mergetime_ref_period_$refperiodstring.nc4
-		echo $mergetime_refperiod_file
-		cdo timmean ./$RCM/$VAR/$file ./$RCM/$VAR/$mergetime_refperiod_file
-		echo
-		pwd
-		echo $/$RCM/$VAR/$mergetime_refperiod_file
-		echo "exit now"
-		exit
-
-		##TEST END##
 
         #if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
 		if [ $VAR == "tas" ]; then
@@ -662,6 +640,121 @@ function calc_indices {
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "prmax5day" $yyyy
 			fi
+
+
+			# 30-year percentiles (needed for remaining indices) only need to be computed once
+			if [ $yyyy == $REFBEGIN ]; then
+				# Merge daily data for all years in reference period
+				local refperiodstring="$REFBEGIN-$REFEND"
+				local refyearlist="$(seq $REFBEGIN $REFEND)"
+				local refyeararray=($refyearlist)
+				get_filenamestart $file $yyyy #returns filestart needed for next lines
+				ifilestart=$filestart
+				local ifiles_reference=( "${refyeararray[@]/#/$filedir$ifilestart}" )
+				local ifiles_reference="${ifiles_reference[@]/%/.nc4}"
+				mergetime_refperiod_file=temp_mergetime_refperiod_$refperiodstring.nc4
+				cdo mergetime $ifiles_reference ./$RCM/$VAR/$mergetime_refperiod_file
+				echo $mergetime_refperiod_file "in path" /$RCM/$VAR/
+
+				# Compute timmin and timmax for reference period, and use that to compute percentiles.
+				timmin_refperiod_file=temp_timmin_refperiod_$refperiodstring.nc4
+				timmax_refperiod_file=temp_timmax_refperiod_$refperiodstring.nc4
+				timpctl95_refperiod_file=temp_timpctl95_refperiod_$refperiodstring.nc4
+				timpctl997_refperiod_file=temp_timpctl997_refperiod_$refperiodstring.nc4
+
+				if ! [ -f ./$RCM/$VAR/$timpctl95_refperiod_file ]; then
+
+				cdo timmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file
+				cdo timmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file
+
+				cdo timpctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl95_refperiod_file
+				cdo timpctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file
+
+				# Compute yseasmin and yseasmax for reference period, and use that to compute seasonal percentiles.
+				yseasmin_refperiod_file=temp_yseasmin_refperiod_$refperiodstring.nc4
+				yseasmax_refperiod_file=temp_yseasmax_refperiod_$refperiodstring.nc4
+				yseaspctl95_refperiod_file=temp_yseaspctl95_refperiod_$refperiodstring.nc4
+				yseaspctl997_refperiod_file=temp_yseaspctl997_refperiod_$refperiodstring.nc4
+
+				cdo yseasmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file
+				cdo yseasmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file
+
+				cdo yseaspctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl95_refperiod_file
+				cdo yseaspctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file
+			fi
+
+			# THIS PART IS DONE FOR EVERY ITERATION
+			# Compute pr95p_annual
+			cdo timsum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$timpctl95_refperiod_file ./$RCM/$VAR/$ofile_pr95p_annual
+
+			# Compute pr95p_seasonal
+			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
+			cdo yseassum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/$ofile_pr95p_seasonal
+
+			# Compute pr997p_annual
+			cdo timsum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_annual
+
+			# Compute pr997p_seasonal
+			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
+			cdo yseassum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseaspctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_seasonal
+
+			# Compute _pr95ptot_annual
+			gt_timpctl95_file=temp_gt_timpctl95_$file
+			sumPgt_timpctl95_file=temp_sumPgt_timpctl95_$file
+			timsum_year_file=temp_timsum_$file
+
+			cdo gt $filedir/$file ./$RCM/$VAR/$timpctl95_refperiod_file ./$RCM/$VAR/$gt_timpctl95_file #1 if daily_P>perc95, 0 otherwise
+			cdo yearsum -mul $filedir/$file ./$RCM/$VAR/$gt_timpctl95_file ./$RCM/$VAR/$sumPgt_timpctl95_file #annual P-sum of P>perc95
+			cdo yearsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$timsum_year_file #annual P-sum
+			cdo div -ifthen $LANDMASK ./$RCM/$VAR/$sumPgt_timpctl95_file ./$RCM/$VAR/$timsum_year_file ./$RCM/$VAR/$ofile_pr95ptot_annual
+
+			# Compute _pr95ptot_seasonal
+			gt_yseaspctl95_file=temp_gt_yseaspctl95_$file
+			sumPgt_yseaspctl95_file=temp_sumPgt_yseaspctl95_$file
+			yseassum_year_file=temp_yseassum_$file
+
+			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
+			cdo gt $filedir/$file ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/$gt_yseaspctl95_file #1 if daily_P>perc95, 0 otherwise
+			cdo yearsum -mul $filedir/$file ./$RCM/$VAR/$gt_yseaspctl95_file ./$RCM/$VAR/$sumPgt_yseaspctl95_file #seasonal P-sum of P>perc95
+			cdo yearsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseassum_year_file #seasonal P-sum
+			cdo div -ifthen $LANDMASK ./$RCM/$VAR/$sumPgt_yseaspctl95_file ./$RCM/$VAR/$yseassum_year_file ./$RCM/$VAR/$ofile_pr95ptot_seasonal
+
+
+			# Compute _pr997_annual
+			# THIS PART IS ONLY DONE FOR ONE ITERATION, NOT IF HISTORICAL RUN, AND ONLY IF NOT EXIST ALREADY:
+			# Merge daily data for all years in scenario period
+			local scenperiodstring="$SCENBEGIN-$SCENEND"
+			local scenyearlist="$(seq $SCENBEGIN $SCENEND)"
+			local scenyeararray=($scenyearlist)
+			get_filenamestart $file $yyyy #returns filestart needed for next line
+			local ifiles_scenario=( "${scenyeararray[@]/#/$filedir$filestart}" )
+			local ifiles_scenario="${ifiles_scenario[@]/%/.nc4}"
+			mergetime_scenperiod_file=temp_mergetime_scenperiod_$scenperiodstring.nc4
+			cdo mergetime $ifiles_scenario ./$RCM/$VAR/$mergetime_scenperiod_file
+			echo $mergetime_scenperiod_file "in path" /$RCM/$VAR/
+
+			# Compute timmin and timmax for scenario period, and use that to compute percentiles.
+			timmin_scenperiod_file=temp_timmin_scenperiod_$scenperiodstring.nc4
+			timmax_scenperiod_file=temp_timmax_scenperiod_$scenperiodstring.nc4
+			timpctl997_scenperiod_file=temp_timpctl997_scenperiod_$scenperiodstring.nc4
+
+			cdo timmin ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$timmin_scenperiod_file
+			cdo timmax ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$timmax_scenperiod_file
+
+			cdo timpctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$timmin_scenperiod_file ./$RCM/$VAR/$timmax_scenperiod_file ./$RCM/$VAR/$timpctl997_scenperiod_file
+
+			# Compute yseasmin and yseasmax for scenario period, and use that to compute seasonal percentiles.
+			yseasmin_scenperiod_file=temp_yseasmin_scenperiod_$scenperiodstring.nc4
+			yseasmax_scenperiod_file=temp_yseasmax_scenperiod_$scenperiodstring.nc4
+			yseaspctl997_scenperiod_file=temp_yseaspctl997_scenperiod_$scenperiodstring.nc4
+
+			cdo yseasmin ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmin_scenperiod_file
+			cdo yseasmax ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmax_scenperiod_file
+
+			cdo yseaspctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmin_scenperiod_file ./$RCM/$VAR/$yseasmax_scenperiod_file ./$RCM/$VAR/$yseaspctl997_scenperiod_file
+
+			#Compute change from reference period 99.7 percentile here or later on? Not same procedure as other because not annually resolved.
+			# cdo -mulc,100 -div -sub -mulc,100 -ifthen $LANDMASK yseaspctl997_scenperiod_file
 	 
 			
 			
