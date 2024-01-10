@@ -663,12 +663,25 @@ function calc_indices {
 				timpctl997_refperiod_file=temp_timpctl997_refperiod_$refperiodstring.nc4
 
 				if ! [ -f ./$RCM/$VAR/$timpctl95_refperiod_file ]; then
+					if ! [ -f ./$RCM/$VAR/$timmin_refperiod_file ]; then
+						cdo timmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file
+					fi
+					if ! [ -f ./$RCM/$VAR/$timmax_refperiod_file ]; then
+						cdo timmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file
+					fi
+					cdo timpctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl95_refperiod_file
+				fi
 
-				cdo timmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file
-				cdo timmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file
+				if ! [ -f ./$RCM/$VAR/$timpctl997_refperiod_file ]; then
+					if ! [ -f ./$RCM/$VAR/$timmin_refperiod_file ]; then
+						cdo timmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file
+					fi
+					if ! [ -f ./$RCM/$VAR/$timmax_refperiod_file ]; then
+						cdo timmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file
+					fi
+					cdo timpctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file
+				fi
 
-				cdo timpctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl95_refperiod_file
-				cdo timpctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file
 
 				# Compute yseasmin and yseasmax for reference period, and use that to compute seasonal percentiles.
 				yseasmin_refperiod_file=temp_yseasmin_refperiod_$refperiodstring.nc4
@@ -676,11 +689,25 @@ function calc_indices {
 				yseaspctl95_refperiod_file=temp_yseaspctl95_refperiod_$refperiodstring.nc4
 				yseaspctl997_refperiod_file=temp_yseaspctl997_refperiod_$refperiodstring.nc4
 
-				cdo yseasmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file
-				cdo yseasmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file
+				if ! [ -f ./$RCM/$VAR/$yseaspctl95_refperiod_file ]; then
+					if ! [ -f ./$RCM/$VAR/$yseasmin_refperiod_file ]; then
+						cdo yseasmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file
+					fi
+					if ! [ -f ./$RCM/$VAR/$yseasmax_refperiod_file ]; then
+						cdo yseasmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file
+					fi
+					cdo yseaspctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl95_refperiod_file
+				fi
 
-				cdo yseaspctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl95_refperiod_file
-				cdo yseaspctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file
+				if ! [ -f ./$RCM/$VAR/$yseaspctl997_refperiod_file ]; then
+					if ! [ -f ./$RCM/$VAR/$yseasmin_refperiod_file ]; then
+						cdo yseasmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file
+					fi
+					if ! [ -f ./$RCM/$VAR/$yseasmax_refperiod_file ]; then
+						cdo yseasmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file
+					fi
+					cdo yseaspctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file
+				fi
 			fi
 
 			# THIS PART IS DONE FOR EVERY ITERATION
