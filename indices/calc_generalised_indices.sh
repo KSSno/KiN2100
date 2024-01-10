@@ -474,14 +474,14 @@ function calc_indices {
 			local ofile_pr20mm_annual=`echo $ofile | sed s/_pr_/_pr20mm_annual_/`
 			local ofile_pr20mm_seasonal=`echo $ofile | sed s/_pr_/_pr20mm_seasonal_/`
 			local ofile_prmax5day=`echo $ofile | sed s/_pr_/_prmax5day_/`
-			#local ofile_pr95p_annual=`echo $ofile | sed s/_pr_/_pr95p_annual_/`            # Dager med pr > 95-persentilen av døgnmengder (i referanseperioden)
-			#local ofile_pr95p_seasonal=`echo $ofile | sed s/_pr_/_pr95p_seasonal_/`
-			#local ofile_pr95ptot_annual=`echo $ofile | sed s/_pr_/_pr95ptot_annual_/`      # Andel (%) dager med PR>95-persentilen av døgnmengde (veldig våte dager)
-			#local ofile_pr95ptot_seasonal=`echo $ofile | sed s/_pr_/_pr95ptot_seasonal_/`
-			#local ofile_pr997_annual=`echo $ofile | sed s/_pr_/_pr997_annual_/`            # 99,7 persentil for døgnverdi (mm)
-			#local ofile_pr997_seasonal=`echo $ofile | sed s/_pr_/_pr997_seasonal_/`
-			#local ofile_pr997p_annual=`echo $ofile | sed s/_pr_/_pr997p_annual_/`          # Antall dager pr. år i scenario-periodene med døgnnedbør> 99,7 persentilen for kontrollperioden
-			#local ofile_pr997p_seasonal=`echo $ofile | sed s/_pr_/_pr997p_seasonal_/`
+			local ofile_pr95p_annual=`echo $ofile | sed s/_pr_/_pr95p_annual_/`            # Dager med pr > 95-persentilen av døgnmengder (i referanseperioden)
+			local ofile_pr95p_seasonal=`echo $ofile | sed s/_pr_/_pr95p_seasonal_/`
+			local ofile_pr95ptot_annual=`echo $ofile | sed s/_pr_/_pr95ptot_annual_/`      # Andel (%) dager med PR>95-persentilen av døgnmengde (veldig våte dager)
+			local ofile_pr95ptot_seasonal=`echo $ofile | sed s/_pr_/_pr95ptot_seasonal_/`
+			local ofile_pr997p_annual=`echo $ofile | sed s/_pr_/_pr997p_annual_/`          # Antall dager pr. år i scenario-periodene med døgnnedbør> 99,7 persentilen for kontrollperioden
+			local ofile_pr997p_seasonal=`echo $ofile | sed s/_pr_/_pr997p_seasonal_/`
+			local ofile_pr997_annual=`echo $ofile | sed s/_pr_/_pr997_annual_/`            # 99,7 persentil for døgnverdi (mm)
+			local ofile_pr997_seasonal=`echo $ofile | sed s/_pr_/_pr997_seasonal_/`
 
 			
 
@@ -522,28 +522,29 @@ function calc_indices {
 				get_filenamestart $ofile_prmax5day $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
 				
-				# get_filenamestart $ofile_pr95p_annual $yyyy
-				# ofilestartlist="$ofilestartlist $filestart"
+				get_filenamestart $ofile_pr95p_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
 
-				# get_filenamestart $ofile_pr95p_seasonal $yyyy
-				# ofilestartlist="$ofilestartlist $filestart"
+				get_filenamestart $ofile_pr95p_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
 				
-				# get_filenamestart $ofile_pr95ptot_annual $yyyy
-				# ofilestartlist="$ofilestartlist $filestart"
+				get_filenamestart $ofile_pr95ptot_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
 
-				# get_filenamestart $ofile_pr95ptot_seasonal $yyyy
-				# ofilestartlist="$ofilestartlist $filestart"
+				get_filenamestart $ofile_pr95ptot_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
 				
+				get_filenamestart $ofile_pr997p_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
+				get_filenamestart $ofile_pr997p_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+				
+				# NOT INCLUDE THESE NOW, BECAUSE FINAL CALCULATIONS ARE DONE IN THIS FUNCTION AND NOT OUTSIDE AS THE OTHERS.
 				# get_filenamestart $ofile_pr997_annual $yyyy
 				# ofilestartlist="$ofilestartlist $filestart"
 
 				# get_filenamestart $ofile_pr997_seasonal $yyyy
-				# ofilestartlist="$ofilestartlist $filestart"
-				
-				# get_filenamestart $ofile_pr997p_annual $yyyy
-				# ofilestartlist="$ofilestartlist $filestart"
-
-				# get_filenamestart $ofile_pr997p_seasonal $yyyy
 				# ofilestartlist="$ofilestartlist $filestart"
 
 				#-# NEW INDEX from pr? Add two lines (as above) here #-#
