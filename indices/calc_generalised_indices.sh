@@ -697,22 +697,22 @@ function calc_indices {
 
 				if ! [ -f ./$RCM/$VAR/$yseaspctl95_refperiod_file ]; then
 					if ! [ -f ./$RCM/$VAR/$yseasmin_refperiod_file ]; then
-						cdo yseasmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file
+						cdo -L yseasmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file
 					fi
 					if ! [ -f ./$RCM/$VAR/$yseasmax_refperiod_file ]; then
-						cdo yseasmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file
+						cdo -L yseasmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file
 					fi
-					cdo yseaspctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl95_refperiod_file
+					cdo -L yseaspctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl95_refperiod_file
 				fi
 
 				if ! [ -f ./$RCM/$VAR/$yseaspctl997_refperiod_file ]; then
 					if ! [ -f ./$RCM/$VAR/$yseasmin_refperiod_file ]; then
-						cdo yseasmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file
+						cdo -L yseasmin ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file
 					fi
 					if ! [ -f ./$RCM/$VAR/$yseasmax_refperiod_file ]; then
-						cdo yseasmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file
+						cdo -L yseasmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file
 					fi
-					cdo yseaspctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file
+					cdo -L yseaspctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file
 				fi
 			fi
 
@@ -726,7 +726,7 @@ function calc_indices {
 			# Compute pr95p_seasonal
 			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95p_seasonal ]; then
-				cdo yseassum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/$ofile_pr95p_seasonal
+				cdo -L yseassum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/$ofile_pr95p_seasonal
 				ncrename -v pr,pr95p ./$RCM/$VAR/$ofile_pr95p_seasonal
 			fi
 			
@@ -739,7 +739,7 @@ function calc_indices {
 			# Compute pr997p_seasonal
 			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
 			if ! [ -f ./$RCM/$VAR/$ofile_pr997p_annual ]; then
-				cdo yseassum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseaspctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_seasonal
+				cdo -L yseassum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseaspctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_seasonal
 				ncrename -v pr,pr997p ./$RCM/$VAR/$ofile_pr997p_seasonal
 			fi
 
@@ -812,12 +812,12 @@ function calc_indices {
 						cdo mergetime $ifiles_scenario ./$RCM/$VAR/$mergetime_scenperiod_file
 					fi
 					if ! [ -f ./$RCM/$VAR/$yseasmin_scenperiod_file ]; then
-						cdo yseasmin ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmin_scenperiod_file
+						cdo -L yseasmin ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmin_scenperiod_file
 					fi
 					if ! [ -f ./$RCM/$VAR/$yseasmax_scenperiod_file ]; then
-						cdo yseasmax ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmax_scenperiod_file
+						cdo -L yseasmax ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmax_scenperiod_file
 					fi
-					cdo yseaspctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmin_scenperiod_file ./$RCM/$VAR/$yseasmax_scenperiod_file ./$RCM/$VAR/$yseaspctl997_scenperiod_file
+					cdo -L yseaspctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmin_scenperiod_file ./$RCM/$VAR/$yseasmax_scenperiod_file ./$RCM/$VAR/$yseaspctl997_scenperiod_file
 				fi
 
 				#Compute change from reference period 99.7 percentile here or later on? Not same procedure as other because not annually resolved. Currently added here.
