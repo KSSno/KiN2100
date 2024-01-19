@@ -2,7 +2,7 @@
 
 ##!/usr/bin/bash   # <- use this on Lustre
 set -e #exit on error
-
+#set -x
 
 #---------------------------------------------------#
 #### DESCRIPTION OF SCRIPT ####
@@ -704,6 +704,7 @@ function calc_indices {
 					fi
 					cdo -L yseaspctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl95_refperiod_file
 				fi
+				
 
 				if ! [ -f ./$RCM/$VAR/$yseaspctl997_refperiod_file ]; then
 					if ! [ -f ./$RCM/$VAR/$yseasmin_refperiod_file ]; then
@@ -715,21 +716,34 @@ function calc_indices {
 					cdo -L yseaspctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file
 				fi
 			fi
-
+			echo "OK"
 			# THIS PART IS DONE FOR EVERY ITERATION
 			# Compute pr95p_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95p_annual ]; then
-				cdo timsum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$timpctl95_refperiod_file ./$RCM/$VAR/$ofile_pr95p_annual
+				cdo -L timsum -gt ./$RCM/$VAR/$timpctl95_refperiod_file $filedir/$file ./$RCM/$VAR/$ofile_pr95p_annual
 				ncrename -v pr,pr95p ./$RCM/$VAR/$ofile_pr95p_annual
 			fi
 
+			#echo "Start seas"
 			# Compute pr95p_seasonal
 			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
+			#rm ./$RCM/$VAR/$ofile_pr95p_seasonal
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95p_seasonal ]; then
-				cdo -L yseassum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/$ofile_pr95p_seasonal
+				for iseas in 1 2 3 4; do
+					if ! [ -f $filedir/seas$iseas\_$file ]; then
+						cdo selseas,$iseas $filedir/$file $filedir/seas$iseas\_$file
+					fi
+					if ! [ -f ./$RCM/$VAR/seas$iseas\_$ofile_pr95p_seasonal ]; then
+						cdo -L timsum -gt -seltimestep,$iseas ./$RCM/$VAR/$yseaspctl95_refperiod_file $filedir/seas$iseas\_$file ./$RCM/$VAR/seas$iseas\_$ofile_pr95p_seasonal
+					fi
+				done
+				cdo mergetime ./$RCM/$VAR/seas[1-4]_$ofile_pr95p_seasonal ./$RCM/$VAR/$ofile_pr95p_seasonal
 				ncrename -v pr,pr95p ./$RCM/$VAR/$ofile_pr95p_seasonal
+				rm ./$RCM/$VAR/seas[1-4]_$ofile_pr95p_seasonal
 			fi
-			
+			#echo "OK"
+			#echo ./$RCM/$VAR/$ofile_pr95p_seasonal
+			#exit
 			# Compute pr997p_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr997p_annual ]; then
 				cdo timsum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_annual
