@@ -715,8 +715,9 @@ function calc_indices {
 					fi
 					cdo -L yseaspctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file
 				fi
+				echo "Done computing percentiles for reference period" $refperiodstring
 			fi
-			echo "OK"
+			
 			# THIS PART IS DONE FOR EVERY ITERATION
 			# Compute pr95p_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95p_annual ]; then
@@ -724,11 +725,7 @@ function calc_indices {
 				ncrename -v pr,pr95p ./$RCM/$VAR/$ofile_pr95p_annual
 			fi
 
-			#echo "Start seas"
 			# Compute pr95p_seasonal
-			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
-			#rm ./$RCM/$VAR/$ofile_pr95p_seasonal
-			pwd
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95p_seasonal ]; then
 				for iseas in 1 2 3 4; do
 					if ! [ -f $filedir/seas$iseas\_$file ]; then
@@ -743,6 +740,7 @@ function calc_indices {
 				rm ./$RCM/$VAR/seas[1-4]_$ofile_pr95p_seasonal
 			fi
 			echo "OK"
+			pwd
 			echo ./$RCM/$VAR/$ofile_pr95p_seasonal
 			exit
 			# Compute pr997p_annual
@@ -752,12 +750,19 @@ function calc_indices {
 			fi
 
 			# Compute pr997p_seasonal
-			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
-			if ! [ -f ./$RCM/$VAR/$ofile_pr997p_annual ]; then
-				cdo -L yseassum -gt $filedir/$file ./$RCM/$VAR/$yseaspctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_seasonal
+			if ! [ -f ./$RCM/$VAR/$ofile_pr997p_seasonal ]; then
+				for iseas in 1 2 3 4; do
+					if ! [ -f $filedir/seas$iseas\_$file ]; then
+						cdo selseas,$iseas $filedir/$file ./$RCM/$VAR/seas$iseas\_$file
+					fi
+					if ! [ -f ./$RCM/$VAR/seas$iseas\_$ofile_pr997p_seasonal ]; then
+						cdo -L timsum -gt ./$RCM/$VAR/seas$iseas\_$file -seltimestep,$iseas ./$RCM/$VAR/$yseaspctl997_refperiod_file ./$RCM/$VAR/seas$iseas\_$ofile_pr997p_seasonal
+					fi
+				done
+				cdo mergetime ./$RCM/$VAR/seas[1-4]_$ofile_pr997p_seasonal ./$RCM/$VAR/$ofile_pr997p_seasonal
 				ncrename -v pr,pr997p ./$RCM/$VAR/$ofile_pr997p_seasonal
+				rm ./$RCM/$VAR/seas[1-4]_$ofile_pr997p_seasonal
 			fi
-
 
 			# Compute _pr95ptot_annual
 			gt_timpctl95_file=temp_gt_timpctl95_$file
