@@ -785,7 +785,7 @@ function calc_indices {
 						cdo selseas,$iseas $filedir/$file ./$RCM/$VAR/seas$iseas\_$file
 					fi
 					if ! [ -f ./$RCM/$VAR/seas$iseas\_$gt_yseaspctl95_file ]; then
-						cdo gt ./$RCM/$VAR/seas$iseas\_$file -seltimestep,$iseas ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/seas$iseas\_$gt_yseaspctl95_file  #1 if daily_P>perc95, 0 otherwise
+						cdo -L gt ./$RCM/$VAR/seas$iseas\_$file -seltimestep,$iseas ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/seas$iseas\_$gt_yseaspctl95_file  #1 if daily_P>perc95, 0 otherwise
 					fi
 				done
 				cdo mergetime ./$RCM/$VAR/seas[1-4]_$gt_yseaspctl95_file ./$RCM/$VAR/$gt_yseaspctl95_file
@@ -860,6 +860,7 @@ function calc_indices {
 				add_attributes_to_file $ofile_yseaspctl997_scen_vs_hist
 				ncatted -O -a units,$indexname,o,c,"%" $ofile_timpctl997_scen_vs_hist
 			fi
+			exit
 	 
 			#-# NEW INDEX from pr? Add the if-block with cdo-command and ncrename (as above) here #-#
 			#-# crop domain to mainland Norway by "-ifthen $LANDMASK" (as above) #-#
