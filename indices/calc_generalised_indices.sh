@@ -720,7 +720,7 @@ function calc_indices {
 			# THIS PART IS DONE FOR EVERY ITERATION
 			# Compute pr95p_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95p_annual ]; then
-				cdo -L timsum -gt ./$RCM/$VAR/$timpctl95_refperiod_file $filedir/$file ./$RCM/$VAR/$ofile_pr95p_annual
+				cdo -L timsum -gt $filedir/$file ./$RCM/$VAR/$timpctl95_refperiod_file ./$RCM/$VAR/$ofile_pr95p_annual
 				ncrename -v pr,pr95p ./$RCM/$VAR/$ofile_pr95p_annual
 			fi
 
@@ -728,13 +728,14 @@ function calc_indices {
 			# Compute pr95p_seasonal
 			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
 			#rm ./$RCM/$VAR/$ofile_pr95p_seasonal
+			pwd
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95p_seasonal ]; then
 				for iseas in 1 2 3 4; do
 					if ! [ -f $filedir/seas$iseas\_$file ]; then
-						cdo selseas,$iseas $filedir/$file $filedir/seas$iseas\_$file
+						cdo selseas,$iseas $filedir/$file ./$RCM/$VAR/seas$iseas\_$file
 					fi
 					if ! [ -f ./$RCM/$VAR/seas$iseas\_$ofile_pr95p_seasonal ]; then
-						cdo -L timsum -gt -seltimestep,$iseas ./$RCM/$VAR/$yseaspctl95_refperiod_file $filedir/seas$iseas\_$file ./$RCM/$VAR/seas$iseas\_$ofile_pr95p_seasonal
+						cdo -L timsum -gt ./$RCM/$VAR/seas$iseas\_$file -seltimestep,$iseas ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/seas$iseas\_$ofile_pr95p_seasonal
 					fi
 				done
 				cdo mergetime ./$RCM/$VAR/seas[1-4]_$ofile_pr95p_seasonal ./$RCM/$VAR/$ofile_pr95p_seasonal
@@ -746,14 +747,14 @@ function calc_indices {
 			exit
 			# Compute pr997p_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr997p_annual ]; then
-				cdo timsum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_annual
+				cdo timsum -gt $filedir/$file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_annual
 				ncrename -v pr,pr997p ./$RCM/$VAR/$ofile_pr997p_annual
 			fi
 
 			# Compute pr997p_seasonal
 			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
 			if ! [ -f ./$RCM/$VAR/$ofile_pr997p_annual ]; then
-				cdo -L yseassum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseaspctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_seasonal
+				cdo -L yseassum -gt $filedir/$file ./$RCM/$VAR/$yseaspctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_seasonal
 				ncrename -v pr,pr997p ./$RCM/$VAR/$ofile_pr997p_seasonal
 			fi
 
