@@ -739,10 +739,7 @@ function calc_indices {
 				ncrename -v pr,pr95p ./$RCM/$VAR/$ofile_pr95p_seasonal
 				rm ./$RCM/$VAR/seas[1-4]_$ofile_pr95p_seasonal
 			fi
-			echo "OK"
-			pwd
-			echo ./$RCM/$VAR/$ofile_pr95p_seasonal
-			exit
+
 			# Compute pr997p_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr997p_annual ]; then
 				cdo timsum -gt $filedir/$file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_annual
@@ -772,8 +769,8 @@ function calc_indices {
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95ptot_annual ]; then
 				cdo gt $filedir/$file ./$RCM/$VAR/$timpctl95_refperiod_file ./$RCM/$VAR/$gt_timpctl95_file #1 if daily_P>perc95, 0 otherwise
 				cdo yearsum -mul $filedir/$file ./$RCM/$VAR/$gt_timpctl95_file ./$RCM/$VAR/$sumPgt_timpctl95_file #annual P-sum of P>perc95
-				cdo yearsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$timsum_year_file #annual P-sum
-				cdo div -ifthen $LANDMASK ./$RCM/$VAR/$sumPgt_timpctl95_file ./$RCM/$VAR/$timsum_year_file ./$RCM/$VAR/$ofile_pr95ptot_annual
+				cdo yearsum $filedir/$file ./$RCM/$VAR/$timsum_year_file #annual P-sum
+				cdo div ./$RCM/$VAR/$sumPgt_timpctl95_file ./$RCM/$VAR/$timsum_year_file ./$RCM/$VAR/$ofile_pr95ptot_annual
 				ncrename -v pr,pr95ptot ./$RCM/$VAR/$ofile_pr95ptot_annual
 			fi
 
@@ -782,16 +779,24 @@ function calc_indices {
 			sumPgt_yseaspctl95_file=temp_sumPgt_yseaspctl95_$file
 			yseassum_year_file=temp_yseassum_$file
 
-			#       CHECK: WILL GT WORK WHEN 4 VALUES PER GRID CELL IN SEASONAL?
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95ptot_seasonal ]; then
-				cdo gt $filedir/$file ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/$gt_yseaspctl95_file #1 if daily_P>perc95, 0 otherwise
-				cdo yearsum -mul $filedir/$file ./$RCM/$VAR/$gt_yseaspctl95_file ./$RCM/$VAR/$sumPgt_yseaspctl95_file #seasonal P-sum of P>perc95
-				cdo yearsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$yseassum_year_file #seasonal P-sum
-				cdo div -ifthen $LANDMASK ./$RCM/$VAR/$sumPgt_yseaspctl95_file ./$RCM/$VAR/$yseassum_year_file ./$RCM/$VAR/$ofile_pr95ptot_seasonal
+				for iseas in 1 2 3 4; do
+					if ! [ -f $filedir/seas$iseas\_$file ]; then
+						cdo selseas,$iseas $filedir/$file ./$RCM/$VAR/seas$iseas\_$file
+					fi
+					if ! [ -f ./$RCM/$VAR/seas$iseas\_$gt_yseaspctl95_file ]; then
+						cdo gt ./$RCM/$VAR/seas$iseas\_$file -seltimestep,$iseas ./$RCM/$VAR/$yseaspctl95_refperiod_file ./$RCM/$VAR/seas$iseas\_$gt_yseaspctl95_file  #1 if daily_P>perc95, 0 otherwise
+					fi
+				done
+				cdo mergetime ./$RCM/$VAR/seas[1-4]_$gt_yseaspctl95_file ./$RCM/$VAR/$gt_yseaspctl95_file
+				rm ./$RCM/$VAR/seas[1-4]_$gt_yseaspctl95_file
+				cdo seassum -mul $filedir/$file ./$RCM/$VAR/$gt_yseaspctl95_file ./$RCM/$VAR/$sumPgt_yseaspctl95_file #seasonal P-sum of P>perc95
+				cdo seassum $filedir/$file ./$RCM/$VAR/$yseassum_year_file #seasonal P-sum
+				cdo div ./$RCM/$VAR/$sumPgt_yseaspctl95_file ./$RCM/$VAR/$yseassum_year_file ./$RCM/$VAR/$ofile_pr95ptot_seasonal
 				ncrename -v pr,pr95ptot ./$RCM/$VAR/$ofile_pr95ptot_seasonal
 			fi
 
-			# Compute _pr997_annual
+			# Compute _pr997_annual and _pr997_seasonal
 			# Scenario 30-year percentiles (needed for remaining indices) only need to be computed once for one scenario
 			if [ $yyyy == $SCENBEGIN ]; then
 				# Merge daily data for all years in scenario period
@@ -857,7 +862,7 @@ function calc_indices {
 			fi
 	 
 			#-# NEW INDEX from pr? Add the if-block with cdo-command and ncrename (as above) here #-#
-			#-# crop domain to mainland Norway before processing by "-ifthen $LANDMASK" (as above) #-#
+			#-# crop domain to mainland Norway by "-ifthen $LANDMASK" (as above) #-#
 
 
 		# elif [ $VAR == "hurs" ]; then
