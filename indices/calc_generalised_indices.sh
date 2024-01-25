@@ -741,9 +741,9 @@ function calc_indices {
 				ncrename -v pr,pr95p ./$RCM/$VAR/$ofile_pr95p_seasonal
 				rm ./$RCM/$VAR/seas[1-4]_$ofile_pr95p_seasonal
 			fi
-			#echo "OK"
-			#echo ./$RCM/$VAR/$ofile_pr95p_seasonal
-			#exit
+			echo "OK"
+			echo ./$RCM/$VAR/$ofile_pr95p_seasonal
+			exit
 			# Compute pr997p_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr997p_annual ]; then
 				cdo timsum -gt -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_annual
