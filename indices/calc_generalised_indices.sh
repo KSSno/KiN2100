@@ -569,7 +569,7 @@ function calc_indices {
 
 			# Compute pr01mm_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr01mm_annual ]; then   # check if the file exists
-				cdo yearsum -gtc,0.1 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr01mm_annual
+				cdo -L yearsum -gtc,0.1 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr01mm_annual
 				ncrename -v pr,pr01mm ./$RCM/$VAR/$ofile_pr01mm_annual
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "pr01mm_annual" $yyyy
@@ -585,7 +585,7 @@ function calc_indices {
 
 			# Compute pr1mm_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr1mm_annual ]; then   # check if the file exists
-				cdo yearsum -gec,1 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr1mm_annual
+				cdo -L yearsum -gec,1 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr1mm_annual
 				ncrename -v pr,pr1mm ./$RCM/$VAR/$ofile_pr1mm_annual
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "pr1mm_annual" $yyyy
@@ -617,7 +617,7 @@ function calc_indices {
 
 			# Compute pr20mm_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr20mm_annual ]; then   # check if the file exists
-				cdo yearsum -gec,20 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr20mm_annual
+				cdo -L yearsum -gec,20 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr20mm_annual
 				ncrename -v pr,pr20mm ./$RCM/$VAR/$ofile_pr20mm_annual
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "pr20mm_annual" $yyyy
@@ -634,7 +634,7 @@ function calc_indices {
 			# Compute prmax5day
 			if ! [ -f ./$RCM/$VAR/$ofile_prmax5day ]; then   # check if the file exists
 				#cdo timsum  $filedir/$file ./$RCM/$VAR/$ofile_prmax5day
-				cdo runsum,5 -mulc,86400  $filedir/$file ./$RCM/$VAR/temp_prmax5day.nc
+				cdo -L runsum,5 -mulc,86400  $filedir/$file ./$RCM/$VAR/temp_prmax5day.nc
 				cdo timmax ./$RCM/$VAR/temp_prmax5day.nc ./$RCM/$VAR/$ofile_prmax5day
 				rm ./$RCM/$VAR/temp_prmax5day.nc
 				ncrename -v pr,prmax5day ./$RCM/$VAR/$ofile_prmax5day
@@ -685,7 +685,7 @@ function calc_indices {
 					if ! [ -f ./$RCM/$VAR/$timmax_refperiod_file ]; then
 						cdo timmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file
 					fi
-					cdo -ifthen $LANDMASK -timpctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file
+					cdo -L -ifthen $LANDMASK -timpctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file
 				fi
 
 
@@ -790,7 +790,7 @@ function calc_indices {
 				done
 				cdo mergetime ./$RCM/$VAR/seas[1-4]_$gt_yseaspctl95_file ./$RCM/$VAR/$gt_yseaspctl95_file
 				rm ./$RCM/$VAR/seas[1-4]_$gt_yseaspctl95_file
-				cdo seassum -mul $filedir/$file ./$RCM/$VAR/$gt_yseaspctl95_file ./$RCM/$VAR/$sumPgt_yseaspctl95_file #seasonal P-sum of P>perc95
+				cdo -L seassum -mul $filedir/$file ./$RCM/$VAR/$gt_yseaspctl95_file ./$RCM/$VAR/$sumPgt_yseaspctl95_file #seasonal P-sum of P>perc95
 				cdo seassum $filedir/$file ./$RCM/$VAR/$yseassum_year_file #seasonal P-sum
 				cdo div ./$RCM/$VAR/$sumPgt_yseaspctl95_file ./$RCM/$VAR/$yseassum_year_file ./$RCM/$VAR/$ofile_pr95ptot_seasonal
 				ncrename -v pr,pr95ptot ./$RCM/$VAR/$ofile_pr95ptot_seasonal
@@ -824,7 +824,7 @@ function calc_indices {
 					if ! [ -f ./$RCM/$VAR/$timmax_scenperiod_file ]; then
 						cdo timmax ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$timmax_scenperiod_file
 					fi
-					cdo -ifthen $LANDMASK -timpctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$timmin_scenperiod_file ./$RCM/$VAR/$timmax_scenperiod_file ./$RCM/$VAR/$timpctl997_scenperiod_file
+					cdo -L -ifthen $LANDMASK -timpctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$timmin_scenperiod_file ./$RCM/$VAR/$timmax_scenperiod_file ./$RCM/$VAR/$timpctl997_scenperiod_file
 				fi
 
 				# Merge time and compute yseasmin and yseasmax for scenario period, and use that to compute seasonal percentiles.
@@ -1296,4 +1296,4 @@ done
 # 	#ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
 # 	#ncatted -O -a long_name,tg,o,c,"Mean annual growing season length (days TAS >=5 °C)"           ."/senorge/growing/"$ofile_growing
 # 	##ncatted -O -a short_name,tg,o,c,"growing"                                                   ."/senorge/growing/"$ofile_growing
-	## ncrename -v tg,growing .'/senorge/growing/'$ofile_growing .'/senorge/growing/'$ofile_growing                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+	## ncrename -v tg,growing .'/senorge/growing/'$ofile_growing .'/senorge/growing/'$ofile_growing
