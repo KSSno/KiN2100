@@ -239,7 +239,7 @@ function calc_indices {
 
 			# Compute tas_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_tas_annual ]; then   # check that the file does not exist
-				cdo timmean   -ifthen $LANDMASK $filedir/$file  ./$RCM/$VAR/$ofile_tas_annual
+				cdo timmean $filedir/$file  ./$RCM/$VAR/$ofile_tas_annual
 				#ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_annual
 				#ncrename -v tas,tas ./$RCM/$VAR/$ofile_tas_annual #https://linux.die.net/man/1/ncrename
 			else
@@ -248,7 +248,7 @@ function calc_indices {
 	    
 			# Compute tas_seasonal
  			if ! [ -f ./$RCM/$VAR/$ofile_tas_seasonal ]; then
-				cdo -L yseasmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
+				cdo -L yseasmean $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
 				#ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal
 				## ncrename -v tas,tas ./$RCM/$VAR/$ofile_tas_seasonal ./$RCM/$VAR/$ofile_tas_seasonal	 
 			else
@@ -291,16 +291,16 @@ function calc_indices {
 	 
 			# Annual and seasonal mean of $VAR
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmax_annual ]; then   # check if the file exists
-				cdo timmean                -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_tasmax_annual
+				cdo timmean                 $filedir/$file ./$RCM/$VAR/$ofile_tasmax_annual
 				# flytt metadata hit når de er klare?
 			fi
 	 
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmax_seasonal ]; then   # check if the file exists
 
-				cdo timmean -selmon,12,1,2 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-				cdo timmean -selmon,3/5    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-				cdo timmean -selmon,6/8    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-				cdo timmean -selmon,9/11   -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+				cdo timmean -selmon,12,1,2  $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+				cdo timmean -selmon,3/5     $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+				cdo timmean -selmon,6/8     $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+				cdo timmean -selmon,9/11    $filedir/$file ./$RCM/$VAR/"SONmean.nc"
 
 				cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
 				rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc"
@@ -308,7 +308,7 @@ function calc_indices {
 			fi
 	 
 			# Monthly mean of $VAR (no space to save this for all variables and models)	 
-			# cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
+			# cdo -s monmean  $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
 
 			# Read in tasmin
 			local ifileN=`echo $file | sed s/_tasmax_/_tasmin_/`
@@ -322,23 +322,23 @@ function calc_indices {
 
 			# Annual and seasonal mean of $VAR
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmin_annual ]; then   # check if the file exists
-				cdo timmean                -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_tasmin_annual
+				cdo timmean                 $filedir/$file ./$RCM/$VAR/$ofile_tasmin_annual
 				# flytt metadata hit når de er klare?
 			fi
 	 
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmin_seasonal ]; then   # check if the file exists
 	     
-				#cdo timmean                -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
+				#cdo timmean                 $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
 
-				cdo timmean -selmon,12,1,2 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-				cdo timmean -selmon,3/5    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-				cdo timmean -selmon,6/8    -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-				cdo timmean -selmon,9/11   -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/"SONmean.nc"
+				cdo timmean -selmon,12,1,2  $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
+				cdo timmean -selmon,3/5     $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
+				cdo timmean -selmon,6/8     $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
+				cdo timmean -selmon,9/11    $filedir/$file ./$RCM/$VAR/"SONmean.nc"
 				cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
 				rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc"
 
 				# Monthly mean of $VAR (no space to save this for all variables and models)
-				# cdo -s monmean -ifthen $LANDMASK $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
+				# cdo -s monmean  $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
 				echo "Tasmin: done"
 				# flytt metadata hit når de er klare?
 			fi
@@ -354,7 +354,7 @@ function calc_indices {
 				#ofile_dtr=`echo $ofile | sed s/_tasmax_/_dtr_/`
 
 				echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
-				cdo sub -ifthen $LANDMASK $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
+				cdo sub  $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
 			fi
 
 	 	 
@@ -364,7 +364,7 @@ function calc_indices {
 				local ofile_dzc_annual=`echo $ofile | sed s/_tasmax_/_dzc_annual-mean_/`
 				local ofile_dzc_seasonal=`echo $ofile | sed s/_tasmax_/_dzc_seasonal-mean_/`	 
 				echo "Ofile_dzc=" $RCM"/dzc/"$ofile_dzc	 
-				cdo monsum -mul -ltc,273.15 -ifthen $LANDMASK $ifiledirN/$ifileN -gtc,273.15 -ifthen $LANDMASK $filedir/$file ./$RCM/dzc/$ofile_dzc
+				cdo monsum -mul -ltc,273.15  $ifiledirN/$ifileN -gtc,273.15  $filedir/$file ./$RCM/dzc/$ofile_dzc
 			fi
 
 
@@ -372,7 +372,7 @@ function calc_indices {
 			if ! [ -f ./$RCM/$VAR/$ofile_fd ]; then   # check if the file exists
 				mkdir -p $RCM/fd/
 				echo "Ofile_fd=" $RCM"/fd/"$ofile_fd
-				cdo monsum -ltc,273.15 -ifthen $LANDMASK $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
+				cdo monsum -ltc,273.15  $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
 			fi
 	 
 	 
@@ -380,41 +380,41 @@ function calc_indices {
 			if ! [ -f ./$RCM/$VAR/$ofile_tropnight ]; then   # check if the file exists
 				mkdir -p $RCM/tropnight/
 				echo "Ofile_tropnight=" $RCM"/tropnight/"$ofile_tropnight
-				cdo -s monsum -gec,293.15 -ifthen $LANDMASK $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
+				cdo -s monsum -gec,293.15  $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
 			fi
 	 
 			# Nordiske sommerdager # over 20 grader
 			if ! [ -f ./$RCM/$VAR/$ofile_norsummer ]; then   # check if the file exists
 				mkdir -p  $RCM/norsummer/
 				echo "Ofile_norsummer=" $RCM"/norsummer/"$ofile_norsummer	 	 
-				cdo monsum -gec,293.15 -ifthen $LANDMASK $filedir/$file ./$RCM/norsummer/$ofile_norsummer
+				cdo monsum -gec,293.15  $filedir/$file ./$RCM/norsummer/$ofile_norsummer
 			fi
 
 			# Nordiske sommerdager # over 25 grader
 			if ! [ -f ./$RCM/$VAR/$ofile_summerdays ]; then   # check if the file exists
 				mkdir -p  $RCM/summerdays/	 
 				echo "Ofile_summerdays=" $RCM"/summerdays/"$ofile_summerdays 	 
-				cdo monsum -gec,298.15 -ifthen $LANDMASK $filedir/$file ./$RCM/summerdays/$ofile_summerdays
+				cdo monsum -gec,298.15  $filedir/$file ./$RCM/summerdays/$ofile_summerdays
 			fi
 	 
 			# norsk hetebølge # over 27 grader
 			#ofile_norheatwave=`echo $ofile | sed s/_tasmax_/_norheatwave_/`
 			if ! [ -f ./$RCM/$VAR/$ofile_norheatwave ]; then   # check if the file exists
 				mkdir -p $RCM/norheatwave/
-				cdo monsum -gec,300.15 -runmean,5 -ifthen $LANDMASK $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
+				cdo monsum -gec,300.15 -runmean,5  $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
 				echo "norsk hetebølge: done"
 			fi    
 
 
 			# Til alle standard_name under: Kan vurdere å legge inn variabel threshold (float threshold;   threshold:standard_name="air_temperature";    threshold:units="degC"; data: threshold=0.;)	 
-			ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_below_threshold"    ./$RCM/dzc/$ofile_dzc
-			# ncatted -O -a metno_name,global,o,c,"number_of_days_with_air_temperature_crossing_threshold"    ./$RCM/dzc/$ofile_dzc  <- not standard_name 
-			ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_below_threshold"    ./$RCM/fd/$ofile_fd
-			ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_above_threshold"    ./$RCM/tropnight/$ofile_tropnight 	
-			ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_above_threshold"    ./$RCM/norsummer/$ofile_norsummer
-			ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_above_threshold"    ./$RCM/summerdays/$ofile_summerdays
-			ncatted -O -a metno_name,global,o,c,"number_of_events_with_air_temperature_above_threshold"     ./$RCM/norheatwave/$ofile_norheatwave
-			# NB: norheatwave arver nå standard_name fra hovedfila, dvs "air_temperature". Kan vurdere å fjerne standard_name.
+			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_below_threshold"    ./$RCM/dzc/$ofile_dzc
+			# # ncatted -O -a metno_name,global,o,c,"number_of_days_with_air_temperature_crossing_threshold"    ./$RCM/dzc/$ofile_dzc  <- not standard_name 
+			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_below_threshold"    ./$RCM/fd/$ofile_fd
+			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_above_threshold"    ./$RCM/tropnight/$ofile_tropnight 	
+			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_above_threshold"    ./$RCM/norsummer/$ofile_norsummer
+			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_above_threshold"    ./$RCM/summerdays/$ofile_summerdays
+			# ncatted -O -a metno_name,global,o,c,"number_of_events_with_air_temperature_above_threshold"     ./$RCM/norheatwave/$ofile_norheatwave
+			# # NB: norheatwave arver nå standard_name fra hovedfila, dvs "air_temperature". Kan vurdere å fjerne standard_name.
 
 			# Forslag:
 			ncatted -O -a cell_methods,global,o,c,"time: minimum within days and maximum within days time: sum over days"    ./$RCM/fd/$ofile_dzc
@@ -552,7 +552,7 @@ function calc_indices {
 
 			# Compute prsum_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_prsum_annual ]; then   # check if the file exists
-				cdo timsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_prsum_annual
+				cdo timsum  $filedir/$file ./$RCM/$VAR/$ofile_prsum_annual
 				ncrename -v pr,prsum ./$RCM/$VAR/$ofile_prsum_annual #https://linux.die.net/man/1/ncrename
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "prsum_annual" $yyyy
@@ -560,7 +560,7 @@ function calc_indices {
 
 			# Compute prsum_seasonal
 			if ! [ -f ./$RCM/$VAR/$ofile_prsum_seasonal ]; then   # check if the file exists
-				cdo -L yseassum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_prsum_seasonal
+				cdo -L yseassum  $filedir/$file ./$RCM/$VAR/$ofile_prsum_seasonal
 				ncrename -v pr,prsum ./$RCM/$VAR/$ofile_prsum_seasonal #https://linux.die.net/man/1/ncrename
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "prsum_seasonal" $yyyy
@@ -569,7 +569,7 @@ function calc_indices {
 
 			# Compute pr01mm_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr01mm_annual ]; then   # check if the file exists
-				cdo yearsum -gtc,0.1 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr01mm_annual
+				cdo yearsum -gtc,0.1 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr01mm_annual
 				ncrename -v pr,pr01mm ./$RCM/$VAR/$ofile_pr01mm_annual
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "pr01mm_annual" $yyyy
@@ -577,7 +577,7 @@ function calc_indices {
 
 			# Compute pr01mm_seasonal
 			if ! [ -f ./$RCM/$VAR/$ofile_pr01mm_seasonal ]; then   # check if the file exists
-				cdo -L seassum -gtc,0.1 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr01mm_seasonal
+				cdo -L seassum -gtc,0.1 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr01mm_seasonal
 				ncrename -v pr,pr01mm ./$RCM/$VAR/$ofile_pr01mm_seasonal
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "pr01mm_seasonal" $yyyy
@@ -585,7 +585,7 @@ function calc_indices {
 
 			# Compute pr1mm_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr1mm_annual ]; then   # check if the file exists
-				cdo yearsum -gec,1 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr1mm_annual
+				cdo yearsum -gec,1 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr1mm_annual
 				ncrename -v pr,pr1mm ./$RCM/$VAR/$ofile_pr1mm_annual
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "pr1mm_annual" $yyyy
@@ -593,7 +593,7 @@ function calc_indices {
 
 			# Compute pr1mm_seasonal
 			if ! [ -f ./$RCM/$VAR/$ofile_pr1mm_seasonal ]; then   # check if the file exists
-				cdo -L seassum -gec,1 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr1mm_seasonal
+				cdo -L seassum -gec,1 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr1mm_seasonal
 				ncrename -v pr,pr1mm ./$RCM/$VAR/$ofile_pr1mm_seasonal
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "pr1mm_seasonal" $yyyy
@@ -601,7 +601,7 @@ function calc_indices {
 
 			# Compute sdii_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_sdii_annual ]; then   # check if the file exists
-				cdo -L yearmean -setctomiss,0 -expr,"sdii=pr*(pr>=1)" -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_sdii_annual
+				cdo -L yearmean -setctomiss,0 -expr,"sdii=pr*(pr>=1)" -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_sdii_annual
 				#ncrename -v pr,sdii ./$RCM/$VAR/$ofile_sdii_annual #endres i expr over
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "sdii_annual" $yyyy
@@ -609,7 +609,7 @@ function calc_indices {
 
 			# Compute sdii_seasonal
 			if ! [ -f ./$RCM/$VAR/$ofile_sdii_seasonal ]; then   # check if the file exists
-				cdo -L seasmean -setctomiss,0 -expr,"sdii=pr*(pr>=1)" -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_sdii_seasonal
+				cdo -L seasmean -setctomiss,0 -expr,"sdii=pr*(pr>=1)" -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_sdii_seasonal
 				#ncrename -v pr,sdii ./$RCM/$VAR/$ofile_sdii_seasonal #endres i expr over
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "sdii_seasonal" $yyyy
@@ -617,7 +617,7 @@ function calc_indices {
 
 			# Compute pr20mm_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr20mm_annual ]; then   # check if the file exists
-				cdo yearsum -gec,20 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr20mm_annual
+				cdo yearsum -gec,20 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr20mm_annual
 				ncrename -v pr,pr20mm ./$RCM/$VAR/$ofile_pr20mm_annual
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "pr20mm_annual" $yyyy
@@ -625,7 +625,7 @@ function calc_indices {
 
 			# Compute pr20mm_seasonal
 			if ! [ -f ./$RCM/$VAR/$ofile_pr20mm_seasonal ]; then   # check if the file exists
-				cdo -L seassum -gec,20 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_pr20mm_seasonal
+				cdo -L seassum -gec,20 -mulc,86400  $filedir/$file ./$RCM/$VAR/$ofile_pr20mm_seasonal
 				ncrename -v pr,pr20mm ./$RCM/$VAR/$ofile_pr20mm_seasonal
 			else
 				echo "Skip computation from daily data, because ofile already exists for" "pr20mm_seasonal" $yyyy
@@ -633,8 +633,8 @@ function calc_indices {
 
 			# Compute prmax5day
 			if ! [ -f ./$RCM/$VAR/$ofile_prmax5day ]; then   # check if the file exists
-				#cdo timsum -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_prmax5day
-				cdo runsum,5 -mulc,86400 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/temp_prmax5day.nc
+				#cdo timsum  $filedir/$file ./$RCM/$VAR/$ofile_prmax5day
+				cdo runsum,5 -mulc,86400  $filedir/$file ./$RCM/$VAR/temp_prmax5day.nc
 				cdo timmax ./$RCM/$VAR/temp_prmax5day.nc ./$RCM/$VAR/$ofile_prmax5day
 				rm ./$RCM/$VAR/temp_prmax5day.nc
 				ncrename -v pr,prmax5day ./$RCM/$VAR/$ofile_prmax5day
@@ -685,7 +685,7 @@ function calc_indices {
 					if ! [ -f ./$RCM/$VAR/$timmax_refperiod_file ]; then
 						cdo timmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file
 					fi
-					cdo timpctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file
+					cdo -ifthen $LANDMASK -timpctl,99.7 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$timmin_refperiod_file ./$RCM/$VAR/$timmax_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file
 				fi
 
 
@@ -702,7 +702,7 @@ function calc_indices {
 					if ! [ -f ./$RCM/$VAR/$yseasmax_refperiod_file ]; then
 						cdo -L yseasmax ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file
 					fi
-					cdo -L yseaspctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl95_refperiod_file
+					cdo -L -ifthen $LANDMASK -yseaspctl,95 ./$RCM/$VAR/$mergetime_refperiod_file ./$RCM/$VAR/$yseasmin_refperiod_file ./$RCM/$VAR/$yseasmax_refperiod_file ./$RCM/$VAR/$yseaspctl95_refperiod_file
 				fi
 				
 
@@ -824,7 +824,7 @@ function calc_indices {
 					if ! [ -f ./$RCM/$VAR/$timmax_scenperiod_file ]; then
 						cdo timmax ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$timmax_scenperiod_file
 					fi
-					cdo timpctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$timmin_scenperiod_file ./$RCM/$VAR/$timmax_scenperiod_file ./$RCM/$VAR/$timpctl997_scenperiod_file
+					cdo -ifthen $LANDMASK -timpctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$timmin_scenperiod_file ./$RCM/$VAR/$timmax_scenperiod_file ./$RCM/$VAR/$timpctl997_scenperiod_file
 				fi
 
 				# Merge time and compute yseasmin and yseasmax for scenario period, and use that to compute seasonal percentiles.
@@ -842,13 +842,13 @@ function calc_indices {
 					if ! [ -f ./$RCM/$VAR/$yseasmax_scenperiod_file ]; then
 						cdo -L yseasmax ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmax_scenperiod_file
 					fi
-					cdo -L yseaspctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmin_scenperiod_file ./$RCM/$VAR/$yseasmax_scenperiod_file ./$RCM/$VAR/$yseaspctl997_scenperiod_file
+					cdo -L -ifthen $LANDMASK -yseaspctl,99.7 ./$RCM/$VAR/$mergetime_scenperiod_file ./$RCM/$VAR/$yseasmin_scenperiod_file ./$RCM/$VAR/$yseasmax_scenperiod_file ./$RCM/$VAR/$yseaspctl997_scenperiod_file
 				fi
 
 				#Compute change from reference period 99.7 percentile here or later on? Not same procedure as other because not annually resolved. Currently added here.
 				#   annual
 				ofile_timpctl997_scen_vs_hist=test_ofile_timpctl997_scen_vs_hist.nc4
-				cdo -mulc,100 -div -sub ./$RCM/$VAR/$yseaspctl997_scenperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file $ofile_timpctl997_scen_vs_hist
+				cdo -mulc,100 -div -sub ./$RCM/$VAR/$timpctl997_scenperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file $ofile_timpctl997_scen_vs_hist
 				ncrename -v pr,pr997 $ofile_timpctl997_scen_vs_hist
 				add_attributes_to_file $ofile_timpctl997_scen_vs_hist
 				ncatted -O -a units,$indexname,o,c,"%" $ofile_timpctl997_scen_vs_hist
@@ -872,7 +872,7 @@ function calc_indices {
 			# 	 ofile_hurs_monmean=`echo $ofile | sed s/_hurs_/_hurs_monmean_/`	 
 
 			# 	 # Monthly mean av hurs
-			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_hurs_monmean	 
+			#    cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_hurs_monmean	 
 
 			# 	 ncatted -O -a short_name,hurs,o,c,"hurs_monmean" 		                ./$RCM/$VAR/$ofile_hurs_monmean	 
 			# 	 ncatted -O -a units,hurs,o,c,"W m-2" 		                        ./$RCM/$VAR/$ofile_hurs_monmean
@@ -885,7 +885,7 @@ function calc_indices {
 			# 	 ofile_rlds_monmean=`echo $ofile | sed s/_rlds_/_rlds_monmean_/`	 
 			
 			# 	 # Monthly mean av rlds
-			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_rlds_monmean	 
+			#    cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_rlds_monmean	 
 			
 			# 	 ncatted -O -a short_name,rlds,o,c,"rlds_monmean"                  	        ./$RCM/$VAR/$ofile_rlds_monmean	 
 			# 	 ncatted -O -a units,rlds,o,c,"W m-2" 		                        ./$RCM/$VAR/$ofile_rlds_monmean
@@ -898,7 +898,7 @@ function calc_indices {
 			# 	 ofile_rsds_monmean=`echo $ofile | sed s/_rsds_/_rsds_monmean_/`	 
 			
 			# 	 # Monthly mean av rsds
-			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_rsds_monmean	 
+			#    cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_rsds_monmean	 
 			
 			# 	 ncatted -O -a short_name,rsds,o,c,"rsds_monmean"         ./$RCM/$VAR/$ofile_rsds_monmean	 
 			# 	 ncatted -O -a units,rsds,o,c,"%"                         ./$RCM/$VAR/$ofile_rsds_monmean
@@ -911,7 +911,7 @@ function calc_indices {
 			# 	 ofile_ps_monmean=`echo $ofile | sed s/_ps_/_ps_monmean_/`	 
 			
 			# 	 # Monthly mean av ps
-			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_ps_monmean	 
+			#    cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_ps_monmean	 
 			
 			# 	 ncatted -O -a short_name,ps,o,c,"ps_monmean" 		./$RCM/$VAR/$ofile_ps_monmean	 
 			# 	 ncatted -O -a units,ps,o,c,"Pa" 		        ./$RCM/$VAR/$ofile_ps_monmean
@@ -925,7 +925,7 @@ function calc_indices {
 			# 	 ofile_sfcWind_monmean=`echo $ofile | sed s/_sfcWind_/_sfcWind_monmean_/`	 
 			
 			# 	 # Monthly mean av sfcWind
-			#    cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_sfcWind_monmean	 
+			#    cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_sfcWind_monmean	 
 			
 			# 	 ncatted -O -a short_name,sfcWind,o,c,"sfcWind_monmean" ./$RCM/$VAR/$ofile_sfcWind_monmean	 
 			# 	 ncatted -O -a units,sfcWind,o,c,"m s-1" 		./$RCM/$VAR/$ofile_sfcWind_monmean
@@ -1004,7 +1004,7 @@ function calc_periodmeans {
             echo Saved: "$(basename $ofilepath1)"
         fi
         if ! [ -f $ofilepath2 ]; then   # if ofile not already exist, do timmean
-			cdo yseasmean $ofilepath1 $ofilepath2 #yseasmean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
+			cdo yseasmean  -ifthen $LANDMASK $ofilepath1 $ofilepath2 #yseasmean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
             echo Saved: "$(basename $ofilepath2)"
         fi
 		add_attributes_to_file $ofilepath2
@@ -1179,7 +1179,7 @@ done
 # # ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
 # # files by using this line of code in the if sentence below:
 # # Monthly mean of $VAR (no space to save this for all variables and models)	 
-# # cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean 	 
+# # cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean 	 
 
 # # vekstsesongens lengde
 # 	# Denne er tricky fordi den skal beregnes fra en glattet kurve.
@@ -1192,7 +1192,7 @@ done
 # 	# Avkjølingsgraddager, cooling days
 # 	# Antall dager med TAM>=22 (gec) over året
 
-# 	#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_cdd
+# 	#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
 # 	#ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
 # 	#ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
@@ -1202,9 +1202,9 @@ done
 # # vekstsesongens lengde, Mean annual growing season (days>=5C). Merk at senorge er i degC, derfor terskel på 5, ikke 278.15.
 # 	# mkdir -p "./senorge/growing/"                                                           # Testing senorge
 # 	# echo "Ofile_growing=" ."/senorge/growing/"$ofile_growing
-# 	# cdo timsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
+# 	# cdo timsum -gec,5 $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
 # 	# trenger ikke månedsverdier:
-# 	# cdo monsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
+# 	# cdo monsum -gec,5 $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
 
 # 	#ncatted -O -a standard_name,tg,o,c,"spell_length_of_days_with_air_temperature_above_threshold" ."/senorge/growing/"$ofile_growing
 # 	#ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
@@ -1265,7 +1265,7 @@ done
 # # ofile=`basename $file | sed s/daily/monthly/`        # <- The original script computed monthly files from daily
 # # files by using this line of code in the if sentence below:
 # # Monthly mean of $VAR (no space to save this for all variables and models)	 
-# # cdo -s monmean -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean 	 
+# # cdo -s monmean $filedir/$file ./$RCM/$VAR/$ofile_$VAR_monmean 	 
 
 # # vekstsesongens lengde
 # 	# Denne er tricky fordi den skal beregnes fra en glattet kurve.
@@ -1278,7 +1278,7 @@ done
 # 	# Avkjølingsgraddager, cooling days
 # 	# Antall dager med TAM>=22 (gec) over året
 
-# 	#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 -ifthen $LANDMASK $filedir/$file ./$RCM/$VAR/$ofile_cdd
+# 	#cdo -s monsum -setrtoc,-Inf,0,0 -subc,295.15 $filedir/$file ./$RCM/$VAR/$ofile_cdd
 
 # 	#ncatted -O -a short_name,tas,o,c,"cdd" 		          ./$RCM/$VAR/$ofile_cdd
 # 	#ncatted -O -a units,tas,o,c,"degreedays" 			  ./$RCM/$VAR/$ofile_cdd
@@ -1288,9 +1288,9 @@ done
 # # vekstsesongens lengde, Mean annual growing season (days>=5C). Merk at senorge er i degC, derfor terskel på 5, ikke 278.15.
 # 	# mkdir -p "./senorge/growing/"                                                           # Testing senorge
 # 	# echo "Ofile_growing=" ."/senorge/growing/"$ofile_growing
-# 	# cdo timsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
+# 	# cdo timsum -gec,5 $filedir/$ofile ."/senorge/growing/"$ofile_growing  # med senorge-data må file være ofile!
 # 	# trenger ikke månedsverdier:
-# 	# cdo monsum -gec,5 -ifthen $LANDMASK $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
+# 	# cdo monsum -gec,5 $filedir/$ofile ."/senorge/growing/"$ofile_growing  # gir store månedsverdifiler.
 
 # 	#ncatted -O -a standard_name,tg,o,c,"spell_length_of_days_with_air_temperature_above_threshold" ."/senorge/growing/"$ofile_growing
 # 	#ncatted -O -a units,tg,o,c,"day" 		  		                                ."/senorge/growing/"$ofile_growing 
