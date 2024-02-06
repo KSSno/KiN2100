@@ -768,7 +768,7 @@ function calc_indices {
 
 			if ! [ -f ./$RCM/$VAR/$ofile_pr95ptot_annual ]; then
 				cdo gt $filedir/$file ./$RCM/$VAR/$timpctl95_refperiod_file ./$RCM/$VAR/$gt_timpctl95_file #1 if daily_P>perc95, 0 otherwise
-				cdo yearsum -mul $filedir/$file ./$RCM/$VAR/$gt_timpctl95_file ./$RCM/$VAR/$sumPgt_timpctl95_file #annual P-sum of P>perc95
+				cdo -L yearsum -mul $filedir/$file ./$RCM/$VAR/$gt_timpctl95_file ./$RCM/$VAR/$sumPgt_timpctl95_file #annual P-sum of P>perc95
 				cdo yearsum $filedir/$file ./$RCM/$VAR/$timsum_year_file #annual P-sum
 				cdo div ./$RCM/$VAR/$sumPgt_timpctl95_file ./$RCM/$VAR/$timsum_year_file ./$RCM/$VAR/$ofile_pr95ptot_annual
 				ncrename -v pr,pr95ptot ./$RCM/$VAR/$ofile_pr95ptot_annual
