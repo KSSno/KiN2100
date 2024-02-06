@@ -860,7 +860,7 @@ function calc_indices {
 				add_attributes_to_file $ofile_yseaspctl997_scen_vs_hist
 				ncatted -O -a units,$indexname,o,c,"%" $ofile_timpctl997_scen_vs_hist
 			fi
-			exit
+			#exit
 	 
 			#-# NEW INDEX from pr? Add the if-block with cdo-command and ncrename (as above) here #-#
 			#-# crop domain to mainland Norway by "-ifthen $LANDMASK" (as above) #-#
