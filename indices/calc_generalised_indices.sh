@@ -742,7 +742,7 @@ function calc_indices {
 
 			# Compute pr997p_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_pr997p_annual ]; then
-				cdo timsum -gt $filedir/$file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_annual
+				cdo -L timsum -gt $filedir/$file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$ofile_pr997p_annual
 				ncrename -v pr,pr997p ./$RCM/$VAR/$ofile_pr997p_annual
 			fi
 
@@ -1004,7 +1004,7 @@ function calc_periodmeans {
             echo Saved: "$(basename $ofilepath1)"
         fi
         if ! [ -f $ofilepath2 ]; then   # if ofile not already exist, do timmean
-			cdo yseasmean  -ifthen $LANDMASK $ofilepath1 $ofilepath2 #yseasmean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
+			cdo -L yseasmean  -ifthen $LANDMASK $ofilepath1 $ofilepath2 #yseasmean (instead of timmean) makes the mean calculation work for both annual and seasonal data.
             echo Saved: "$(basename $ofilepath2)"
         fi
 		add_attributes_to_file $ofilepath2
