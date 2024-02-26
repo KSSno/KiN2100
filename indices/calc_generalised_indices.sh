@@ -848,14 +848,14 @@ function calc_indices {
 				#Compute change from reference period 99.7 percentile here or later on? Not same procedure as other because not annually resolved. Currently added here.
 				#   annual
 				ofile_timpctl997_scen_vs_hist=test_ofile_timpctl997_scen_vs_hist.nc4
-				cdo -mulc,100 -div -sub ./$RCM/$VAR/$timpctl997_scenperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file $ofile_timpctl997_scen_vs_hist
+				cdo -L -mulc,100 -div -sub ./$RCM/$VAR/$timpctl997_scenperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file ./$RCM/$VAR/$timpctl997_refperiod_file $ofile_timpctl997_scen_vs_hist
 				ncrename -v pr,pr997 $ofile_timpctl997_scen_vs_hist
 				add_attributes_to_file $ofile_timpctl997_scen_vs_hist
 				ncatted -O -a units,$indexname,o,c,"%" $ofile_timpctl997_scen_vs_hist
 				
 				#   seasonal
 				ofile_yseaspctl997_scen_vs_hist=test_ofile_yseaspctl997_scen_vs_hist.nc4
-				cdo -mulc,100 -div -sub ./$RCM/$VAR/$yseaspctl997_scenperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file $ofile_yseaspctl997_scen_vs_hist
+				cdo -L -mulc,100 -div -sub ./$RCM/$VAR/$yseaspctl997_scenperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file ./$RCM/$VAR/$yseaspctl997_refperiod_file $ofile_yseaspctl997_scen_vs_hist
 				ncrename -v pr,pr997 $ofile_yseaspctl997_scen_vs_hist
 				add_attributes_to_file $ofile_yseaspctl997_scen_vs_hist
 				ncatted -O -a units,$indexname,o,c,"%" $ofile_timpctl997_scen_vs_hist
@@ -1114,8 +1114,8 @@ do
 			[[ $indices_that_need_percentage_change =~ (^|[[:space:]])$indexname($|[[:space:]]) ]] && need_change=true || need_change=false #check if current index needs percentage change
 
 			if $need_change; then 
-				cdo -mulc,100 -div -sub $ifile_rcp26 $ifile_hist $ifile_hist $ofile_rcp26_vs_hist #percentage change: double check if correct
-				cdo -mulc,100 -div -sub $ifile_rcp45 $ifile_hist $ifile_hist $ofile_rcp45_vs_hist #percentage change: double check if correct
+				cdo -L -mulc,100 -div -sub $ifile_rcp26 $ifile_hist $ifile_hist $ofile_rcp26_vs_hist #percentage change: double check if correct
+				cdo -L -mulc,100 -div -sub $ifile_rcp45 $ifile_hist $ifile_hist $ofile_rcp45_vs_hist #percentage change: double check if correct
 				
 				ncatted -O -a units,$indexname,o,c,"%" $ofile_rcp26_vs_hist #change units to percent
 				ncatted -O -a units,$indexname,o,c,"%" $ofile_rcp45_vs_hist #change units to percent
