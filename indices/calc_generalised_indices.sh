@@ -1119,13 +1119,21 @@ do
 				
 				ncatted -O -a units,$indexname,o,c,"%" $ofile_rcp26_vs_hist #change units to percent
 				ncatted -O -a units,$indexname,o,c,"%" $ofile_rcp45_vs_hist #change units to percent
+
+				ncrename -v $indexname,change-$indexname $ofile_rcp26_vs_hist #change varname from 'var' to 'change-var'
+				ncrename -v $indexname,change-$indexname $ofile_rcp45_vs_hist #change varname from 'var' to 'change-var'
+
 			else
 				cdo sub $ifile_rcp26 $ifile_hist $ofile_rcp26_vs_hist #simple difference
 				cdo sub $ifile_rcp45 $ifile_hist $ofile_rcp45_vs_hist #simple difference
+
+				ncrename -v $indexname,diff-$indexname $ofile_rcp26_vs_hist #change varname from 'var' to 'diff-var'
+				ncrename -v $indexname,diff-$indexname $ofile_rcp45_vs_hist #change varname from 'var' to 'diff-var'
+
 			fi
 
-			# ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp26_vs_hist
-			# ncatted -O -a tracking_id,global,o,c,`uuidgen` $ofile_rcp45_vs_hist
+			add_attributes_to_file $ofile_rcp26_vs_hist #add attributes belonging to the variable change-var or diff-var 
+			add_attributes_to_file $ofile_rcp45_vs_hist #add attributes belonging to the variable change-var or diff-var
 
 		done
 	exit
