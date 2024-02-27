@@ -1,7 +1,8 @@
 
 
 #On l-klima-app05 run as: 
-# $ python3.6 write_metadataCSV_to_ini.py
+# $ conda activate testenv #environment that includes pandas
+# $ python3.8 write_metadataCSV_to_ini.py
 
 #"Metadata_KiN-2025_231102.csv" need to have scandianvian characters correct. 
 # I do this now by:
@@ -11,7 +12,7 @@
 
 import pandas as pd
 
-ifile_csv = "Metadata_KiN-2025_20231214.csv" #input  file of type csv
+ifile_csv = "Metadata_KiN-2025_20240227.csv" #input  file of type csv
 ofile_ini = "config_for_calc_generalised_indices.ini"              #output file of type ini
 ifile_separator_char = ";"  #separator in input file
 ifile_encoding="iso8859_10" #iso8859_10 allow scandinavian characters #https://docs.python.org/3/library/codecs.html#standard-encodings
@@ -22,7 +23,7 @@ ifile_encoding="iso8859_10" #iso8859_10 allow scandinavian characters #https://d
 #  - need one row where variabelnavn column is 'attr_typename', and values either varattr, globalattr or globalattr_met
 #  - the row where variabelnavn column is 'attr_type_and_source' is deleted
 
-meta = pd.read_csv(ifile_csv, skiprows=6, sep=ifile_separator_char,encoding=ifile_encoding) 
+meta = pd.read_csv(ifile_csv, skiprows=7, sep=ifile_separator_char,encoding=ifile_encoding) 
 meta = meta[meta.columns[2:]][1:].set_index("Variabelnavn") #drop two first cols and first row which don't have useful information.
 meta = meta.drop(labels=meta.columns[meta.columns.str.contains("Unnamed")],axis=1) #drop columns without name (i.e. missing attribute key)
 meta = meta.iloc[~meta.index.isnull()] #drop empty rows
