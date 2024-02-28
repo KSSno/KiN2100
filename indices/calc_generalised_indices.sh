@@ -1110,7 +1110,7 @@ do
 			# Compute difference or percentage change (between future and reference) depending on index:
     		indexname=$(cdo showname $ifile_hist) #extract variable name from ncfile (only allow one variable per file)
     		indexname=${indexname[@]} #removes problem with space that may appear
-			indices_that_need_percentage_change="prsum sdii pr997prmax5day" #-# add indices that need percentage change here (and not difference) #-#
+			indices_that_need_percentage_change="prsum sdii pr997 prmax5day" #-# add indices that need percentage change here (and not difference) #-#
 			[[ $indices_that_need_percentage_change =~ (^|[[:space:]])$indexname($|[[:space:]]) ]] && need_change=true || need_change=false #check if current index needs percentage change
 
 			if $need_change; then 
