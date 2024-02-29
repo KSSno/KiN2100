@@ -257,6 +257,39 @@ function calc_indices {
 			else
 				echo "Skip computation of tas_seasonal from daily data, because ofile already exists for year " $yyyy
 			fi 
+
+			# Compute degday17le_annual, energigradtall
+ 			if ! [ -f ./$RCM/$VAR/$degday17le_annual ]; then
+				## ! ## NEED INPUT FROM OLE-EINAR: cdo -L ???? $filedir/$file ./$RCM/$VAR/$degday17le_annual
+				ncrename -v tas,degday17le ./$RCM/$VAR/$degday17le_annual ./$RCM/$VAR/$degday17le_annual	 
+			else
+				echo "Skip computation of degday17le_annual from daily data, because ofile already exists for year " $yyyy
+			fi 
+
+			# Compute gsl_annual, vekstsesong
+ 			if ! [ -f ./$RCM/$VAR/$gsl_annual ]; then
+				## ! ## NEED INPUT FROM OLE-EINAR: cdo -L ???? $filedir/$file ./$RCM/$VAR/$gsl_annual
+				ncrename -v tas,gsl ./$RCM/$VAR/$gsl_annual ./$RCM/$VAR/$gsl_annual	 
+			else
+				echo "Skip computation of gsl_annual from daily data, because ofile already exists for year " $yyyy
+			fi 
+
+			# Compute degday5ge_annual, vekstgraddager
+ 			if ! [ -f ./$RCM/$VAR/$degday5ge_annual ]; then
+				## ! ## NEED INPUT FROM OLE-EINAR: cdo -L ???? $filedir/$file ./$RCM/$VAR/$degday5ge_annual
+				ncrename -v tas,degday5ge ./$RCM/$VAR/$degday5ge_annual ./$RCM/$VAR/$degday5ge_annual	 
+			else
+				echo "Skip computation of degday5ge_annual from daily data, because ofile already exists for year " $yyyy
+			fi 
+
+			# Compute degday22ge_annual, avkjolingsgraddager
+ 			if ! [ -f ./$RCM/$VAR/$degday22ge_annual ]; then
+				## ! ## NEED INPUT FROM OLE-EINAR: cdo -L ???? $filedir/$file ./$RCM/$VAR/$degday22ge_annual
+				ncrename -v tas,degday22ge ./$RCM/$VAR/$degday22ge_annual ./$RCM/$VAR/$degday22ge_annual	 
+			else
+				echo "Skip computation of degday22ge_annual from daily data, because ofile already exists for year " $yyyy
+			fi 
+
 			#-# NEW INDEX from tas? Add the if-block with cdo-command and ncrename (as above) here #-#
 	 
 
