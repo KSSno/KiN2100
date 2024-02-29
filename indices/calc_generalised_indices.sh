@@ -370,7 +370,7 @@ function calc_indices {
 				# Compute tasmax_annual
 				if ! [ -f ./$RCM/$VAR/$ofile_tasmax_annual ]; then   # check that the file does not exist
 					cdo timmean $filedir/$file  ./$RCM/$VAR/$ofile_tasmax_annual
-					#ncrename -v tasmax,tasmax ./$RCM/$VAR/$ofile_tasmax_annual #https://linux.die.net/man/1/ncrename
+					#ncrename -v tasmax,tasmax ./$RCM/$VAR/$ofile_tasmax_annual #https://linux.die.net/man/1/ncrename    #comment out when no change in varname
 				else
 					echo "Skip computation of tasmax_annual from daily data, because ofile already exists for year " $yyyy
 				fi
@@ -378,12 +378,29 @@ function calc_indices {
 				# Compute tasmax_seasonal
 				if ! [ -f ./$RCM/$VAR/$ofile_tasmax_seasonal ]; then
 					cdo -L yseasmean $filedir/$file ./$RCM/$VAR/$ofile_tasmax_seasonal
-					## ncrename -v tasmax,tasmax ./$RCM/$VAR/$ofile_tasmax_seasonal ./$RCM/$VAR/$ofile_tasmax_seasonal	 
+					## ncrename -v tasmax,tasmax ./$RCM/$VAR/$ofile_tasmax_seasonal ./$RCM/$VAR/$ofile_tasmax_seasonal	 #comment out when no change in varname
 				else
 					echo "Skip computation of tasmax_seasonal from daily data, because ofile already exists for year " $yyyy
 				fi 
+				
+				# Compute tasmax20ge, i.e. nordic summerdays (tasmax>=20 degC), nordiske sommerdager
+				if ! [ -f ./$RCM/$VAR/$ofile_tasmax20ge_annual ]; then   # check if the file exists
+					cdo -L timsum -gec,293.15  $filedir/$file ./$RCM/$VAR/$ofile_tasmax20ge_annual
+					ncrename -v tasmax,tasmax20ge ./$RCM/$VAR/$ofile_tasmax_seasonal ./$RCM/$VAR/$ofile_tasmax20ge_annual	 
+				else
+					echo "Skip computation of tasmax20ge_annual from daily data, because ofile already exists for year " $yyyy
+				fi 
+
+				# Compute norheatwave_annual, norsk hetebølge, five consecutive days with tasmax>=27 degC
+				if ! [ -f ./$RCM/$VAR/$ofile_norheatwave_annual ]; then   # check if the file exists
+					cdo -L timsum -gec,300.15 -runmean,5  $filedir/$file ./$RCM/$VAR/$ofile_norheatwave_annual 
+					ncrename -v tasmax,norheatwave ./$RCM/$VAR/$ofile_norheatwave_annual ./$RCM/$VAR/$ofile_norheatwave_annual	 
+				else
+					echo "Skip computation of norheatwave_annual from daily data, because ofile already exists for year " $yyyy
+				fi  
 				#-# NEW INDEX from tasmax? Add the if-block with cdo-command and ncrename (as above) here #-#
 			fi
+
 
 			if [ $VAR == "tasmin" ]; then
 				echo "Next computing indices based on tasmin."
@@ -394,7 +411,6 @@ function calc_indices {
 				local ofile_tasmin_annual=`echo $ofile | sed s/_tasmin_/_tasmin_annual_/` #mean tasmin
 				local ofile_tasmin_seasonal=`echo $ofile | sed s/_tasmin_/_tasmin_seasonal_/` #mean tasmin	 
 				local ofile_fd_annual=`echo $ofile | sed s/_tasmin_/_fd_annual_/` #number of frost days
-				local ofile_fd_seasonal=`echo $ofile | sed s/_tasmin_/_fd_seasonal_/` #number of frost days
 				local ofile_tasmin20le_annual=`echo $ofile | sed s/_tasmin_/_tasmin20le_annual_/` #number of tropical nights
 
 				## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
@@ -408,9 +424,6 @@ function calc_indices {
 					get_filenamestart $ofile_fd_annual $yyyy
 					ofilestartlist="$ofilestartlist $filestart"
 					
-					get_filenamestart $ofile_fd_seasonal $yyyy
-					ofilestartlist="$ofilestartlist $filestart"
-					
 					get_filenamestart $ofile_tasmin20le_annual $yyyy
 					ofilestartlist="$ofilestartlist $filestart"
 					
@@ -419,7 +432,7 @@ function calc_indices {
 				fi
 			
 				# Compute tasmin_annual
-				if ! [ -f ./$RCM/$VAR/$ofile_tasmin_annual ]; then   # check that the file does not exist
+				if ! [ -f ./$RCM/$VAR/$ofile_tasmin_annual ]; then
 					cdo timmean $filedir/$file  ./$RCM/$VAR/$ofile_tasmin_annual
 					#ncrename -v tasmin,tasmin ./$RCM/$VAR/$ofile_tasmin_annual #https://linux.die.net/man/1/ncrename
 				else
@@ -433,51 +446,26 @@ function calc_indices {
 				else
 					echo "Skip computation of tasmin_seasonal from daily data, because ofile already exists for year " $yyyy
 				fi 
+
+				# Compute fd_annual, number of frost days (tasmin<=0 degC)
+				if ! [ -f ./$RCM/$VAR/$ofile_fd_annual ]; then
+					cdo -L timsum -ltc,273.15 $filedir/$file ./$RCM/$VAR/$ofile_fd_annual
+					ncrename -v tasmin,fd ./$RCM/$VAR/$ofile_fd_annual ./$RCM/$VAR/$ofile_fd_annual	 
+				else
+					echo "Skip computation of fd_annual from daily data, because ofile already exists for year " $yyyy
+				fi
+
+				# Compute tasmin20le_annual, tropenattdøgn, tasmin >= 20 grader
+				if ! [ -f ./$RCM/$VAR/$tasmin20le_annual ]; then
+					cdo -L timsum -gec,293.15  $filedir/$file ./$RCM/$VAR/$tasmin20le_annual
+					ncrename -v tasmin,tasmin20le ./$RCM/$VAR/$tasmin20le_annual ./$RCM/$VAR/$tasmin20le_annual	 
+				else
+					echo "Skip computation of tasmin20le_annual from daily data, because ofile already exists for year " $yyyy
+				fi
+
 				#-# NEW INDEX from tasmin? Add the if-block with cdo-command and ncrename (as above) here #-#
 			fi
 
-	 
-			# START: NEED TO CHECK AND ORGANISE tasmin and tasmax indices:
-
-
-			# Frostdager, fd # under 0 grader
-			if ! [ -f ./$RCM/$VAR/$ofile_fd ]; then   # check if the file exists
-				mkdir -p $RCM/fd/
-				echo "Ofile_fd=" $RCM"/fd/"$ofile_fd
-				cdo monsum -ltc,273.15  $ifiledirN/$ifileN ./$RCM/fd/$ofile_fd
-			fi
-	 
-	 
-			# tropenattdøgn # Tmin >= 20 grader
-			if ! [ -f ./$RCM/$VAR/$ofile_tropnight ]; then   # check if the file exists
-				mkdir -p $RCM/tropnight/
-				echo "Ofile_tropnight=" $RCM"/tropnight/"$ofile_tropnight
-				cdo -s monsum -gec,293.15  $ifiledirN/$ifileN ./$RCM/tropnight/$ofile_tropnight
-			fi
-	 
-			# Nordiske sommerdager # over 20 grader
-			if ! [ -f ./$RCM/$VAR/$ofile_norsummer ]; then   # check if the file exists
-				mkdir -p  $RCM/norsummer/
-				echo "Ofile_norsummer=" $RCM"/norsummer/"$ofile_norsummer	 	 
-				cdo monsum -gec,293.15  $filedir/$file ./$RCM/norsummer/$ofile_norsummer
-			fi
-
-			# Nordiske sommerdager # over 25 grader
-			if ! [ -f ./$RCM/$VAR/$ofile_summerdays ]; then   # check if the file exists
-				mkdir -p  $RCM/summerdays/	 
-				echo "Ofile_summerdays=" $RCM"/summerdays/"$ofile_summerdays 	 
-				cdo monsum -gec,298.15  $filedir/$file ./$RCM/summerdays/$ofile_summerdays
-			fi
-	 
-			# norsk hetebølge # over 27 grader
-			#ofile_norheatwave=`echo $ofile | sed s/_tasmax_/_norheatwave_/`
-			if ! [ -f ./$RCM/$VAR/$ofile_norheatwave ]; then   # check if the file exists
-				mkdir -p $RCM/norheatwave/
-				cdo monsum -gec,300.15 -runmean,5  $filedir/$file ./$RCM/norheatwave/$ofile_norheatwave 
-				echo "norsk hetebølge: done"
-			fi    
-
-			# END OF: NEED TO CHECK AND ORGANISE tasmin and tasmax indices:
 		
 		elif [ $VAR == "pr" ]; then
 			echo ""
