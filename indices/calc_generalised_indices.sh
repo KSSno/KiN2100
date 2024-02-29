@@ -326,17 +326,18 @@ function calc_indices {
 
 			# Read in the extra variable needed (tasmin if user chose tasmax and vixe versa):
 			if [ $VAR == "tasmax" ]; then
-				local ifile_tasmax=$ifile
-				local ifiledir_tasmax=$ifiledir
-				local ifile_tasmin=`echo $file_tasmax | sed s/_tasmax_/_tasmin_/`
-				local ifiledir_tasmin=`echo $filedir_tasmax | sed s/_tasmax_/_tasmin_/`
+				local file_tasmax=$file
+				local filedir_tasmax=$filedir
+				local file_tasmin=`echo $file_tasmax | sed s/tasmax/tasmin/`
+				local filedir_tasmin=`echo $filedir_tasmax | sed s/tasmax/tasmin/`
 			else
-				local ifile_tasmin=$ifile
-				local ifiledir_tasmin=$ifiledir
-				local ifile_tasmax=`echo $file_tasmin | sed s/_tasmin_/_tasmax_/`
-				local ifiledir_tasmax=`echo $filedir_tasmin | sed s/_tasmin_/_tasmax_/`
+				local file_tasmin=$file
+				local filedir_tasmin=$filedir
+				local file_tasmax=`echo $file_tasmin | sed s/tasmin/tasmax/`
+				local filedir_tasmax=`echo $filedir_tasmin | sed s/tasmin/tasmax/`
 				mkdir -p $RCM/tasmax #make tasmax folder here because indices based on both tasmin and tasmax are stored in the folder of tasmax
 			fi
+
 
 			# Compute dtr_annual, diurnal temperature range
 			if ! [ -f ./$RCM/tasmax/$ofile_dtr_annual ]; then   # check if the file exists
