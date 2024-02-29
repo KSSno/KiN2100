@@ -270,7 +270,8 @@ function calc_indices {
 			## For each index: Make ofilenames by substituting _varname_ with _indexname_ (potentially with time resolution)
 			local ofile_dtr_annual=`echo $ofile | sed s/_$VAR_/_dtr_annual_/` #diurnal temperature range annual
 			local ofile_dtr_seasonal=`echo $ofile | sed s/_$VAR_/_dtr_seasonal_/` #diurnal temperature range seasonal
-			local ofile_dzc_annual=`echo $ofile | sed s/_tasmax_/_dzc_/` #number of days with zero-crossing
+			local ofile_dzc_annual=`echo $ofile | sed s/_tasmax_/_dzc_annual_/` #number of days with zero-crossing
+			local ofile_dzc_seasonal=`echo $ofile | sed s/_tasmax_/_dzc_seasonal_/` #number of days with zero-crossing
 			#-# NEW INDEX from both tasmin and tasmax? Add line (as above) here #-#
 
 			## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
@@ -284,9 +285,58 @@ function calc_indices {
 				get_filenamestart $ofile_dzc_annual $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
 
-				#-# NEW INDEX from both tasmin and tasmax? Add two lines (as above) here #-#
-			fi	
+				get_filenamestart $ofile_dzc_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
 
+				#-# NEW INDEX from both tasmin and tasmax? Add two lines (as above) here #-#
+			fi
+
+			# Read in the extra variable needed:
+			if [ $VAR == "tasmax" ]; then
+				local ifile_tasmax=$ifile
+				local ifiledir_tasmax=$ifiledir
+				local ifile_tasmin=`echo $file_tasmax | sed s/_tasmax_/_tasmin_/`
+				local ifiledir_tasmin=`echo $filedir_tasmax | sed s/_tasmax_/_tasmin_/`
+			else
+				local ifile_tasmin=$ifile
+				local ifiledir_tasmin=$ifiledir
+				local ifile_tasmax=`echo $file_tasmin | sed s/_tasmin_/_tasmax_/`
+				local ifiledir_tasmax=`echo $filedir_tasmin | sed s/_tasmin_/_tasmax_/`
+			fi
+
+			# DTR annual diurnal temperature range
+			if ! [ -f ./$RCM/tasmax/$ofile_dtr_annual ]; then   # check if the file exists
+				echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
+				cdo -L timmean -sub  $filedir_tasmax/$file_tasmax $ifiledir_tasmin/$ifile_tasmin ./$RCM/tasmax/$ofile_dtr_annual
+				ncrename -v $VAR,dtr ./$RCM/tasmax/$ofile_dtr_annual ./$RCM/tasmax/$ofile_dtr_annual	 
+			else
+				echo "Skip computation of dtr_annual from daily data, because ofile already exists for year " $yyyy
+			fi
+
+			# DTR seasonal diurnal temperature range
+			if ! [ -f ./$RCM/tasmax/$ofile_dtr_seasonal ]; then   # check if the file exists
+				cdo -L yseasmean -sub  $filedir_tasmax/$file_tasmax $ifiledir_tasmin/$ifile_tasmin ./$RCM/tasmax/$ofile_dtr_seasonal
+				ncrename -v $VAR,dtr ./$RCM/tasmax/$ofile_dtr_seasonal ./$RCM/tasmax/$ofile_dtr_seasonal	 
+			else
+				echo "Skip computation of dtr_seasonal from daily data, because ofile already exists for year " $yyyy
+			fi
+
+	 	 
+			# DZC, annual number of days with zero-crossing
+			if ! [ -f ./$RCM/tasmax/$ofile_dzc_annual ]; then   # check if the file exists
+				cdo -L timsum -mul -ltc,273.15  $ifiledir_tasmin/$ifile_tasmin -gtc,273.15  $filedir_tasmax/$file_tasmax ./$RCM/tasmax/$ofile_dzc_annual
+				ncrename -v $VAR,dzc ./$RCM/tasmax/$ofile_dzc_annual ./$RCM/tasmax/$ofile_dzc_annual	 
+			else
+				echo "Skip computation of dzc_annual from daily data, because ofile already exists for year " $yyyy
+			fi
+
+			# DZC, seasonal number of days with zero-crossing
+			if ! [ -f ./$RCM/tasmax/$ofile_dzc_seasonal ]; then   # check if the file exists
+				cdo -L yseassum -mul -ltc,273.15  $ifiledir_tasmin/$ifile_tasmin -gtc,273.15  $filedir_tasmax/$file_tasmax ./$RCM/tasmax/$ofile_dzc_seasonal
+				ncrename -v $VAR,dzc ./$RCM/tasmax/$ofile_dzc_seasonal ./$RCM/tasmax/$ofile_dzc_seasonal	 
+			else
+				echo "Skip computation of dzc_seasonal from daily data, because ofile already exists for year " $yyyy
+			fi
 
 
 			if [ $VAR == "tasmax" ]; then
@@ -388,28 +438,6 @@ function calc_indices {
 
 	 
 			# START: NEED TO CHECK AND ORGANISE tasmin and tasmax indices:
-			# DTR
-			if ! [ -f ./$RCM/$VAR/$ofile_dtr ]; then   # check if the file exists
-
-				#ofile_dtr=`echo $ofile | sed s/_tasmax_/_dtr_/`  # <- this is written higher up
-				mkdir -p  $RCM/dtr/
-				local ofile_dtr_annual=`echo $ofile | sed s/_tasmax_/_dtr_annual-mean_/`	 
-				local ofile_dtr_seasonal=`echo $ofile | sed s/_tasmax_/_dtr_seasonal-mean_/`
-				#ofile_dtr=`echo $ofile | sed s/_tasmax_/_dtr_/`
-
-				echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
-				cdo sub  $filedir/$file $ifiledirN/$ifileN ./$RCM/dtr/$ofile_dtr
-			fi
-
-	 	 
-			# DZC, nullgradspasseringer
-			if ! [ -f ./$RCM/$VAR/$ofile_dzc ]; then   # check if the file exists
-				mkdir -p  $RCM/dzc/
-				local ofile_dzc_annual=`echo $ofile | sed s/_tasmax_/_dzc_annual-mean_/`
-				local ofile_dzc_seasonal=`echo $ofile | sed s/_tasmax_/_dzc_seasonal-mean_/`	 
-				echo "Ofile_dzc=" $RCM"/dzc/"$ofile_dzc	 
-				cdo monsum -mul -ltc,273.15  $ifiledirN/$ifileN -gtc,273.15  $filedir/$file ./$RCM/dzc/$ofile_dzc
-			fi
 
 
 			# Frostdager, fd # under 0 grader
