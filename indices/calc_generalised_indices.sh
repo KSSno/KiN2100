@@ -424,7 +424,7 @@ function calc_indices {
 				# Compute tasmax20ge, i.e. nordic summerdays (tasmax>=20 degC), nordiske sommerdager
 				if ! [ -f ./$RCM/$VAR/$ofile_tasmax20ge_annual ]; then   # check if the file exists
 					cdo -L timsum -gec,293.15  $filedir/$file ./$RCM/$VAR/$ofile_tasmax20ge_annual
-					ncrename -v tasmax,tasmax20ge ./$RCM/$VAR/$ofile_tasmax_seasonal ./$RCM/$VAR/$ofile_tasmax20ge_annual	 
+					ncrename -v tasmax,tasmax20ge ./$RCM/$VAR/$ofile_tasmax20ge_annual ./$RCM/$VAR/$ofile_tasmax20ge_annual	 
 				else
 					echo "Skip computation of tasmax20ge_annual from daily data, because ofile already exists for year " $yyyy
 				fi 
