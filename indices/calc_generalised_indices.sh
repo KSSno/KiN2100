@@ -281,12 +281,14 @@ function calc_indices {
 			fi	
 
 			if [ $VAR == "tasmax" ]; then
+				echo "Next computing indices based on tasmax."
 
 				#mkdir -p  $RCM/tasmax/
 				
 				## For each index: Make ofilenames by substituting _varname_ (here: _tasmax_) with _indexname_ (potentially with time resolution)
-				local ofile_tasmax_annual=`echo $ofile | sed s/_tasmax_/_tasmax_annual-mean_/`
-				local ofile_tasmax_seasonal=`echo $ofile | sed s/_tasmax_/_tasmax_seasonal-mean_/`	 
+				local ofile_tasmax_annual=`echo $ofile | sed s/_tasmax_/_tasmax_annual_/`
+				local ofile_tasmax_seasonal=`echo $ofile | sed s/_tasmax_/_tasmax_seasonal_/`	 
+				local ofile_tasmax20ge_annual=`echo $ofile | sed s/_tasmax_/_tasmax20ge_annual_/` #number of summer days
 
 				## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 				if [ $count == 0 ]; then
@@ -295,17 +297,25 @@ function calc_indices {
 					
 					get_filenamestart $ofile_tasmax_seasonal $yyyy
 					ofilestartlist="$ofilestartlist $filestart"
+					
+					get_filenamestart $ofile_tasmax20ge_annual $yyyy
+					ofilestartlist="$ofilestartlist $filestart"
 
 					#-# NEW INDEX from tas? Add two lines (as above) here #-#
-				fi	
+				fi
+			fi
 
 			if [ $VAR == "tasmin" ]; then
+				echo "Next computing indices based on tasmin."
 
 				#mkdir -p  $RCM/tasmin/
 				
 				## For each index: Make ofilenames by substituting _varname_ (here: _tasmin_) with _indexname_ (potentially with time resolution)
-				local ofile_tasmin_annual=`echo $ofile | sed s/_tasmin_/_tasmin_annual-mean_/`
-				local ofile_tasmin_seasonal=`echo $ofile | sed s/_tasmin_/_tasmin_seasonal-mean_/`	 
+				local ofile_tasmin_annual=`echo $ofile | sed s/_tasmin_/_tasmin_annual_/` #mean tasmin
+				local ofile_tasmin_seasonal=`echo $ofile | sed s/_tasmin_/_tasmin_seasonal_/` #mean tasmin	 
+				local ofile_fd_annual=`echo $ofile | sed s/_tasmin_/_fd_annual_/` #number of frost days
+				local ofile_fd_seasonal=`echo $ofile | sed s/_tasmin_/_fd_seasonal_/` #number of frost days
+				local ofile_tasmin20le_annual=`echo $ofile | sed s/_tasmin_/_tasmin20le_annual_/` #number of tropical nights
 
 				## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 				if [ $count == 0 ]; then
@@ -314,22 +324,30 @@ function calc_indices {
 					
 					get_filenamestart $ofile_tasmin_seasonal $yyyy
 					ofilestartlist="$ofilestartlist $filestart"
+					
+					get_filenamestart $ofile_fd_annual $yyyy
+					ofilestartlist="$ofilestartlist $filestart"
+					
+					get_filenamestart $ofile_fd_seasonal $yyyy
+					ofilestartlist="$ofilestartlist $filestart"
+					
+					get_filenamestart $ofile_tasmin20le_annual $yyyy
+					ofilestartlist="$ofilestartlist $filestart"
+					
 
 					#-# NEW INDEX from tas? Add two lines (as above) here #-#
-				fi	
-		
-				#ofile_dzc=`echo $ofile | sed s/_tasmax_/_dzc_/`
-				local ofile_fd=`echo $ofile | sed s/_tasmax_/_fd_/`
-				local ofile_tropnight=`echo $ofile | sed s/_tasmax_/_tropnight_/`
-				local ofile_norheatwave=`echo $ofile | sed s/_tasmax_/_norheatwave_/`
-				local ofile_summerdnor=`echo $ofile | sed s/_tasmax_/_summerdnor_/`
-				local ofile_summerd=`echo $ofile | sed s/_tasmax_/_summerd_/`
-				#-# NEW INDEX from tasmax? Add line (as above) here #-#
-
-				#ofile_tas_annual=`echo $ofile | sed s/_tg_/_tg_annual-mean_/`      # Testing senorge
-				#ofile_tas_seasonal=`echo $ofile | sed s/_tg_/_tg_seasonal-mean_/`  # Testing senorge 
-				#ofile_growing=`echo $ofile | sed s/_tg_/_growing_/`                # Testing senorge: vekstsesong
+				fi
 			fi
+		
+			#ofile_dzc=`echo $ofile | sed s/_tasmax_/_dzc_/`
+			local ofile_norheatwave=`echo $ofile | sed s/_tasmax_/_norheatwave_/`
+			local ofile_summerd=`echo $ofile | sed s/_tasmax_/_summerd_/`
+			#-# NEW INDEX from tasmax? Add line (as above) here #-#
+
+			#ofile_tas_annual=`echo $ofile | sed s/_tg_/_tg_annual-mean_/`      # Testing senorge
+			#ofile_tas_seasonal=`echo $ofile | sed s/_tg_/_tg_seasonal-mean_/`  # Testing senorge 
+			#ofile_growing=`echo $ofile | sed s/_tg_/_growing_/`                # Testing senorge: vekstsesong
+			
 			#set tasmin to tasmax because they are treated in the same way
 			#VAR="tasmax"      # set the first variable is tasmax and treat tasmin equally.  # orig. Roll back to this.
 			#VAR="tx"          # Testing senorge
