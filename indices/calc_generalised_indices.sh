@@ -340,7 +340,6 @@ function calc_indices {
 
 			# Compute dtr_annual, diurnal temperature range
 			if ! [ -f ./$RCM/tasmax/$ofile_dtr_annual ]; then   # check if the file exists
-				echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
 				cdo -L timmean -sub  $filedir_tasmax/$file_tasmax $ifiledir_tasmin/$ifile_tasmin ./$RCM/tasmax/$ofile_dtr_annual
 				ncrename -v $VAR,dtr ./$RCM/tasmax/$ofile_dtr_annual ./$RCM/tasmax/$ofile_dtr_annual	 
 			else
