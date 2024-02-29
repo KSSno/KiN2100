@@ -97,7 +97,7 @@ VALID_REFBEGINS=$( seq 1961 2020 )
 VALID_REFENDS=$( seq 1961 2020 )
 VALID_SCENBEGINS=$( seq 2021 2100 )
 VALID_SCENENDS=$( seq 2021 2100 )
-VALID_VARS="tas pr" # later: "hurs pr ps rlds rsds sfcWind tas tasmax mrro swe esvpbls soilmoist"
+VALID_VARS="tas pr tasmin tasmax" # later: "hurs pr ps rlds rsds sfcWind tasmin tasmax mrro swe esvpbls soilmoist"
 
 #---------------------------------------------------#
 
