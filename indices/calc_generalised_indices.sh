@@ -205,25 +205,19 @@ function calc_indices {
 		echo "Ifile is: " $file
 		local ofile=`echo $file | sed s/daily_//`
 		echo "Ofile is: " $ofile
-		###ofile=`basename $file | sed s/senorge2018_//`          # Testing senorge. Format: tg_senorge2018_2008.nc
 
-
-
-        #if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
 		if [ $VAR == "tas" ]; then
 			echo ""
 			echo "tas chosen. Now processing ifile " $file ", which is number " $(( $count+1 )) " out of " $nbrfiles " (from one model, RCM and RCP only)."
 			
 			## For each index: Make ofilenames by substituting _varname_ (here: _tas_) with _indexname_ (potentially with time resolution)
-			local ofile_tas_annual=`echo $ofile | sed s/_tas_/_tas_annual-mean_/`     # orig. Roll back to this.
-			local ofile_tas_seasonal=`echo $ofile | sed s/_tas_/_tas_seasonal-mean_/` # orig. Roll back to this.
-			local ofile_cdd=`echo $ofile | sed s/_tas_/_cdd_/`                        # orig. Roll back to this.
-			local ofile_gsl=`echo $ofile | sed s/_tas_/_gsl_/`                        # orig. Roll back to this. 
+			local ofile_tas_annual=`echo $ofile | sed s/_tas_/_tas_annual_/`                   # mean temperature
+			local ofile_tas_seasonal=`echo $ofile | sed s/_tas_/_tas_seasonal_/`               # mean temperature
+			local ofile_degday17le_annual=`echo $ofile | sed s/_tas_/_degday17le_annual_/`     # Mean annual heating degree-day (tas<17 °C)
+			local ofile_gsl_annual=`echo $ofile | sed s/_tas_/_gsl_annual_/`                   # Mean annual growing season length (days tas >=5 °C)
+			local ofile_degday5ge_annual=`echo $ofile | sed s/_tas_/_degday5ge_annual_/`       # Growing degree day (tas >5 °C)
+			local ofile_degday22ge_annual=`echo $ofile | sed s/_tas_/_degday22ge_annual_/`     # Cooling degree day (tas>=22 °C)
 			#-# NEW INDEX from tas? Add line (as above) here #-#
-
-			#ofile_tas_annual=`echo $ofile | sed s/_tg_/_tg_annual-mean_/`      # Testing senorge
-			#ofile_tas_seasonal=`echo $ofile | sed s/_tg_/_tg_seasonal-mean_/`  # Testing senorge 
-			#ofile_growing=`echo $ofile | sed s/_tg_/_growing_/`                # Testing senorge: vekstsesong
 
 			## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 			if [ $count == 0 ]; then
@@ -233,6 +227,17 @@ function calc_indices {
 				get_filenamestart $ofile_tas_seasonal $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
 
+				get_filenamestart $ofile_degday17le_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
+				get_filenamestart $ofile_gsl_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
+				get_filenamestart $ofile_degday5ge_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
+				get_filenamestart $ofile_degday22ge_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
 				#-# NEW INDEX from tas? Add two lines (as above) here #-#
 			fi
 
@@ -240,7 +245,6 @@ function calc_indices {
 			# Compute tas_annual
 			if ! [ -f ./$RCM/$VAR/$ofile_tas_annual ]; then   # check that the file does not exist
 				cdo timmean $filedir/$file  ./$RCM/$VAR/$ofile_tas_annual
-				#ncatted -O -a long_name,tas,o,c,"annual average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_annual
 				#ncrename -v tas,tas ./$RCM/$VAR/$ofile_tas_annual #https://linux.die.net/man/1/ncrename
 			else
 				echo "Skip computation of tas_annual from daily data, because ofile already exists for year " $yyyy
@@ -249,18 +253,16 @@ function calc_indices {
 			# Compute tas_seasonal
  			if ! [ -f ./$RCM/$VAR/$ofile_tas_seasonal ]; then
 				cdo -L yseasmean $filedir/$file ./$RCM/$VAR/$ofile_tas_seasonal
-				#ncatted -O -a long_name,tas,o,c,"seasonal average_of_air_temperature" ./$RCM/$VAR/$ofile_tas_seasonal
 				## ncrename -v tas,tas ./$RCM/$VAR/$ofile_tas_seasonal ./$RCM/$VAR/$ofile_tas_seasonal	 
 			else
 				echo "Skip computation of tas_seasonal from daily data, because ofile already exists for year " $yyyy
 			fi 
 			#-# NEW INDEX from tas? Add the if-block with cdo-command and ncrename (as above) here #-#
-			#-# crop domain to mainland Norway before processing by "-ifthen $LANDMASK" (as above) #-#
 	 
 
 
 		# elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
-		elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then             # orig. Roll back to this.
+		elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then
 			echo ""
 			echo "tasmax or tasmin chosen. Now processing ifile " $file ", which is number " $(( $count+1 )) " out of " $nbrfiles " (from one model, RCM and RCP only)."
 			echo "First computing indices based on both tasmin and tasmax."
@@ -268,6 +270,8 @@ function calc_indices {
 			## For each index: Make ofilenames by substituting _varname_ with _indexname_ (potentially with time resolution)
 			local ofile_dtr_annual=`echo $ofile | sed s/_$VAR_/_dtr_annual_/` #diurnal temperature range annual
 			local ofile_dtr_seasonal=`echo $ofile | sed s/_$VAR_/_dtr_seasonal_/` #diurnal temperature range seasonal
+			local ofile_dzc_annual=`echo $ofile | sed s/_tasmax_/_dzc_/` #number of days with zero-crossing
+			#-# NEW INDEX from both tasmin and tasmax? Add line (as above) here #-#
 
 			## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 			if [ $count == 0 ]; then
@@ -276,9 +280,14 @@ function calc_indices {
 				
 				get_filenamestart $ofile_dtr_seasonal $yyyy
 				ofilestartlist="$ofilestartlist $filestart"
+				
+				get_filenamestart $ofile_dzc_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
 
-				#-# NEW INDEX from tas? Add two lines (as above) here #-#
+				#-# NEW INDEX from both tasmin and tasmax? Add two lines (as above) here #-#
 			fi	
+
+
 
 			if [ $VAR == "tasmax" ]; then
 				echo "Next computing indices based on tasmax."
@@ -289,6 +298,7 @@ function calc_indices {
 				local ofile_tasmax_annual=`echo $ofile | sed s/_tasmax_/_tasmax_annual_/`
 				local ofile_tasmax_seasonal=`echo $ofile | sed s/_tasmax_/_tasmax_seasonal_/`	 
 				local ofile_tasmax20ge_annual=`echo $ofile | sed s/_tasmax_/_tasmax20ge_annual_/` #number of summer days
+				local ofile_norheatwave_annual=`echo $ofile | sed s/_tasmax_/_norheatwave_annual_/` #nordic heat wave index events
 
 				## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 				if [ $count == 0 ]; then
@@ -300,9 +310,29 @@ function calc_indices {
 					
 					get_filenamestart $ofile_tasmax20ge_annual $yyyy
 					ofilestartlist="$ofilestartlist $filestart"
+					
+					get_filenamestart $ofile_norheatwave_annual $yyyy
+					ofilestartlist="$ofilestartlist $filestart"
 
 					#-# NEW INDEX from tas? Add two lines (as above) here #-#
 				fi
+
+				# Compute tasmax_annual
+				if ! [ -f ./$RCM/$VAR/$ofile_tasmax_annual ]; then   # check that the file does not exist
+					cdo timmean $filedir/$file  ./$RCM/$VAR/$ofile_tasmax_annual
+					#ncrename -v tasmax,tasmax ./$RCM/$VAR/$ofile_tasmax_annual #https://linux.die.net/man/1/ncrename
+				else
+					echo "Skip computation of tasmax_annual from daily data, because ofile already exists for year " $yyyy
+				fi
+			
+				# Compute tasmax_seasonal
+				if ! [ -f ./$RCM/$VAR/$ofile_tasmax_seasonal ]; then
+					cdo -L yseasmean $filedir/$file ./$RCM/$VAR/$ofile_tasmax_seasonal
+					## ncrename -v tasmax,tasmax ./$RCM/$VAR/$ofile_tasmax_seasonal ./$RCM/$VAR/$ofile_tasmax_seasonal	 
+				else
+					echo "Skip computation of tasmax_seasonal from daily data, because ofile already exists for year " $yyyy
+				fi 
+				#-# NEW INDEX from tasmax? Add the if-block with cdo-command and ncrename (as above) here #-#
 			fi
 
 			if [ $VAR == "tasmin" ]; then
@@ -337,78 +367,27 @@ function calc_indices {
 
 					#-# NEW INDEX from tas? Add two lines (as above) here #-#
 				fi
-			fi
-		
-			#ofile_dzc=`echo $ofile | sed s/_tasmax_/_dzc_/`
-			local ofile_norheatwave=`echo $ofile | sed s/_tasmax_/_norheatwave_/`
-			local ofile_summerd=`echo $ofile | sed s/_tasmax_/_summerd_/`
-			#-# NEW INDEX from tasmax? Add line (as above) here #-#
-
-			#ofile_tas_annual=`echo $ofile | sed s/_tg_/_tg_annual-mean_/`      # Testing senorge
-			#ofile_tas_seasonal=`echo $ofile | sed s/_tg_/_tg_seasonal-mean_/`  # Testing senorge 
-			#ofile_growing=`echo $ofile | sed s/_tg_/_growing_/`                # Testing senorge: vekstsesong
 			
-			#set tasmin to tasmax because they are treated in the same way
-			#VAR="tasmax"      # set the first variable is tasmax and treat tasmin equally.  # orig. Roll back to this.
-			#VAR="tx"          # Testing senorge
-
-
-
-			# Annual and seasonal mean of $VAR
-			if ! [ -f ./$RCM/$VAR/$ofile_tasmax_annual ]; then   # check if the file exists
-				cdo timmean                 $filedir/$file ./$RCM/$VAR/$ofile_tasmax_annual
-				# flytt metadata hit når de er klare?
+				# Compute tasmin_annual
+				if ! [ -f ./$RCM/$VAR/$ofile_tasmin_annual ]; then   # check that the file does not exist
+					cdo timmean $filedir/$file  ./$RCM/$VAR/$ofile_tasmin_annual
+					#ncrename -v tasmin,tasmin ./$RCM/$VAR/$ofile_tasmin_annual #https://linux.die.net/man/1/ncrename
+				else
+					echo "Skip computation of tasmin_annual from daily data, because ofile already exists for year " $yyyy
+				fi
+			
+				# Compute tasmin_seasonal
+				if ! [ -f ./$RCM/$VAR/$ofile_tasmin_seasonal ]; then
+					cdo -L yseasmean $filedir/$file ./$RCM/$VAR/$ofile_tasmin_seasonal
+					## ncrename -v tasmin,tasmin ./$RCM/$VAR/$ofile_tasmin_seasonal ./$RCM/$VAR/$ofile_tasmin_seasonal	 
+				else
+					echo "Skip computation of tasmin_seasonal from daily data, because ofile already exists for year " $yyyy
+				fi 
+				#-# NEW INDEX from tasmin? Add the if-block with cdo-command and ncrename (as above) here #-#
 			fi
+
 	 
-			if ! [ -f ./$RCM/$VAR/$ofile_tasmax_seasonal ]; then   # check if the file exists
-
-				cdo timmean -selmon,12,1,2  $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-				cdo timmean -selmon,3/5     $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-				cdo timmean -selmon,6/8     $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-				cdo timmean -selmon,9/11    $filedir/$file ./$RCM/$VAR/"SONmean.nc"
-
-				cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
-				rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc"
-				# flytt metadata hit når de er klare?
-			fi
-	 
-			# Monthly mean of $VAR (no space to save this for all variables and models)	 
-			# cdo -s monmean  $filedir/$file ./$RCM/tasmax/$ofile_tasmax_monmean
-
-			# Read in tasmin
-			local ifileN=`echo $file | sed s/_tasmax_/_tasmin_/`
-			local ifiledirN=`echo $filedir | sed s/_tasmax_/_tasmin_/`
-			echo $ifiledirN/$ifileN
-
-			# Gjennomsnitt av tasmin
-			mkdir -p  $RCM/tasmin/
-			local ofile_tasmin_annual=`echo $ofile | sed s/_tasmax_/_tasmin_annual-mean_/`
-			local ofile_tasmin_seasonal=`echo $ofile | sed s/_tasmax_/_tasmin_seasonal-mean_/`	 
-
-			# Annual and seasonal mean of $VAR
-			if ! [ -f ./$RCM/$VAR/$ofile_tasmin_annual ]; then   # check if the file exists
-				cdo timmean                 $filedir/$file ./$RCM/$VAR/$ofile_tasmin_annual
-				# flytt metadata hit når de er klare?
-			fi
-	 
-			if ! [ -f ./$RCM/$VAR/$ofile_tasmin_seasonal ]; then   # check if the file exists
-	     
-				#cdo timmean                 $filedir/$file ./$RCM/$VAR/$ofile_tas_annual
-
-				cdo timmean -selmon,12,1,2  $filedir/$file ./$RCM/$VAR/"DJFmean.nc"
-				cdo timmean -selmon,3/5     $filedir/$file ./$RCM/$VAR/"MAMmean.nc"
-				cdo timmean -selmon,6/8     $filedir/$file ./$RCM/$VAR/"JJAmean.nc"
-				cdo timmean -selmon,9/11    $filedir/$file ./$RCM/$VAR/"SONmean.nc"
-				cdo cat ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc" ./$RCM/$VAR/$ofile_tas_seasonal
-				rm ./$RCM/$VAR/"DJFmean.nc" ./$RCM/$VAR/"MAMmean.nc" ./$RCM/$VAR/"JJAmean.nc" ./$RCM/$VAR/"SONmean.nc"
-
-				# Monthly mean of $VAR (no space to save this for all variables and models)
-				# cdo -s monmean  $ifiledirN/$ifileN ./$RCM/tasmin/$ofile_tasmin_monmean
-				echo "Tasmin: done"
-				# flytt metadata hit når de er klare?
-			fi
-	 
-
+			# START: NEED TO CHECK AND ORGANISE tasmin and tasmax indices:
 			# DTR
 			if ! [ -f ./$RCM/$VAR/$ofile_dtr ]; then   # check if the file exists
 
@@ -470,59 +449,8 @@ function calc_indices {
 				echo "norsk hetebølge: done"
 			fi    
 
-
-			# Til alle standard_name under: Kan vurdere å legge inn variabel threshold (float threshold;   threshold:standard_name="air_temperature";    threshold:units="degC"; data: threshold=0.;)	 
-			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_below_threshold"    ./$RCM/dzc/$ofile_dzc
-			# # ncatted -O -a metno_name,global,o,c,"number_of_days_with_air_temperature_crossing_threshold"    ./$RCM/dzc/$ofile_dzc  <- not standard_name 
-			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_below_threshold"    ./$RCM/fd/$ofile_fd
-			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_above_threshold"    ./$RCM/tropnight/$ofile_tropnight 	
-			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_above_threshold"    ./$RCM/norsummer/$ofile_norsummer
-			# ncatted -O -a standard_name,global,o,c,"number_of_days_with_air_temperature_above_threshold"    ./$RCM/summerdays/$ofile_summerdays
-			# ncatted -O -a metno_name,global,o,c,"number_of_events_with_air_temperature_above_threshold"     ./$RCM/norheatwave/$ofile_norheatwave
-			# # NB: norheatwave arver nå standard_name fra hovedfila, dvs "air_temperature". Kan vurdere å fjerne standard_name.
-
-			# Forslag:
-			ncatted -O -a cell_methods,global,o,c,"time: minimum within days and maximum within days time: sum over days"    ./$RCM/fd/$ofile_dzc
-			ncatted -O -a cell_methods,global,o,c,"time: minimum within days time: sum over days"    ./$RCM/fd/$ofile_fd
-			ncatted -O -a cell_methods,global,o,c,"time: maximum within days time: sum over days"    ./$RCM/fd/$ofile_tropnight
-			ncatted -O -a cell_methods,global,o,c,"time: maximum within days time: sum over days"    ./$RCM/fd/$ofile_norsummer
-			ncatted -O -a cell_methods,global,o,c,"time: maximum within days time: sum over days"    ./$RCM/fd/$ofile_summerdays
-			ncatted -O -a cell_methods,global,o,c,"time: maximum within days time: number of events"    ./$RCM/fd/$ofile_norheatwave # <- må sjekkes
-
-			ncatted -O -a short_name,tasmax,o,c,"tasmax"      ./$RCM/tasmax/$ofile_tasmax
-			ncatted -O -a short_name,tasmin,o,c,"tasmin"      ./$RCM/tasmin/$ofile_tasmin
-			ncatted -O -a short_name,tasmax,o,c,"dtr" 	   ./$RCM/dtr/$ofile_dtr
-			ncatted -O -a short_name,tasmin,o,c,"dzc" 	   ./$RCM/dzc/$ofile_dzc 	
-			ncatted -O -a short_name,tasmin,o,c,"fd" 	   ./$RCM/fd/$ofile_fd
-			ncatted -O -a short_name,tasmin,o,c,"tropnight"   ./$RCM/tropnight/$ofile_tropnight 	
-			ncatted -O -a short_name,tasmax,o,c,"norsummer"   ./$RCM/norsummer/$ofile_norsummer
-			ncatted -O -a short_name,tasmax,o,c,"summerdays"  ./$RCM/summerdays/$ofile_summerdays
-			ncatted -O -a short_name,tasmax,o,c,"norheatwave" ./$RCM/norheatwave/$ofile_norheatwave 
-
-			ncatted -O -a units,tasmax,o,c,"K" 		   ./$RCM/tasmax/$ofile_tasmax
-			ncatted -O -a units,tasmin,o,c,"K" 		   ./$RCM/tasmin/$ofile_tasmin
-			ncatted -O -a units,tasmax,o,c,"K" 		   ./$RCM/dtr/$ofile_dtr 
-			ncatted -O -a units,tasmin,o,c,"days" 		   ./$RCM/dzc/$ofile_dzc
-			ncatted -O -a units,tasmin,o,c,"days" 		   ./$RCM/fd/$ofile_fd
-			ncatted -O -a units,tasmin,o,c,"days" 		   ./$RCM/tropnight/$ofile_tropnight
-			ncatted -O -a units,tasmax,o,c,"days" 		   ./$RCM/norsummer/$ofile_norsummer
-			ncatted -O -a units,tasmax,o,c,"days" 	 	   ./$RCM/summerdays/$ofile_summerdays	
-			ncatted -O -a units,tasmax,o,c,"number of events" ./$RCM/norheatwave/$ofile_norheatwave
-
-			# Mulig bug: dette er standard name, ikke long_name. Vurdere å endre teksten til det lange navnet? 
-			ncatted -O -a long_name,tasmax,o,c,"average_of_maximum_air_temperature"     ./$RCM/tasmax/$ofile_tasmax
-			ncatted -O -a long_name,tasmin,o,c,"average_of_minimum_air_temperature"     ./$RCM/tasmin/$ofile_tasmin
-			ncatted -O -a long_name,tasmax,o,c,"diurnal temperature range"  	     ./$RCM/dtr/$ofile_dtr
-			ncatted -O -a long_name,tasmin,o,c,"number_of_days_with_zero_crossings"     ./$RCM/dzc/$ofile_dzc
-			ncatted -O -a long_name,tasmin,o,c,"number_of_frost_days_tasmin-below-0"    ./$RCM/fd/$ofile_fd
-			ncatted -O -a long_name,tasmin,o,c,"number of tropical nights" 	     ./$RCM/tropnight/$ofile_tropnight
-			ncatted -O -a long_name,tasmax,o,c,"nordic_summer_days_tasmax-exceeding-20" ./$RCM/norsummer/$ofile_summerdnor
-			ncatted -O -a long_name,tasmax,o,c,"summer_days_tasmax-exceeding-20"        ./$RCM/summerdays/$ofile_summerdays 
-			ncatted -O -a long_name,tasmax,o,c,"norwegian_heatwave_index"               ./$RCM/norheatwave/$ofile_norheatwave	
-
-			ofileList="${ofile_tasmax_annual} ${ofile_tasmax_seasonal} ${ofile_tasmin_annual} ${ofile_tasmin_seasonal}"
-
-
+			# END OF: NEED TO CHECK AND ORGANISE tasmin and tasmax indices:
+		
 		elif [ $VAR == "pr" ]; then
 			echo ""
 			echo "pr chosen. Now processing ifile " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
@@ -1370,3 +1298,22 @@ done
 # 	#ncatted -O -a long_name,tg,o,c,"Mean annual growing season length (days TAS >=5 °C)"           ."/senorge/growing/"$ofile_growing
 # 	##ncatted -O -a short_name,tg,o,c,"growing"                                                   ."/senorge/growing/"$ofile_growing
 	## ncrename -v tg,growing .'/senorge/growing/'$ofile_growing .'/senorge/growing/'$ofile_growing
+
+# Irene is testing senorge:
+		###ofile=`basename $file | sed s/senorge2018_//`          # Testing senorge. Format: tg_senorge2018_2008.nc
+
+
+
+        #if [ "$VAR" == "tas" ] || [ "$VAR" == "tg" ]; then    # Testing seNorge
+
+			#ofile_tas_annual=`echo $ofile | sed s/_tg_/_tg_annual-mean_/`      # Testing senorge
+			#ofile_tas_seasonal=`echo $ofile | sed s/_tg_/_tg_seasonal-mean_/`  # Testing senorge 
+			#ofile_growing=`echo $ofile | sed s/_tg_/_growing_/`                # Testing senorge: vekstsesong
+			
+			#set tasmin to tasmax because they are treated in the same way
+			#VAR="tasmax"      # set the first variable is tasmax and treat tasmin equally.  # orig. Roll back to this.
+			#VAR="tx"          # Testing senorge
+
+			#ofile_tas_annual=`echo $ofile | sed s/_tg_/_tg_annual_/`      # Testing senorge
+			#ofile_tas_seasonal=`echo $ofile | sed s/_tg_/_tg_seasonal_/`  # Testing senorge 
+			#ofile_growing=`echo $ofile | sed s/_tg_/_growing_/`           # Testing senorge: vekstsesong
