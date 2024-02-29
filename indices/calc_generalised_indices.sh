@@ -338,10 +338,15 @@ function calc_indices {
 				mkdir -p $RCM/tasmax #make tasmax folder here because indices based on both tasmin and tasmax are stored in the folder of tasmax
 			fi
 
+			echo $file_tasmax
+			echo $file_tasmin
+			echo $filedir_tasmax
+			echo $filedir_tasmin
+
 
 			# Compute dtr_annual, diurnal temperature range
 			if ! [ -f ./$RCM/tasmax/$ofile_dtr_annual ]; then   # check if the file exists
-				cdo -L timmean -sub  $filedir_tasmax/$file_tasmax $ifiledir_tasmin/$ifile_tasmin ./$RCM/tasmax/$ofile_dtr_annual
+				cdo -L timmean -sub  $filedir_tasmax/$file_tasmax $filedir_tasmin/$file_tasmin ./$RCM/tasmax/$ofile_dtr_annual
 				ncrename -v $VAR,dtr ./$RCM/tasmax/$ofile_dtr_annual ./$RCM/tasmax/$ofile_dtr_annual	 
 			else
 				echo "Skip computation of dtr_annual from daily data, because ofile already exists for year " $yyyy
@@ -349,7 +354,7 @@ function calc_indices {
 
 			# Compute dtr_seasonal, diurnal temperature range
 			if ! [ -f ./$RCM/tasmax/$ofile_dtr_seasonal ]; then   # check if the file exists
-				cdo -L yseasmean -sub  $filedir_tasmax/$file_tasmax $ifiledir_tasmin/$ifile_tasmin ./$RCM/tasmax/$ofile_dtr_seasonal
+				cdo -L yseasmean -sub  $filedir_tasmax/$file_tasmax $filedir_tasmin/$file_tasmin ./$RCM/tasmax/$ofile_dtr_seasonal
 				ncrename -v $VAR,dtr ./$RCM/tasmax/$ofile_dtr_seasonal ./$RCM/tasmax/$ofile_dtr_seasonal	 
 			else
 				echo "Skip computation of dtr_seasonal from daily data, because ofile already exists for year " $yyyy
@@ -358,7 +363,7 @@ function calc_indices {
 	 	 
 			# Compute dzc_annual, zero-crossing
 			if ! [ -f ./$RCM/tasmax/$ofile_dzc_annual ]; then   # check if the file exists
-				cdo -L timsum -mul -ltc,273.15  $ifiledir_tasmin/$ifile_tasmin -gtc,273.15  $filedir_tasmax/$file_tasmax ./$RCM/tasmax/$ofile_dzc_annual
+				cdo -L timsum -mul -ltc,273.15  $filedir_tasmin/$file_tasmin -gtc,273.15  $filedir_tasmax/$file_tasmax ./$RCM/tasmax/$ofile_dzc_annual
 				ncrename -v $VAR,dzc ./$RCM/tasmax/$ofile_dzc_annual ./$RCM/tasmax/$ofile_dzc_annual	 
 			else
 				echo "Skip computation of dzc_annual from daily data, because ofile already exists for year " $yyyy
@@ -366,7 +371,7 @@ function calc_indices {
 
 			# Compute dzc_seasonal, zero-crossing
 			if ! [ -f ./$RCM/tasmax/$ofile_dzc_seasonal ]; then   # check if the file exists
-				cdo -L yseassum -mul -ltc,273.15  $ifiledir_tasmin/$ifile_tasmin -gtc,273.15  $filedir_tasmax/$file_tasmax ./$RCM/tasmax/$ofile_dzc_seasonal
+				cdo -L yseassum -mul -ltc,273.15  $filedir_tasmin/$file_tasmin -gtc,273.15  $filedir_tasmax/$file_tasmax ./$RCM/tasmax/$ofile_dzc_seasonal
 				ncrename -v $VAR,dzc ./$RCM/tasmax/$ofile_dzc_seasonal ./$RCM/tasmax/$ofile_dzc_seasonal	 
 			else
 				echo "Skip computation of dzc_seasonal from daily data, because ofile already exists for year " $yyyy
