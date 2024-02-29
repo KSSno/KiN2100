@@ -261,34 +261,81 @@ function calc_indices {
 
 		# elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ] || [ $VAR == "tx" ] || [ $VAR == "tn" ]; then   # Testing senorge
 		elif [ $VAR == "tasmax" ] || [ $VAR == "tasmin" ]; then             # orig. Roll back to this.
+			echo ""
+			echo "tasmax or tasmin chosen. Now processing ifile " $file ", which is number " $(( $count+1 )) " out of " $nbrfiles " (from one model, RCM and RCP only)."
+			echo "First computing indices based on both tasmin and tasmax."
 
+			## For each index: Make ofilenames by substituting _varname_ with _indexname_ (potentially with time resolution)
+			local ofile_dtr_annual=`echo $ofile | sed s/_$VAR_/_dtr_annual_/` #diurnal temperature range annual
+			local ofile_dtr_seasonal=`echo $ofile | sed s/_$VAR_/_dtr_seasonal_/` #diurnal temperature range seasonal
+
+			## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
+			if [ $count == 0 ]; then
+				get_filenamestart $ofile_dtr_annual $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+				
+				get_filenamestart $ofile_dtr_seasonal $yyyy
+				ofilestartlist="$ofilestartlist $filestart"
+
+				#-# NEW INDEX from tas? Add two lines (as above) here #-#
+			fi	
+
+			if [ $VAR == "tasmax" ]; then
+
+				#mkdir -p  $RCM/tasmax/
+				
+				## For each index: Make ofilenames by substituting _varname_ (here: _tasmax_) with _indexname_ (potentially with time resolution)
+				local ofile_tasmax_annual=`echo $ofile | sed s/_tasmax_/_tasmax_annual-mean_/`
+				local ofile_tasmax_seasonal=`echo $ofile | sed s/_tasmax_/_tasmax_seasonal-mean_/`	 
+
+				## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
+				if [ $count == 0 ]; then
+					get_filenamestart $ofile_tasmax_annual $yyyy
+					ofilestartlist="$ofilestartlist $filestart"
+					
+					get_filenamestart $ofile_tasmax_seasonal $yyyy
+					ofilestartlist="$ofilestartlist $filestart"
+
+					#-# NEW INDEX from tas? Add two lines (as above) here #-#
+				fi	
+
+			if [ $VAR == "tasmin" ]; then
+
+				#mkdir -p  $RCM/tasmin/
+				
+				## For each index: Make ofilenames by substituting _varname_ (here: _tasmin_) with _indexname_ (potentially with time resolution)
+				local ofile_tasmin_annual=`echo $ofile | sed s/_tasmin_/_tasmin_annual-mean_/`
+				local ofile_tasmin_seasonal=`echo $ofile | sed s/_tasmin_/_tasmin_seasonal-mean_/`	 
+
+				## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
+				if [ $count == 0 ]; then
+					get_filenamestart $ofile_tasmin_annual $yyyy
+					ofilestartlist="$ofilestartlist $filestart"
+					
+					get_filenamestart $ofile_tasmin_seasonal $yyyy
+					ofilestartlist="$ofilestartlist $filestart"
+
+					#-# NEW INDEX from tas? Add two lines (as above) here #-#
+				fi	
+		
+				#ofile_dzc=`echo $ofile | sed s/_tasmax_/_dzc_/`
+				local ofile_fd=`echo $ofile | sed s/_tasmax_/_fd_/`
+				local ofile_tropnight=`echo $ofile | sed s/_tasmax_/_tropnight_/`
+				local ofile_norheatwave=`echo $ofile | sed s/_tasmax_/_norheatwave_/`
+				local ofile_summerdnor=`echo $ofile | sed s/_tasmax_/_summerdnor_/`
+				local ofile_summerd=`echo $ofile | sed s/_tasmax_/_summerd_/`
+				#-# NEW INDEX from tasmax? Add line (as above) here #-#
+
+				#ofile_tas_annual=`echo $ofile | sed s/_tg_/_tg_annual-mean_/`      # Testing senorge
+				#ofile_tas_seasonal=`echo $ofile | sed s/_tg_/_tg_seasonal-mean_/`  # Testing senorge 
+				#ofile_growing=`echo $ofile | sed s/_tg_/_growing_/`                # Testing senorge: vekstsesong
+			fi
 			#set tasmin to tasmax because they are treated in the same way
-			VAR="tasmax"      # set the first variable is tasmax and treat tasmin equally.  # orig. Roll back to this.
+			#VAR="tasmax"      # set the first variable is tasmax and treat tasmin equally.  # orig. Roll back to this.
 			#VAR="tx"          # Testing senorge
 
-				echo ""
-			echo "tasmax chosen (and tasmin automatically read in). Now processing file " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
-
-			# Gjennomsnitt av tasmax
-			mkdir -p  $RCM/tasmax/
-			local ofile_tasmax_annual=`echo $ofile | sed s/_tasmax_/_tasmax_annual-mean_/`
-			local ofile_tasmax_seasonal=`echo $ofile | sed s/_tasmax_/_tasmax_seasonal-mean_/`	 
-			#ofile_tasmax_monmean=`echo $ofile | sed s/_tasmax_/_tasmax_monmean_/`
-			#ofile_tasmin_monmean=`echo $ofile | sed s/_tasmax_/_tasmin_monmean_/`
-
-			#ofile_dtr=`echo $ofile | sed s/_tasmax_/_dtr_/`
-			#ofile_dzc=`echo $ofile | sed s/_tasmax_/_dzc_/`
-			local ofile_fd=`echo $ofile | sed s/_tasmax_/_fd_/`
-			local ofile_tropnight=`echo $ofile | sed s/_tasmax_/_tropnight_/`
-			local ofile_norheatwave=`echo $ofile | sed s/_tasmax_/_norheatwave_/`
-			local ofile_summerdnor=`echo $ofile | sed s/_tasmax_/_summerdnor_/`
-			local ofile_summerd=`echo $ofile | sed s/_tasmax_/_summerd_/`
 
 
-			# cdo ifthen $LANDMASK -monmean ./$RCM/'/mergetime_norheatwave_'$REFBEGIN'-'$REFEND'.nc'     ./$RCM'/land_tasmax'
-			# cdo ifthen $LANDMASK -monmean ./$RCM/'/mergetime_norheatwave_'$REFBEGIN'-'$REFEND'.nc'     ./$RCM'/land_norheatwave'
-				
-	 
 			# Annual and seasonal mean of $VAR
 			if ! [ -f ./$RCM/$VAR/$ofile_tasmax_annual ]; then   # check if the file exists
 				cdo timmean                 $filedir/$file ./$RCM/$VAR/$ofile_tasmax_annual
