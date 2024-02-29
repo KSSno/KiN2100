@@ -268,10 +268,10 @@ function calc_indices {
 			echo "First computing indices based on both tasmin and tasmax."
 
 			## For each index: Make ofilenames by substituting _varname_ with _indexname_ (potentially with time resolution)
-			local ofile_dtr_annual=`echo $ofile | sed s/_$VAR_/_dtr_annual_/` #diurnal temperature range annual
-			local ofile_dtr_seasonal=`echo $ofile | sed s/_$VAR_/_dtr_seasonal_/` #diurnal temperature range seasonal
-			local ofile_dzc_annual=`echo $ofile | sed s/_tasmax_/_dzc_annual_/` #number of days with zero-crossing
-			local ofile_dzc_seasonal=`echo $ofile | sed s/_tasmax_/_dzc_seasonal_/` #number of days with zero-crossing
+			local ofile_dtr_annual=`echo $ofile | sed s/_$VAR_/_dtr_annual_/`         #diurnal temperature range annual
+			local ofile_dtr_seasonal=`echo $ofile | sed s/_$VAR_/_dtr_seasonal_/`     #diurnal temperature range seasonal
+			local ofile_dzc_annual=`echo $ofile | sed s/_tasmax_/_dzc_annual_/`       #number of days with zero-crossing
+			local ofile_dzc_seasonal=`echo $ofile | sed s/_tasmax_/_dzc_seasonal_/`   #number of days with zero-crossing
 			#-# NEW INDEX from both tasmin and tasmax? Add line (as above) here #-#
 
 			## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
@@ -291,7 +291,7 @@ function calc_indices {
 				#-# NEW INDEX from both tasmin and tasmax? Add two lines (as above) here #-#
 			fi
 
-			# Read in the extra variable needed:
+			# Read in the extra variable needed (tasmin if user chose tasmax and vixe versa):
 			if [ $VAR == "tasmax" ]; then
 				local ifile_tasmax=$ifile
 				local ifiledir_tasmax=$ifiledir
@@ -302,9 +302,10 @@ function calc_indices {
 				local ifiledir_tasmin=$ifiledir
 				local ifile_tasmax=`echo $file_tasmin | sed s/_tasmin_/_tasmax_/`
 				local ifiledir_tasmax=`echo $filedir_tasmin | sed s/_tasmin_/_tasmax_/`
+				mkdir -p $RCM/tasmax #make tasmax folder here because indices based on both tasmin and tasmax are stored in the folder of tasmax
 			fi
 
-			# DTR annual diurnal temperature range
+			# Compute dtr_annual, diurnal temperature range
 			if ! [ -f ./$RCM/tasmax/$ofile_dtr_annual ]; then   # check if the file exists
 				echo "Ofile_dtr=" $RCM"/dtr/"$ofile_dtr	 
 				cdo -L timmean -sub  $filedir_tasmax/$file_tasmax $ifiledir_tasmin/$ifile_tasmin ./$RCM/tasmax/$ofile_dtr_annual
@@ -313,7 +314,7 @@ function calc_indices {
 				echo "Skip computation of dtr_annual from daily data, because ofile already exists for year " $yyyy
 			fi
 
-			# DTR seasonal diurnal temperature range
+			# Compute dtr_seasonal, diurnal temperature range
 			if ! [ -f ./$RCM/tasmax/$ofile_dtr_seasonal ]; then   # check if the file exists
 				cdo -L yseasmean -sub  $filedir_tasmax/$file_tasmax $ifiledir_tasmin/$ifile_tasmin ./$RCM/tasmax/$ofile_dtr_seasonal
 				ncrename -v $VAR,dtr ./$RCM/tasmax/$ofile_dtr_seasonal ./$RCM/tasmax/$ofile_dtr_seasonal	 
@@ -322,7 +323,7 @@ function calc_indices {
 			fi
 
 	 	 
-			# DZC, annual number of days with zero-crossing
+			# Compute dzc_annual, zero-crossing
 			if ! [ -f ./$RCM/tasmax/$ofile_dzc_annual ]; then   # check if the file exists
 				cdo -L timsum -mul -ltc,273.15  $ifiledir_tasmin/$ifile_tasmin -gtc,273.15  $filedir_tasmax/$file_tasmax ./$RCM/tasmax/$ofile_dzc_annual
 				ncrename -v $VAR,dzc ./$RCM/tasmax/$ofile_dzc_annual ./$RCM/tasmax/$ofile_dzc_annual	 
@@ -330,7 +331,7 @@ function calc_indices {
 				echo "Skip computation of dzc_annual from daily data, because ofile already exists for year " $yyyy
 			fi
 
-			# DZC, seasonal number of days with zero-crossing
+			# Compute dzc_seasonal, zero-crossing
 			if ! [ -f ./$RCM/tasmax/$ofile_dzc_seasonal ]; then   # check if the file exists
 				cdo -L yseassum -mul -ltc,273.15  $ifiledir_tasmin/$ifile_tasmin -gtc,273.15  $filedir_tasmax/$file_tasmax ./$RCM/tasmax/$ofile_dzc_seasonal
 				ncrename -v $VAR,dzc ./$RCM/tasmax/$ofile_dzc_seasonal ./$RCM/tasmax/$ofile_dzc_seasonal	 
@@ -339,15 +340,14 @@ function calc_indices {
 			fi
 
 
+
 			if [ $VAR == "tasmax" ]; then
 				echo "Next computing indices based on tasmax."
-
-				#mkdir -p  $RCM/tasmax/
 				
 				## For each index: Make ofilenames by substituting _varname_ (here: _tasmax_) with _indexname_ (potentially with time resolution)
-				local ofile_tasmax_annual=`echo $ofile | sed s/_tasmax_/_tasmax_annual_/`
+				local ofile_tasmax_annual=`echo $ofile | sed s/_tasmax_/_tasmax_annual_/`           #mean tasmax
 				local ofile_tasmax_seasonal=`echo $ofile | sed s/_tasmax_/_tasmax_seasonal_/`	 
-				local ofile_tasmax20ge_annual=`echo $ofile | sed s/_tasmax_/_tasmax20ge_annual_/` #number of summer days
+				local ofile_tasmax20ge_annual=`echo $ofile | sed s/_tasmax_/_tasmax20ge_annual_/`   #number of summer days
 				local ofile_norheatwave_annual=`echo $ofile | sed s/_tasmax_/_norheatwave_annual_/` #nordic heat wave index events
 
 				## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
@@ -393,7 +393,7 @@ function calc_indices {
 
 				# Compute norheatwave_annual, norsk hetebølge, five consecutive days with tasmax>=27 degC
 				if ! [ -f ./$RCM/$VAR/$ofile_norheatwave_annual ]; then   # check if the file exists
-					cdo -L timsum -gec,300.15 -runmean,5  $filedir/$file ./$RCM/$VAR/$ofile_norheatwave_annual 
+					cdo -L timsum -eqc,5 -runmean,5 -gec,300.15  $filedir/$file ./$RCM/$VAR/$ofile_norheatwave_annual 
 					ncrename -v tasmax,norheatwave ./$RCM/$VAR/$ofile_norheatwave_annual ./$RCM/$VAR/$ofile_norheatwave_annual	 
 				else
 					echo "Skip computation of norheatwave_annual from daily data, because ofile already exists for year " $yyyy
@@ -402,10 +402,9 @@ function calc_indices {
 			fi
 
 
+
 			if [ $VAR == "tasmin" ]; then
 				echo "Next computing indices based on tasmin."
-
-				#mkdir -p  $RCM/tasmin/
 				
 				## For each index: Make ofilenames by substituting _varname_ (here: _tasmin_) with _indexname_ (potentially with time resolution)
 				local ofile_tasmin_annual=`echo $ofile | sed s/_tasmin_/_tasmin_annual_/` #mean tasmin
@@ -467,6 +466,7 @@ function calc_indices {
 			fi
 
 		
+
 		elif [ $VAR == "pr" ]; then
 			echo ""
 			echo "pr chosen. Now processing ifile " $file ", which is number " $count " out of " $nbrfiles " (from one model, RCM and RCP only)."
