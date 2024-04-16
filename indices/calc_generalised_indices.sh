@@ -448,7 +448,7 @@ function calc_indices {
 				local ofile_tasmin_annual=`echo $ofile | sed s/_tasmin_/_tasmin_annual_/` #mean tasmin
 				local ofile_tasmin_seasonal=`echo $ofile | sed s/_tasmin_/_tasmin_seasonal_/` #mean tasmin	 
 				local ofile_fd_annual=`echo $ofile | sed s/_tasmin_/_fd_annual_/` #number of frost days
-				local ofile_tasmin20le_annual=`echo $ofile | sed s/_tasmin_/_tasmin20le_annual_/` #number of tropical nights
+				local ofile_tasmin20ge_annual=`echo $ofile | sed s/_tasmin_/_tasmin20ge_annual_/` #number of tropical nights
 
 				## For first year (i.e. count==0); make list of ofilenames, where the year and file format is removed from each name. 
 				if [ $count == 0 ]; then
@@ -461,7 +461,7 @@ function calc_indices {
 					get_filenamestart $ofile_fd_annual $yyyy
 					ofilestartlist="$ofilestartlist $filestart"
 					
-					get_filenamestart $ofile_tasmin20le_annual $yyyy
+					get_filenamestart $ofile_tasmin20ge_annual $yyyy
 					ofilestartlist="$ofilestartlist $filestart"
 					
 
@@ -492,12 +492,12 @@ function calc_indices {
 					echo "Skip computation of fd_annual from daily data, because ofile already exists for year " $yyyy
 				fi
 
-				# Compute tasmin20le_annual, tropenattdøgn, tasmin >= 20 grader
-				if ! [ -f ./$RCM/$VAR/$tasmin20le_annual ]; then
-					cdo -L timsum -gec,293.15  $filedir/$file ./$RCM/$VAR/$tasmin20le_annual
-					ncrename -v tasmin,tasmin20le ./$RCM/$VAR/$tasmin20le_annual ./$RCM/$VAR/$tasmin20le_annual	 
+				# Compute tasmin20ge_annual, tropenattdøgn, tasmin >= 20 grader
+				if ! [ -f ./$RCM/$VAR/$tasmin20ge_annual ]; then
+					cdo -L timsum -gec,293.15  $filedir/$file ./$RCM/$VAR/$tasmin20ge_annual
+					ncrename -v tasmin,tasmin20ge ./$RCM/$VAR/$tasmin20ge_annual ./$RCM/$VAR/$tasmin20ge_annual	 
 				else
-					echo "Skip computation of tasmin20le_annual from daily data, because ofile already exists for year " $yyyy
+					echo "Skip computation of tasmin20ge_annual from daily data, because ofile already exists for year " $yyyy
 				fi
 
 				#-# NEW INDEX from tasmin? Add the if-block with cdo-command and ncrename (as above) here #-#
