@@ -431,7 +431,7 @@ function calc_indices {
 
 				# Compute norheatwave_annual, norsk hetebølge, five consecutive days with tasmax>=27 degC
 				if ! [ -f ./$RCM/$VAR/$ofile_norheatwave_annual ]; then   # check if the file exists
-					cdo -L timsum -eqc,5 -runmean,5 -gec,300.15  $filedir/$file ./$RCM/$VAR/$ofile_norheatwave_annual 
+					cdo -L timsum -eqc,5 -runsum,5 -gec,300.15  $filedir/$file ./$RCM/$VAR/$ofile_norheatwave_annual 
 					ncrename -v tasmax,norheatwave ./$RCM/$VAR/$ofile_norheatwave_annual ./$RCM/$VAR/$ofile_norheatwave_annual	 
 				else
 					echo "Skip computation of norheatwave_annual from daily data, because ofile already exists for year " $yyyy
