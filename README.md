@@ -66,3 +66,4 @@ ncatted -a standard_name,mask,o,c,"mask" -a units,mask,o,c,"1" kss2023_mask1km_n
 
 
 
+# KiN2100
