@@ -1,0 +1,2117 @@
+---
+title: "Supporting material for Downscaling the probability of heavy precipitation"
+author: "Rasmus E. Benestad"
+date: "Oslo, Norway: 2024-03-05 - 2024-04-26"
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+    fig_width: 7
+    fig_height: 6
+    fig_caption: true
+    dev: 'pdf'
+header-includes:
+ \usepackage{float}
+ \floatplacement{figure}{H}
+bibliography: references.bib
+csl: elsevier-harvard.csl
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.pos = 'H')
+## Make an ordinary R-script of the chunks of R-code: 
+#knitr::purl('~/dse4fwmu.Rmd','~/R/dse4fwmu.R')
+```
+
+# Introduction
+
+This document can be regarded as a kind of lab notebook for an analysis of precipitation. It shows the merits of two key parameters, _the wet-day frequency_ $f_w$ and _wet-day mean precipitation_ $\mu$ (also referred to as the 'mean precipitation intensity'), and is meant to facilitate an open and transparent process that can be readily replicated by others. 
+
+This document is an R-markdown script written for empirical-statistical downscaling of probabilities and statistical properties of heavy 24-hr precipitation in the Nordic countries, based on @benestad_simple_2019. The R-code and results provided herein show how statistical properties of daily precipitation can be estimated based on $f_w$ and $\mu$ according to $Pr(X > x) = f_w \exp(-x/\mu)$. This script may be adapted to repeat the analysis for other regions of the world.
+
+The white-paper of Euro-CORDEX (<https://cordex.org/wp-content/uploads/2022/08/White-Paper-ESD.pdf>) recommends combining empirical-statistical downscaling (ESD) and dynamical downscaling with regional climate models (RCMs), as these two approaches are based on different assumptions and have different strengths and weaknesses. Nevertheless, this study only involves ESD, as its purpose is to demonstrate how ESD can be used to downscale various statistics for 24-hr precipitation and provide information that may be useful for decision-making and climate change adaptation. This is also ment to be a contribution to CORDEX-ESD and Euro-CORDEX.
+
+This work is meant to provide a basis for the report _'Klima i Norge 2100'_ as well as preparing the ground for studying the connection between climate change and diarrhoea in the project EU-SPRINGS. It  builds on the legacy of the projects KlimaDigital <https://www.sintef.no/projectweb/klimadigital/>, funded by the Norwegian Research Council (2018-2021), and EU-SPECS (FP7; 2012-2017). 
+
+## Set-up: practical and technical considerations
+
+This R-script saves intermediate results in temporary files (saved as R-binary data files `*.rda`) since some of the processing takes long time. It will look for these files and use them for the running of the script, but if they are not found, it will run through the original computations. The  temporary files will be saved together with this R-markdown script for the benefit of those who want to replicate this analysis. 
+
+```{r Set-up}
+## A demonstration of downscaling for seasonal mean temperature
+## Rasmus.Benestad-at-met.no 2023-0
+## For ICRC CORDEX 2023 Session-D
+
+## The first lines of code prepare the data for empirical-statistical 
+## downscaling of a CMIP6 ensemble 
+
+## Needs the R-package 'esd' available from https://github.com/metno/esd
+## Check if you need to get the devtools-package:
+install.esd <- ("esd" %in% rownames(installed.packages()) == FALSE)
+if (install.esd) { 
+  install.devtools <- ("devtools" %in% rownames(installed.packages()) == FALSE)
+  
+  if (install.devtools) {
+    print('Need to install the devtools package')
+    ## You need online access.
+    install.packages('devtools', dependencies = TRUE)
+  }
+  
+  ## Use the devtools-package for simple facilitation of installing.
+  library('devtools')
+  install_github('metno/esd')
+}
+
+library(esd)
+## Working directory where the temporary data files are stored
+setwd('~/R')
+print(sessionInfo()$otherPkgs$esd)
+```
+
+## Settings for downscaling
+
+The choice of predictor domain used for the downscaling was set to match that used for evaluating the model results, shown at the end of this R-markdown script. 
+
+The evaluation shown near the end of this R-markdown script reveals an outlier: CESM2-WACCM-FV2. We exclude it from the projections, even if the ensemble itself is getting a bit small. 
+
+```{r}
+recompute <- FALSE
+## The region of predictors from GCMs evaluated at the end of this R-markdows script
+regions <- "-5-45E.55-72N"
+## Runs which caused the running of the code to crash - to be excluded
+bad.runs <- c("EC-E","FGOA","IPSL","KACE","MPI-","UKES")
+outlier.runs <- c("CESM")
+## Define the spatial domain for the predictor: same as the domain used for evaluation
+## of CMIP6 GCMs.
+lons <- c(-5,45)
+lats <- c(55,72)
+```
+
+
+## Preprocessing ERA5 24-hr precipitation
+
+The ERA5 data (@hersbach_era5_2016) was downloaded from the Copernicus Climate Services (C3S) climate data store (CDS) site using `esd::ERA5.CDS()`:
+
+```{r, eval=FALSE}
+ERA5.CDS(param='total_precipitation',varnm='tp',FUN='daysum')
+```
+
+The daily global ERA5 data was then aggregated into wet-day frequency $f_w$ and wet-day mean precipitation $\mu$ (the threshold for a wet day was 1 mm/day):   
+
+```{r, eval=FALSE}
+## R-script to estimate wet-day mean and wet-day frequency from ERA5/EOBS.
+## Rasmus Benestad 2023-05-26
+
+clean <- TRUE
+
+## This routine masks the data wet/dry and estimates monthly wet-day frequency 
+##vand mean precipitation intensity
+wetdaymean <- function(ifile,datadir,outdir) {
+  ## Make sure that all files have the same longitude/latitude setting as the first file
+  print('Ensure correct grid - use the grid from ERA5_tp_1940_daysum.nc')
+  system(paste0('cdo -b f32 remapcon,',file.path(datadir,'ERA5_tp_1940_daysum.nc '),
+                file.path(datadir,ifile),' out.nc'))
+  print('Make mask of precipitation')
+  system('cdo gtc,0.001 out.nc mumask.nc')
+  ## The file mumask.nc is a mask with 0.001 (m) in all time steps with exceeding 
+  ## data (set to 1) and 0 for all others
+  system(paste('cdo ifthen mumask.nc out.nc masked.nc'))
+  ## her appliseres masken på ifile og lagres i ofile. (Øvrige punkter får verdien NA.)
+  system(paste('cdo monmean masked.nc',file.path(outdir,sub('daysum.nc','mu.nc',ifile))))
+  system(paste('cdo monmean mumask.nc',file.path(outdir,sub('daysum.nc','fw.nc',ifile))))
+  system(paste('cdo -fldmean masked.nc',file.path(outdir,sub('daysum.nc','TP.wet.nc',ifile))))
+  file.remove('mumask.nc')
+  file.remove('masked.nc')
+  file.remove('out.nc')
+}
+
+## Setup
+print('Generate the statistics...')
+datadir <- '~/data/ERA5/day'
+outdir <- '~/Downloads/ERA5-precip-statistics'
+old.files <- NULL
+if (!exists(outdir)) dir.create(outdir) else {
+  old.files <- list.files(path=outdir,full.names = TRUE)
+  if (clean) file.remove(old.files)
+}
+
+## Save temporary files if the job is not completed...
+print('Monthly wet-day-mean and wet-day frequency for each year...')
+files <- list.files(path=datadir,pattern='_tp_')
+if ((!is.null(old.files)) & (!clean) ) {
+  donefiles <- sub('/home/rasmusb/Downloads/ERA5-precip-statistics/ERA5_tp_','',
+                   old.files[grep('TP.wet.nc',old.files)])
+  donefiles <- sub('_TP.wet.nc','',donefiles)
+  files <- files[-match(donefiles,sub('_daysum.nc','',sub('ERA5_tp_','',files)))]
+}
+print(files)
+
+for (file in files) {
+  print(file)
+  wetdaymean(file,datadir,outdir)
+}
+file.remove(file.path(outdir,"first.ERA5grid.nc"))
+
+## Merge the annual files
+print('Merge the results')
+results <- list.files(path=outdir,pattern='mu.nc',full.names = TRUE)
+system(paste('cdo mergetime',paste(results,collapse=' '), 
+             file.path('~/Downloads/','ERA5_mu_mon.nc')))
+file.remove(results)
+results <- list.files(path=outdir,pattern='fw.nc',full.names = TRUE)
+system(paste('cdo mergetime',paste(results,collapse=' '), 
+             file.path('~/Downloads/','ERA5_fw_mon.nc')))
+file.remove(results)
+results <- list.files(path=outdir,pattern='TP.wet.nc',full.names = TRUE)
+system(paste('cdo mergetime',paste(results,collapse=' '), 
+             file.path('~/Downloads/','ERA5_TP.wet.nc')))
+file.remove(results)
+
+## Make annual aggregation
+system('cdo yearavg ~/Downloads/ERA5_fw_mon.nc ~/Downloads/ERA5_fw_year.nc')
+system('cdo yearavg ~/Downloads/ERA5_mu_mon.nc ~/Downloads/ERA5_mu_year.nc')
+```
+
+The subsequent analysis and downscaling relied on aggregated daily ERA5 data processed as described above.
+
+# Downscaling
+
+Annual local wet-day frequency $f_w$ and wet-day mean precipitation $\mu$ were downscaled using $f_w$ and $\mu$ respectively to represent the *large-scale predictors*, as shown below. The annual aggregates were used here as a starting point of this kind of analysis, but it may potentially be extended to seasonal statistics to capture aspects that may be stratified in terms of seasons. Extending this analysis to seasonal statistics will increase the volume of results and result in longer scripts and documents. 
+
+The predictors were based on ERA5 for calibration and daily precipitation from CMIP6 global climate models (GCMs; @eyring_overview_2015) for projections. The Downscaling used common EOFs as framework, as explained in the discussion paper @benestad_norwegian_2021. The common EOF framework provides an additional level of evaluation and quality control in addition a better way to combine GCM output and reanalysis. 
+
+```{r downscaling, fig.height=7,fig.width=7, warning=FALSE, dev='pdf', eval=TRUE}
+ssps <- list.files(path='data/CMIP/CMIP6.monthly/wet-day-frequency/')
+ssps <- ssps[grep('ssp|hist',ssps)]
+print(ssps)
+
+tmp.st.fil <- 'Y.dse4fwmu.rda'
+it <- 'annual'
+ip <- 1:7
+esd.results <- list()
+
+#ssp <- 'ssp370'
+for (ssp in ssps) { 
+  for (param in c('fw','mu')) { 
+    reanalysis <- switch(param,
+                         'fw'='~/data/ERA5/ERA5_fw_year.nc',
+                         'mu'='~/data/ERA5/ERA5_mu_year.nc')
+    ## ERA5 wet-day mean precipitation has units of m/day
+    ## CMIP6 wet-day mean precipitation has units of kg/(m² s)
+    dse.results <- switch(param,'fw'=paste0('dse4fw.',ssp,'.rda'),
+                          'mu'=paste0('dse4mu.',ssp,'.rda'))
+    FUN <- switch(param,'fw'='wetfreq', 'mu'='wetmean')
+    path <- switch(param,'fw'='~/data/CMIP/CMIP6.monthly/wet-day-frequency/',
+                   'mu'='~/data/CMIP/CMIP6.monthly/wet-day-intensity/')
+    #file.remove(dse.results) ## uncomment this line if it should be repeated.
+    if (!file.exists(dse.results) | recompute) { 
+      
+      ## Read daily mean temperatures from Italy through the ECA&D database
+      #Y <- station(param='precip',src='metnod.thredds')
+      file.predictand <- '~/data/ECAD/precip.ecad.nc'
+      varid <- 'precip'
+      it.predictand <- c(1950,2021)
+      is.predictand <- list(lon=c(5,30), lat=c(55,72))
+      if (!file.exists(tmp.st.fil)) { 
+        Y <- retrieve(file.predictand,lon=is.predictand$lon,
+                      lat=is.predictand$lat, nmin=50, it=it.predictand)
+        save(Y,file=tmp.st.fil)
+      } else load(tmp.st.fil)
+      ## Find the number of valid (nv) data points in each series
+      nv <- apply(Y,2,'nv')
+      ## Select only those stations with more than 20000 valid data points 
+      ## (is = index space)
+      y <- subset(Y,is=nv > 20000)
+      
+      ## Estimate the autumn (SON)mean temperature
+      if (it=='annual') predictand <- annual(y,FUN=FUN) else
+        predictand <- subset(as.4seasons(y,FUN=FUN),it=it)
+      attr(predictand,'variable') <- param
+      plot(y)
+      ## The names of the stations the qualified
+      print(loc(y))
+      ## Use the 1950-2022 period
+      predictand <- subset(predictand,it=c(1951,2022))
+      ## Estimate PCA of the stations
+      ## - using PCA rather than single stations tend to improve 
+      ## the signal-to-noise ratio
+      pca <- PCA(pcafill(predictand),n=5)
+      plot(pca)
+      
+      ## Get the  ERA5 reanalysis for calibrating the ESD model
+      if (it=='annual')  {
+        era5 <- retrieve(reanalysis,param='tp',lon=lons,lat=lats, it=it.predictand)
+        index(era5) <- year(era5)
+        predictor <- subset(annual(era5,FUN=FUN)) 
+      } else {  
+        ## REB 2024-03-01: the monthly data looks suspect - poor results.
+        era5 <- retrieve(reanalysis,param=param,lon=lons,lat=lats, it=it.predictand)
+        predictor <- subset(as.4seasons(era5,FUN='mean'),it=it)
+      }
+      attr(predictor,'variable') <- param
+      ## Ensure common unit for ERA5 and CMIP6 runs: kg/(m^2 s)
+      if (param=='mu') {
+        ## Density of water ~ 1000 kg/m^3 so that 1 kg = 1 mm/m^2
+        predictor <- predictor*1000  ## m/day -> daysum(kg/(m^2 s))
+        attr(predictor,'unit') <- 'mm/day'
+      }
+      attr(predictor,'unit') <- switch(param,'fw'='fraction','mu'='mm/day')
+      map(predictor,new=FALSE)
+      
+      ## Test the link between predictor and predictand
+      eof <- EOF(predictor)
+      plot(eof,new=FALSE)
+      ds <-DS(pca,eof,ip=ip)
+      plot(ds,new=FALSE)
+      
+      ## Downscale a CMIP6 ensemble
+      ## Path with GCM data
+      ## Downscale results
+      dse.pca <- DSensemble(pca,predictor=predictor,path=path,
+                            FUNX="mean",verbose=FALSE,
+                            biascorrect=TRUE,rcp=ssp,ip=ip,
+                            nmin=1,pattern='monmean_',
+                            lon=lons,lat=lats,rel.cord=FALSE,plot=TRUE)
+      ## Only keep the mean map information - smaller data volume
+      predictor <- map(predictor)
+      ## Grid the covariance  structures in the PCA
+      gridmap(dse.pca$pca) -> dse.pca$eof
+      
+      nms <- names(dse.pca)
+      for (nm in nms[-c(1:2)]) attr(dse.pca[[nm]],'model') <- NULL
+      save(dse.pca,ds,predictand,predictor,eof,file=dse.results)
+      print('--- Completed downscaling ---')
+    } 
+    load(dse.results)
+    #print(paste('Loading downscaled results',dse.results))
+    load(tmp.st.fil)
+    #print(paste('Loading original station data',tmp.st.fil))
+    if (ssp=='ssp370') { 
+      map(predictor,new=FALSE)
+      ## Plot the leading EOF
+      plot(eof,type='fill',colbar=list(show=FALSE,pal='t2m'),cex=0.5,new=FALSE)
+      par()
+      ## Plot the second EOF
+      plot(eof,type='fill',ip=2,colbar=list(show=FALSE,pal='t2m'),cex=0.5,new=FALSE)
+      ## Plot the PCA
+      nv <- apply(Y,2,'nv')
+      ## Select only those stations with more than 20000 valid data points 
+      ## (is = index space). Use the 1950-2022 period
+      y <- subset(annual(subset(Y,is=nv > 20000),FUN=FUN),it=c(1951,2022))
+      ## Estimate PCA of the stations
+      ## - using PCA rather than single stations tend to improve 
+      ## the signal-to-noise ratio
+      pca <- PCA(pcafill(y))
+      plot(pca,type='fill',colbar=list(show=FALSE,pal='t2m'),cex=0.5,new=FALSE)
+      ## Make sure that the figures come out right in the knitted results
+      ## Plot the PCA
+      plot(pca,type='fill',ip=2,colbar=list(show=FALSE,pal='t2m'),cex=0.5,new=FALSE)
+      ## Make sure that the figures come out right in the knitted results
+      ## Plot the results of the downscaling exercise for the leading EOF
+      plot(ds,type='fill',colbar1=list(show=FALSE,pal='t2m'),cex=0.5,new=FALSE)
+      ## Make sure that the figures come out right in the knitted results
+      par()
+      ## Plot the results from the downscaling of the second EOF
+      plot(ds,type='fill',ip=2,colbar1=list(show=FALSE,pal='t2m'),cex=0.5,new=FALSE)
+      ## Extract annual statistics for Oslo
+      ds.oslo <- subset(as.station(ds),loc="OSLO BLINDERN")
+      plot(ds.oslo,map.show=FALSE,new=FALSE,
+           main=paste("Downscaled and observed",param,"for OSLO BLINDERN")) 
+      grid()
+      ## A hack to grab location names 
+      obs <- as.station(attr(ds,'original_data'))
+      attr(obs,'location') <- loc(ds)
+      y.oslo <- subset(obs,is=list(loc="OSLO BLINDERN"))
+      lines(y.oslo,type='b',lty=2,lwd=2)
+      lines(trend(y.oslo),lty=3)
+      legend(1995,min(y.oslo,na.rm=TRUE),c('Observed','Downscaled'),
+             col=c('black','red'),lty=c(2,1),bty='n')
+      print(c(trend.coef(y.oslo),trend.pval(y.oslo))) 
+    }
+    
+    ## Remove runs which caused the evaluation to crash
+    Bad.runs <- c(bad.runs,outlier.runs)
+    for (j in length(Bad.runs)) {
+      ## Find matching model in the object names
+      rmrun <- grep(Bad.runs[j],names(dse.pca))
+      #print(rmrun)
+      print(paste("Removing",Bad.runs[j],names(dse.pca)[rmrun[1]]))
+      model.id <- attr(dse.pca,'model_id')
+      set2null <- c()
+      for (jj in rmrun) set2null <- c(set2null,jj)
+      
+      ## Remove the elements with largest index first to avoid shifting of order.
+      set2null <- sort(set2null,decreasing = TRUE)
+      for (jj in set2null) dse.pca[[jj]] <- NULL
+      ## The names of the object include 'info' and 'pca' in the beginning
+      ## and since we weed out elements after order, we need to account for this
+      attr(dse.pca,'model_id') <- model.id[-(set2null - 2)]
+      #print(names(dse.pca))
+      #print(sub('.r1i1p1f1','',attr(dse.pca,'model_id')))
+    }
+    
+    #print(paste(param,ssp,sep='.'))
+    #cat('Memory size: '); print(object.size(dse.pca),unit='Kb')
+    nms <- names(dse.pca)
+    for (nm in nms[-c(1:2)]) attr(dse.pca[[nm]],'model') <- NULL
+    esd.results[[paste(param,ssp,sep='.')]] <- dse.pca
+    #cat('Memory size: '); print(object.size(esd.results),unit='Kb')
+    rm(list=c('dse.pca','predictor','ds','predictand','eof','Y'))
+    gc(reset=TRUE)
+  }
+}
+```
+To check the results, we plotted maps of the predictors from ERA5. The mean $f_w$ indicated higher values near the western coasts of Norway, as expected. The results of an empirical orthogonal function (EOF) analysis of $f_w$ from the ERA5 reanalysis also indicated pronounced variability over the ocean and in the north. The leading EOF accounted for 30% of the variance and the leading 20 EOFs represented 88% of the total variance. The second EOF accounted for 19% of the variance and represents an important part of the variability. 
+
+For the downscaling exercise based on ERA5 only, we took a random sample - in this case Oslo-Blindern. The downscaled results for $f_w$ gave a good and close match between historical observations and downscaled $f_w$ using $f_w$ from ERA5 as predictor. The same exercise and evaluation for $\mu$ also indicated a match, but not as good as for $f_w$. Moreover, downscaled $\mu$ based on ERA5 $\mu$ underestimated the observed trend since 2000. In both cases, there was an upward trend in annual $f_w$ and $\mu$, both being significant at the 5%-level. 
+
+### The predictand - aggregated rain gauge measurements
+
+The chunk above shows a map with all the station coordinates with colour coded elevation. The predictand spanned the time interval 1950-2023, ad covered longitudes between 5-30E, latitudes 55-71N and elevations 0m - 2062m. 
+
+The predictand was represented in terms of principal component analysis (PCA) results of annual $f_w$ estimated from the rain gauge data from ECA&D (@klein_tank_daily_2002), as grouping the station data through PCA seems to increase the signal-to-noise ratio (@benestad_downscaling_2015). The spatial pattern of the matches between the predictand and predictor for PC 1 indicated similar geographical weights and the cross-validation gave a strong match with correlation of 0.93. The calibrated model managed to reproduce most of the observed interannual variability in PC#1 for local $f_w$ in the Nordic countries. Corresponding results for the second EOF gave a cross-validation correlation of 0.92.
+
+The map of mean $\mu$ also indicate higher values near the coast and the leading EOF accounts for 19% of the variance. The 20 leading EOFs account for 74% of the total variance, suggesting that the wet-day mean precipitation has stronger presence of small-scale variability. The second EOF explained 9%, and the higher order modes (not shown) also contributed to the variability. 
+
+A downscaling exercise based only on annual $\mu$ from ERA5 and rain gauges also gave a good match between the predictor and predictand: similar geographical weights and a cross-validation correlation of 0.96. The second EOF for $\mu$ explained 8% of the variance. For the second mode, the cross-validation correlation was 0.81, connected to geographical weights along the coast of Norway.  
+
+There was a good match between precipitation statistics aggregated from rain gauge measurements and the ERA5 reanalysis.
+
+In other words, the results of the downscaling indicate that both $f_w$ and $\mu$ to a large extent can be estimated based on their respective large-scale equivalents from the ERA5 reanalysis. There is, however, a question whether the GCMs are able to skillfully reproduce the same large-scale features in $f_w$ and $\mu$, and an evaluation of their skill is provided at the end of this R-markdown script. 
+
+## Diagnostics of the results
+
+The following chunk provides information of 652 locations with rain gauge data downscaled and a model ensemble originally with 30 members used here to estimate future local climate projections. Some of the members were removed due to data issues resulting in technical crash when running the code. Also, one suspect member identified from the GCM evaluation was removed from the projection of future rainfall statistics. 
+
+```{r summary-of-results}
+load(tmp.st.fil)
+## A sanity check - how much memory is taken by the results.
+print(object.size(esd.results))
+## Show the scenarios/projections.
+print(names(esd.results))
+## Summary of countries:
+print(table(cntr(Y)))
+## Time interval for the predictand
+print(range(index(Y)))
+## Spatial distribution of the predictand: lon lat alt
+print(c('Lons:',round(range(lon(Y))),'Lats:',round(range(lat(Y))),'Alts:',range(alt(Y))))
+altitude <- function(x,na.rm=TRUE) alt(x)
+## Show the locations of all stations considered - also short series
+map(Y,FUN='altitude',cex=1,colbar=list(pal='terrain',show=TRUE),new=FALSE)
+## Location names:
+print(paste(length(loc(esd.results$fw.ssp370)),'locations and ',
+            length(names(esd.results$fw.ssp370))-3,'model runs following SSP370'))
+print(sort(loc(esd.results$fw.ssp370)))
+## Ensemble members from the elements of the data object:
+#print(names(esd.results$fw.ssp370))
+print(attr(esd.results$fw.hist,'model_id'))
+## Show locations of the sites that were included in the downscaling graphically
+map(esd.results$fw.ssp370$pca,cex=0.5,new=FALSE)
+## Show the available emission scenarios
+print(names(esd.results))
+```
+
+The results can also be inspected by showing the time series for one location, in this case Oslo and the SSP370 emission scenario. 
+
+### Historical statistics $f_w$ and $\mu$
+
+Since the tend in the annual mean may mask seasonally differing trends, it's instructive to examine trend estimates for the historical data. Below, this is illustrated for Oslo but also statistics are presented for all sites with long time series (more than 20.000 valid data points).
+
+```{r}
+oslo <- subset(Y,loc='OSLO BLINDERN')
+layout(matrix(1:10,5,2))
+par(mar=c(1.5,1,1.5,1),cex.lab=0.7,cex.axis=0.7,cex.main=0.7)
+## Wet-day frequency
+plot(zoo(annual(oslo,FUN='wetfreq')),main='Oslo annual fw'); grid()
+plot(zoo(subset(as.4seasons(oslo,FUN='wetfreq'),it='djf')),main='DJF fw'); grid()
+plot(zoo(subset(as.4seasons(oslo,FUN='wetfreq'),it='mam')),main='MAM fw'); grid()
+plot(zoo(subset(as.4seasons(oslo,FUN='wetfreq'),it='jja')),main='JJA fw'); grid()
+plot(zoo(subset(as.4seasons(oslo,FUN='wetfreq'),it='son')),main='SON fw'); grid()
+## Wet-day mean precipitation
+plot(zoo(annual(oslo,FUN='wetmean')),main='Oslo annual mu'); grid()
+plot(zoo(subset(as.4seasons(oslo,FUN='wetmean'),it='djf')),main='DJF mu'); grid()
+plot(zoo(subset(as.4seasons(oslo,FUN='wetmean'),it='mam')),main='MAM mu'); grid()
+plot(zoo(subset(as.4seasons(oslo,FUN='wetmean'),it='jja')),main='JJA mu'); grid()
+plot(zoo(subset(as.4seasons(oslo,FUN='wetmean'),it='son')),main='SON mu'); grid()
+
+## Trend statistics for wetday frequency fw
+nv <- apply(Y,2,'nv')
+is <- nv >= 20000 ## only apply trend statistics on long time series
+fw.ann <- trend.coef(subset(annual(Y,FUN='wetfreq'),is=is))
+fw.djf <- trend.coef(subset(as.4seasons(Y,FUN='wetfreq'),it='djf',is=is))
+fw.mam <- trend.coef(subset(as.4seasons(Y,FUN='wetfreq'),it='mam',is=is))
+fw.jja <- trend.coef(subset(as.4seasons(Y,FUN='wetfreq'),it='jja',is=is))
+fw.son <- trend.coef(subset(as.4seasons(Y,FUN='wetfreq'),it='son',is=is))
+
+## Visualise the statistics
+breaks <- seq(-0.03,0.03,by=0.005)
+par(mfcol=c(1,1))
+map(subset(annual(Y,FUN='wetfreq'),is=is),FUN='trend',cex=1,
+    colbar=list(pal='precip.ipcc',breaks=breaks,rev=TRUE),showaxis=FALSE,
+    main='historical trends in annual fw',new=FALSE)
+breaks <- seq(-0.05,0.05,by=0.005)
+col <- rep('brown',length(breaks)); col[breaks >= 0] <-'darkgreen'
+layout(matrix(c(0,2,3,1,2,3,1,4,5,0,4,5),3,4))
+par(mar=c(2,1,1.5,1))  
+hist(fw.ann,main='Trends: annual fw',breaks=breaks,col=col); grid()
+hist(fw.djf,main='Trends: DJF fw',breaks=breaks,col=col); grid()
+hist(fw.mam,main='Trends: MAM fw',breaks=breaks,col=col); grid()
+hist(fw.jja,main='Trends: JJA fw',breaks=breaks,col=col); grid()
+hist(fw.son,main='Trends: SON fw',breaks=breaks,col=col); grid()
+
+## Trend statistics for wet-day frequency mu
+mu.ann <- trend.coef(subset(annual(Y,FUN='wetmean'),is=is))
+mu.djf <- trend.coef(subset(as.4seasons(Y,FUN='wetmean'),it='djf',is=is))
+mu.mam <- trend.coef(subset(as.4seasons(Y,FUN='wetmean'),it='mam',is=is))
+mu.jja <- trend.coef(subset(as.4seasons(Y,FUN='wetmean'),it='jja',is=is))
+mu.son <- trend.coef(subset(as.4seasons(Y,FUN='wetmean'),it='son',is=is))
+par(mfcol=c(1,1))
+breaks <- seq(-0.3,0.3,by=0.05)
+map(subset(annual(Y,FUN='mean'),is=is),FUN='trend',cex=1,
+    colbar=list(pal='precip.ipcc',breaks=breaks),showaxis=FALSE,
+    main='historical trends in annual mu',new=FALSE)
+breaks <- seq(-1.5,1.5,by=0.1)
+col <- rep('brown',length(breaks)); col[breaks >= 0] <-'darkgreen'
+layout(matrix(c(0,2,3,1,2,3,1,4,5,0,4,5),3,4))
+par(mar=c(2,1,1.5,1))  
+hist(mu.ann,main='Trends: annual mu',breaks=breaks,col=col); grid()
+hist(mu.djf,main='Trends: DJF mu',breaks=breaks,col=col); grid()
+hist(mu.mam,main='Trends: MAM mu',breaks=breaks,col=col); grid()
+hist(mu.jja,main='Trends: JJA mu',breaks=breaks,col=col); grid()
+hist(mu.son,main='Trends: SON mu',breaks=breaks,col=col); grid()
+```
+
+The analysis of historical data suggests that there has been mainly increases in the wet-day frequency $f_w$, albeit weak. Most pronounced increases are seen in winter (DJF).The map suggests that there is a weak increase in annual $f_w$ in general over the Nordic region. 
+
+The analysis of historical observations also suggest a majority of locations with increasing wet-day mean precipitation $\mu$ for the annual mean as well as most seasons. The map showing trends in annual $\mu$ suggest a general historical increase in intensity over the Nordic region. 
+
+### Simulatons: $f_w$ and $\mu$
+
+Note, the different parameters $f_w$ and $\mu$ and emission scenarios (HIST/SSPs) involve somewhat varying sets of GCMs.
+
+The following R-code chunk presents multi-model ensembles downscaled annual $f_w$ and $\mu$ for Oslo for the historical run ("HIST") and future projections ("SSPs"). 
+
+```{r Oslo-mu+fw}
+## The allN function extracts the time interval for which the ensemble has valid 
+## data for all its members 
+allN <- function(x,verbose=FALSE) {
+  ## Remove members with short time span
+  nt <- length(index(x))
+  cls <- class(x)
+  if (verbose) {print('Remove members with short time span:'); print(dim(x))}
+  nv <- apply(coredata(x),2,FUN='nv')
+  if (verbose) print(nv)
+  im <- nv >= quantile(nv,probs = 0.75)
+  x <- subset(x,im=im,verbose=verbose)
+  ## Remove times with incomplete ensemble
+  if (verbose) {print('Select interval with complet ensemble:'); print(dim(x))}
+  nv <- apply(coredata(x),1,FUN='nv')
+  if (verbose) print(nv)
+  it <- nv==max(nv,na.rm=TRUE)
+  y <- subset(x,it=it,verbose=verbose)
+  y <- attrcp(x,y)
+  class(y) <- cls
+  if (sum(it) != dim(y)[1]) browser()
+  ## Adjust the offset of the ensemble to match recent years of the observations
+  if (verbose) print('Adjust offset')
+  obs <- attr(x,'station')
+  yrs <- sort(year(obs),decreasing = TRUE)
+  i1 <- is.element(year(obs),year(x))
+  i2 <- is.element(year(x),year(obs))
+  mobs <- round(mean(coredata(obs[i2])),2)
+  if (verbose) print(mobs)
+  for (i in 1:dim(x)[2]) x[,i] <- x[,i] - mean(coredata(x[i1,i])) + mobs
+  attr(y[[1]],"model_id") <- attr(x[[1]],"model_id")
+  return(y)
+}
+
+## function for comapring the rank of the observations against ensemble
+rankscore <- function(x) {
+  y <- attr(x, "station")
+  x <- zoo(x)
+  yx <- merge(y,x,all=FALSE)
+  plot(yx,plot.type='single',lwd=c(2,rep(1,dim(x)[2])),
+       col='grey',main=loc(y))
+  lines(zoo(y),lwd=2)
+  print(range(index(yx)))
+  rs <- apply(coredata(yx),1,function(x) order(x)[1]/length(x))
+  print(paste('Rank aginst a uniform distribution: mean rank=',round(mean(rs),2)))
+  print(paste('probability for mean rank given a uniform distribution',punif(mean(rs))))
+  invisible(rs)
+}
+
+amplscore <- function(x) {
+  y <- attr(x, "station")
+  x <- zoo(x)
+  yx <- coredata(merge(y,x,all=FALSE))
+  sd.y <- round(sd(yx[,1],na.rm=TRUE),2)
+  sd.x <- round(sd(c(yx[,-1]),na.rm=TRUE),2)
+  print(paste('Amplitude/standard deviation:',sd.y,sd.x,
+              'ratio:',round(sd.y/sd.x,4)))
+}
+
+## HIST
+## The wet-day frequency
+print("HIST")
+fw.oslo.hist <- as.station(esd.results$fw.hist)[["OSLO BLINDERN"]]
+rankscore(allN(fw.oslo.hist))
+amplscore(allN(fw.oslo.hist))
+
+## Remove members with incomplete data
+plot(allN(fw.oslo.hist),ylim=c(0,1),xlim=c(1950,2020),new=FALSE,
+     main='Oslo: wet-day frequency: HIST')
+mu.oslo.hist <- as.station(esd.results$mu.hist)[["OSLO BLINDERN"]]
+rankscore(allN(mu.oslo.hist))
+amplscore(allN(mu.oslo.hist))
+
+plot(allN(mu.oslo.hist),xlim=c(1950,2020),new=FALSE,
+     main='Oslo: mean precipitation intensity: HIST')
+## SSP370
+print("SSP370")
+## The wet-day frequency
+fw.oslo.ssp370 <- as.station(esd.results$fw.ssp370)[["OSLO BLINDERN"]]
+## Remove members with incomplete data
+plot(allN(fw.oslo.ssp370),ylim=c(0,1),new=FALSE,
+     main='Oslo: wet-day frequency: SSP370')
+mu.oslo.ssp370 <- as.station(esd.results$mu.ssp370)[["OSLO BLINDERN"]]
+plot(allN(mu.oslo.ssp370),new=FALSE,
+     main='Oslo: mean precipitation intensity: SSP370')
+## SSP126
+print("SSP126")
+fw.oslo.ssp126 <- as.station(esd.results$fw.ssp126)[["OSLO BLINDERN"]]
+## Remove members with incomplete data
+plot(allN(fw.oslo.ssp126),ylim=c(0,1),new=FALSE,
+     main='Oslo: wet-day frequency: SSP126')
+mu.oslo.ssp126 <- as.station(esd.results$mu.ssp126)[["OSLO BLINDERN"]]
+plot(allN(mu.oslo.ssp126),new=FALSE,
+     main='Oslo: mean precipitation intensity: SSP126')
+## SSP245
+print("SSP245")
+fw.oslo.ssp245 <- as.station(esd.results$fw.ssp245)[["OSLO BLINDERN"]]
+## Remove members with incomplete data
+plot(allN(fw.oslo.ssp245),ylim=c(0,1),new=FALSE,
+     main='Oslo: wet-day frequency: SSP245')
+mu.oslo.ssp245 <- as.station(esd.results$mu.ssp245)[["OSLO BLINDERN"]]
+plot(allN(mu.oslo.ssp245),new=FALSE,
+     main='Oslo: mean precipitation intensity: SSP245')
+## SSP585
+print("SSP585")
+fw.oslo.ssp585 <- as.station(esd.results$fw.ssp585)[["OSLO BLINDERN"]]
+## Remove members with incomplete data
+plot(allN(fw.oslo.ssp585),ylim=c(0,1),new=FALSE,
+     main='Oslo: wet-day frequency: SSP585')
+mu.oslo.ssp585 <- as.station(esd.results$mu.ssp585)[["OSLO BLINDERN"]]
+plot(allN(mu.oslo.ssp585),new=FALSE,
+     main='Oslo: mean precipitation intensity: SSP585')
+```
+
+The results for the historical runs indicated that the downscaled ensemble generally span the observed annual $f_w$ (black symbols) tightly, but $\mu$ is low biased because it uses a climatology defined for the whole period of observations and there is a historical upward trend in $\mu$.  
+
+The local projection based on SSP370 indicated that no clear future trend in $f_w$, which is consistent with the past. For $\mu$, there is a slight increasing tendency and there has been an long-term increase in the observations (black symbols). The downscaled results seem to underestimate the magnitude of the long-term trend, judging from the historical trend (HIST and SSP370), but the projections for $\mu$ connected to SSP585 indicated more a pronounced long-term trend.
+
+The length of the scenario projections was determined by the availability of all members within the ensemble. Some models dropped out after 2050, and changes in the ensemble sample gave misleading impressions. The results for SSP245 for $\mu$ suffered from small ensemble size.
+
+The downscaled $\mu$ for SSP126 were spurious, indicating that there may have been a data issue, most likely with the extracted information from the CMIP6 GCMs.
+
+## Evaluate the ensemble
+
+The following plots assess the downscaled ensemble results in terms of how they reproduce interannual variability and trends.
+
+```{r diagnoseensemble}
+diagnose(esd.results$fw.hist,new=FALSE) -> difw
+diagnose(esd.results$mu.hist,new=FALSE) -> dimu
+```
+
+
+### Table of selected station projections
+
+```{r}
+cities <- sort(c("STOCKHOLM","ABISKO","FALUN","GEIRANGER","GEILO","HALDEN",
+                 "KRISTINEHAMN","MALMO","TALLINN","HELSINKI KAISANIEMI",
+                 "TRANEBERG","GRONBAEK-ALLINGSKOVGARD","VESTERVIG",
+                 "NORDBY (FANO)","GOTSKA SANDON","OSLO BLINDERN"))
+ssps <- c('ssp370','ssp126','ssp245','ssp585')
+sites.ssps <- list()
+for (city in cities) {
+  for (ssp in ssps) { 
+  fw.ssp370 <- as.station(esd.results[[paste0('fw.',ssp)]])[[city]]
+  mu.ssp370 <- as.station(esd.results[[paste0('mu.',ssp)]])[[city]]
+  sites.ssps[[paste0('fw.',ssp,'.',tolower(city))]] <- fw.ssp370
+  sites.ssps[[paste0('mu.',ssp,'.',tolower(city))]] <- mu.ssp370
+  }
+}
+
+## Table on wet-day frequency
+fw.sites <- names(sites.ssps)[grep('fw.',names(sites.ssps))]
+print('Location/SSP 2071-2100 & mean fw & std fw & mean mu & std mu \\n ')
+for (fw.site in fw.sites) {
+  z.fw <- allN(sites.ssps[[fw.site]])
+  z.mu <- allN(sites.ssps[[sub('fw.','mu.',fw.site)]])
+  print(paste(sub('fw.','',fw.site),round(mean(window(z.fw,start=2071,end=2100)),2),
+              round(sd(window(z.fw,start=2071,end=2100)),2),
+              round(mean(window(z.mu,start=2071,end=2100)),2),
+              round(sd(window(z.mu,start=2071,end=2100)),2),'\\n',sep=' & '))
+}
+```
+
+## Is the ensemble normally distributed?
+
+It's useful to check if the Oslo results $x \sim \mathcal{N}(\mu,\sigma^2)$, because the information embedded in an ensemble with normally distributed members can be quantified in terms of the ensemble mean and standard deviation. The test for normal distribution was only applied to the interval when all ensemble members had valid data.  
+
+```{r qqnorm-fw}
+print("HIST")
+## HIST
+qqnorm(coredata(allN(fw.oslo.hist)),main='Oslo: Wet-day frequency HIST')
+qqline(coredata(allN(fw.oslo.hist)),lty=2,col='red')
+print("SSP370")
+## SSP370
+print(apply(coredata(allN(fw.oslo.ssp370)),2,sd,na.rm=TRUE))
+## One outlier
+coredata(fw.oslo.ssp370)[coredata(fw.oslo.ssp370) > 1] <- NA
+qqnorm(coredata(allN(fw.oslo.ssp370)),main='Oslo: Wet-day frequency SSP370')
+qqline(coredata(allN(fw.oslo.ssp370)),lty=2,col='red')
+print("SSP245")
+## The SSP245
+qqnorm(coredata(allN(fw.oslo.ssp245)),main='Oslo: Wet-day frequency SSP245')
+qqline(coredata(allN(fw.oslo.ssp245)),lty=2,col='red')
+print("SSP585")
+## The SSP585
+qqnorm(coredata(allN(fw.oslo.ssp585)),main='Oslo: Wet-day frequency SSP585')
+qqline(coredata(allN(fw.oslo.ssp585)),lty=2,col='red')
+```
+
+The ensembles for both $f_w$ were close to being normally distributed for the bulk of the members.  
+
+```{r qqnorm-mu}
+## HIST
+print("HIST")
+qqnorm(coredata(allN(mu.oslo.hist)),main='Oslo: Wet-day mean precipitation HIST')
+qqline(coredata(allN(mu.oslo.hist)),lty=2,col='red')
+print("SSP370")
+## SSP370
+print(apply(coredata(allN(mu.oslo.ssp370)),2,sd,na.rm=TRUE))
+qqnorm(coredata(allN(mu.oslo.ssp370)),main='Oslo: Wet-day mean precipitation SSP370')
+qqline(coredata(allN(mu.oslo.ssp370)),lty=2,col='red')
+print("SSP245")
+## SSP245
+qqnorm(coredata(allN(mu.oslo.ssp245)),main='Oslo: Wet-day mean precipitation SSP245')
+qqline(coredata(allN(mu.oslo.ssp245)),lty=2,col='red')
+print("SSP585")
+## SSP585
+qqnorm(coredata(allN(mu.oslo.ssp585)),main='Oslo: Wet-day mean precipitation SSP585')
+qqline(coredata(allN(mu.oslo.ssp585)),lty=2,col='red')
+```
+
+The results for $\mu$ also indicated that the distribution of ensemble members was close to a normal distribution, but there was one exception for the data points at the high end in SSP585. Hence, the ensemble results for $\mu$ were reasonably close to being normally distributed. 
+
+This means that the range of downscaled results can be approximated according to $x \sim \mathcal{N}(\mu,\sigma^2)$.
+
+### Individual ensemble members
+
+The chunk below shows the individual members of the ensemble, revealing that two members of SSP126 and  the SSP585 members go all the way to year 2300 whereas most stop in 2100. There is little tendency of clustering and the results suggest that the ensemble members behave more or less in a similar way (after bad runs were precluded). 
+
+```{r}
+library(RColorBrewer)
+print("HIST")
+models <- sub('.r1i1p1f1','',attr(esd.results$fw.hist,'model_id'))
+col <- brewer.pal(12, 'Paired')
+lty=c(rep(1,12),rep(2,12),rep(3,12))
+plot(zoo(fw.oslo.hist),col=col,plot.type='single',main='Oslo: HIST FW',lty=lty)
+grid()
+legend(1850,0.44,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+plot(zoo(mu.oslo.hist),col=col,plot.type='single',main='Oslo: HIST MU')
+grid()
+legend(1850,7.9,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+s <- round(apply(coredata(fw.oslo.hist),2,min,na.rm=TRUE),2); names(s) <- models
+print(sort(s))
+
+print("SSP370")
+models <- sub('.r1i1p1f1','',attr(esd.results$fw.ssp370,'model_id'))
+plot(zoo(fw.oslo.ssp370),col=col,plot.type='single',main='Oslo: ssp370 FW')
+grid()
+legend(2020,0.2,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+plot(zoo(mu.oslo.ssp370),col=col,plot.type='single',main='Oslo: ssp370 MU')
+grid()
+models <- sub('.r1i1p1f1','',attr(esd.results$mu.ssp370,'model_id'))
+legend(2020,6,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+s <- round(apply(coredata(mu.oslo.ssp370),2,max,na.rm=TRUE),2); names(s) <- models
+print(sort(s))
+
+print("SSP245")
+models <- sub('.r1i1p1f1','',attr(esd.results$fw.ssp245,'model_id'))
+plot(zoo(fw.oslo.ssp245),col=col,plot.type='single',main='Oslo: ssp245 FW')
+grid()
+legend(2020,0.6,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+plot(zoo(mu.oslo.ssp245),col=col,plot.type='single',main='Oslo: ssp245 MU')
+grid()
+models <- sub('.r1i1p1f1','',attr(esd.results$mu.ssp245,'model_id'))
+legend(2020,9,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+s <- round(apply(coredata(mu.oslo.ssp245),2,min,na.rm=TRUE),2); names(s) <- models
+print(sort(s))
+
+print("SSP126")
+models <- sub('.r1i1p1f1','',attr(esd.results$fw.ssp126,'model_id'))
+plot(zoo(fw.oslo.ssp126),col=col,plot.type='single',main='Oslo: SSP126 FW')
+grid()
+legend(2110,0.25,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+plot(zoo(mu.oslo.ssp126),col=col,plot.type='single',main='Oslo: SSP126 MU')
+grid()
+models <- sub('.r1i1p1f1','',attr(esd.results$mu.ssp126,'model_id'))
+legend(2110,7.8,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+s <- round(apply(coredata(fw.oslo.ssp245),2,max,na.rm=TRUE),2); names(s) <- models
+print(sort(s))
+
+print("SSP585")
+models <- sub('.r1i1p1f1','',attr(esd.results$fw.ssp585,'model_id'))
+plot(zoo(fw.oslo.ssp585),col=col,plot.type='single',main='Oslo: SSP585 FW')
+grid()
+legend(2110,0.2,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+plot(zoo(mu.oslo.ssp585),col=col,plot.type='single',main='Oslo: SSP585 MU')
+grid()
+models <- sub('.r1i1p1f1','',attr(esd.results$mu.ssp585,'model_id'))
+legend(2110,6.5,models,col,cex=0.3,bty='n',lty=lty,ncol=5)
+s <- round(apply(coredata(mu.oslo.ssp585),2,max,na.rm=TRUE),2); names(s) <- models
+print(sort(s))
+s <- round(apply(coredata(mu.oslo.ssp585),2,max,na.rm=TRUE),2); names(s) <- models
+print(sort(s))
+```
+The ensemble members tend to follow similar behaviour and there is no obvious clustering or outlier.
+
+## Ensemble mean and and standard deviation
+
+The analysis below provides consise information about the ensemble in terms of the ensemble mean and standard deviation. 
+
+```{r Oslo-aggregate}
+## Limit the ensemble mean and standard deviation to when the ensemble has all 
+## members represented
+fw.oslo.hist <- allN(fw.oslo.hist)
+FW.mean.hist <- zoo(apply(as.data.frame(fw.oslo.hist),1,FUN='mean',na.rm=TRUE),
+                    order.by=year(fw.oslo.hist))
+FW.std.hist <- zoo(apply(as.data.frame(fw.oslo.hist),1,FUN='sd',na.rm=TRUE),
+                   order.by=year(fw.oslo.hist))
+mu.oslo.hist <- allN(mu.oslo.hist)
+MU.mean.hist <- zoo(apply(as.data.frame(mu.oslo.hist),1,FUN='mean',na.rm=TRUE),
+                    order.by=year(mu.oslo.hist))
+MU.std.hist <- zoo(apply(as.data.frame(mu.oslo.hist),1,FUN='sd',na.rm=TRUE),
+                   order.by=year(mu.oslo.hist))
+fw.oslo.ssp370 <- allN(fw.oslo.ssp370)
+FW.mean.ssp370 <- zoo(apply(as.data.frame(fw.oslo.ssp370),1,FUN='mean',na.rm=TRUE),
+                      order.by=year(fw.oslo.ssp370))
+FW.std.ssp370 <- zoo(apply(as.data.frame(fw.oslo.ssp370),1,FUN='sd',na.rm=TRUE),
+                     order.by=year(fw.oslo.ssp370))
+mu.oslo.ssp370 <- allN(mu.oslo.ssp370)
+MU.mean.ssp370 <- zoo(apply(as.data.frame(mu.oslo.ssp370),1,FUN='mean',na.rm=TRUE),
+                      order.by=year(mu.oslo.ssp370))
+MU.std.ssp370 <- zoo(apply(as.data.frame(mu.oslo.ssp370),1,FUN='sd',na.rm=TRUE),
+                     order.by=year(mu.oslo.ssp370))
+fw.oslo.ssp126 <- allN(fw.oslo.ssp126)
+FW.mean.ssp126 <- zoo(apply(as.data.frame(fw.oslo.ssp126),1,FUN='mean',na.rm=TRUE),
+                      order.by=year(fw.oslo.ssp126))
+FW.std.ssp126 <- zoo(apply(as.data.frame(fw.oslo.ssp126),1,FUN='sd',na.rm=TRUE),
+                     order.by=year(fw.oslo.ssp126))
+mu.oslo.ssp126 <- allN(mu.oslo.ssp126)
+MU.mean.ssp126 <- zoo(apply(as.data.frame(mu.oslo.ssp126),1,FUN='mean',na.rm=TRUE),
+                      order.by=year(mu.oslo.ssp126))
+MU.std.ssp126 <- zoo(apply(as.data.frame(mu.oslo.ssp126),1,FUN='sd',na.rm=TRUE),
+                     order.by=year(fw.oslo.ssp126))
+fw.oslo.ssp245 <- allN(fw.oslo.ssp245)
+FW.mean.ssp245 <- zoo(apply(as.data.frame(fw.oslo.ssp245),1,FUN='mean',na.rm=TRUE),
+                      order.by=year(fw.oslo.ssp245))
+FW.std.ssp245 <- zoo(apply(as.data.frame(fw.oslo.ssp245),1,FUN='sd',na.rm=TRUE),
+                     order.by=year(fw.oslo.ssp245))
+mu.oslo.ssp245 <- allN(mu.oslo.ssp245)
+MU.mean.ssp245 <- zoo(apply(as.data.frame(mu.oslo.ssp245),1,FUN='mean',na.rm=TRUE),
+                      order.by=year(mu.oslo.ssp245))
+MU.std.ssp245 <- zoo(apply(as.data.frame(mu.oslo.ssp245),1,FUN='sd',na.rm=TRUE),
+                     order.by=year(fw.oslo.ssp245))
+fw.oslo.ssp585 <- allN(fw.oslo.ssp585)
+FW.mean.ssp585 <- zoo(apply(as.data.frame(fw.oslo.ssp585),1,FUN='mean',na.rm=TRUE),
+                      order.by=year(fw.oslo.ssp585))
+FW.std.ssp585 <- zoo(apply(as.data.frame(fw.oslo.ssp585),1,FUN='sd',na.rm=TRUE),
+                     order.by=year(fw.oslo.ssp585))
+mu.oslo.ssp585 <- allN(mu.oslo.ssp585)
+MU.mean.ssp585 <- zoo(apply(as.data.frame(mu.oslo.ssp585),1,FUN='mean',na.rm=TRUE),
+                      order.by=year(mu.oslo.ssp585))
+MU.std.ssp585 <- zoo(apply(as.data.frame(mu.oslo.ssp585),1,FUN='sd',na.rm=TRUE),
+                     order.by=year(mu.oslo.ssp585))
+```
+
+Plot time series of the ensemble mean and standard deviation to get a visual quality check:
+
+```{r}
+print("HIST FW")
+plot(FW.mean.hist,type='b',pch=19,main='Oslo: Wet-day frequency - HIST',
+     ylab=expression(f[w]%+-%sigma[f]),
+     ylim=range(FW.mean.hist + c(-1,1)*FW.std.hist,na.rm=TRUE))
+lines(FW.mean.hist - FW.std.hist,lty=2)
+lines(FW.mean.hist + FW.std.hist,lty=2)
+grid()
+
+print("HIST MU")
+plot(MU.mean.hist,type='b',pch=19,main='Oslo: Wet-day intensity - HIST',
+     ylab=expression(mu%+-%sigma[mu]),
+     ylim=range(MU.mean.hist + c(-1,1)*MU.std.hist,na.rm=TRUE))
+lines(MU.mean.hist - MU.std.hist,lty=2)
+lines(MU.mean.hist + MU.std.hist,lty=2)
+grid()
+
+print("SSP370 FW")
+plot(FW.mean.ssp370,type='b',pch=19,main='Oslo: Wet-day frequency - SSP370',
+     ylab=expression(f[w]%+-%sigma[f]),
+     ylim=range(FW.mean.ssp370 + c(-1,1)*FW.std.ssp370,na.rm=TRUE))
+lines(FW.mean.ssp370 - FW.std.ssp370,lty=2)
+lines(FW.mean.ssp370 + FW.std.ssp370,lty=2)
+grid()
+
+print("SSP370 MU")
+plot(MU.mean.ssp370,type='b',pch=19,main='Oslo: Wet-day intensity - SSP370',
+     ylab=expression(mu%+-%sigma[mu]),
+     ylim=range(MU.mean.ssp370 + c(-1,1)*MU.std.ssp370,na.rm=TRUE))
+lines(MU.mean.ssp370 - MU.std.ssp370,lty=2)
+lines(MU.mean.ssp370 + MU.std.ssp370,lty=2)
+grid()
+
+print("SSP245 FW")
+plot(FW.mean.ssp245,type='b',pch=19,main='Oslo: Wet-day frequency - SSP245',
+     ylab=expression(f[w]%+-%sigma[f]),
+     ylim=range(FW.mean.ssp245 + c(-1,1)*FW.std.ssp245,na.rm=TRUE))
+lines(FW.mean.ssp245 - FW.std.ssp245,lty=2)
+lines(FW.mean.ssp245 + FW.std.ssp245,lty=2)
+grid()
+
+print("HSSP245 MU")
+plot(MU.mean.ssp245,type='b',pch=19,main='Oslo: Wet-day intensity - SSP245',
+     ylab=expression(mu%+-%sigma[mu]),
+     ylim=range(MU.mean.ssp245 + c(-1,1)*MU.std.ssp245,na.rm=TRUE))
+lines(MU.mean.ssp245 - MU.std.ssp245,lty=2)
+lines(MU.mean.ssp245 + MU.std.ssp245,lty=2)
+grid()
+
+print("SSP585 FW")
+plot(FW.mean.ssp585,type='b',pch=19,main='Oslo: Wet-day frequency - SSP585',
+     ylab=expression(f[w]%+-%sigma[f]),
+     ylim=range(FW.mean.ssp585 + c(-1,1)*FW.std.ssp585,na.rm=TRUE))
+lines(FW.mean.ssp585 - FW.std.ssp585,lty=2)
+lines(FW.mean.ssp585 + FW.std.ssp585,lty=2)
+grid()
+
+print("SSP585 MU")
+plot(MU.mean.ssp585,type='b',pch=19,main='Oslo: Wet-day intensity - SSP585',
+     ylab=expression(mu%+-%sigma[mu]),
+     ylim=range(MU.mean.ssp585 + c(-1,1)*MU.std.ssp585,na.rm=TRUE))
+lines(MU.mean.ssp585 - MU.std.ssp585,lty=2)
+lines(MU.mean.ssp585 + MU.std.ssp585,lty=2)
+grid()
+```
+
+## Local 24-hr precipitation statistics and heavy precipitation
+
+The following chunk reads the original daily precipitation saved as a temporary file and extracts data for Oslo which will be used in the following exercises. 
+
+The R-chunk below tests the rain equation against observations for Oslo daily rainfall: 
+
+```{r rain-equation}
+y <- subset(Y,is=loc(fw.oslo.ssp370))
+z <- test.rainequation(y)
+```
+Although the match is not perfect, there is a clear correlation between the estimated probability (black curve) and the fraction of days with precipitation exceeding 20 mm/day (red curve). 
+
+We can compare the rain equation from observations with the downscaled results from HIST:
+
+```{r X10}
+m.x10 <- zoo(FW.mean.hist*exp(-10/MU.mean.hist),order.by=index(fw.oslo.hist))
+s.x10 <- zoo( 
+  sqrt( (FW.std.hist*exp(-10/MU.mean.hist)/FW.mean.hist*exp(-10/MU.mean.hist))^2 +
+          (FW.mean.hist*exp(-10/MU.mean.hist)/FW.std.hist*exp(-10/MU.mean.hist))^2 ),
+  order.by=index(fw.oslo.hist))
+plot(m.x10,main='Oslo: Fraction of days with more than 10 mm precipitation',
+     ylab=expression(Pr(X > 10*mm)),col='red',xlim=c(1940,2025),
+     ylim=c(0,max(m.x10+s.x10,na.rm=TRUE)))
+lines(m.x10+s.x10,lty=2,col='red')
+lines(m.x10-s.x10,lty=2,col='red')
+points(rainequation(y,threshold=10),pch=19)
+grid()
+```
+
+A comparison between the probability of days with more than 21 mm precipitation from the historical ensemble of downscaled $f_w$ and $\mu$ (solid curve shows ensemble mean and dashed curves indicate the ensemble mean plus/minus one standard deviation) gave a good match with the general level observed numbers (symbols), although the predicted ensemble was systematically highe then the observations. 
+
+```{r X20}
+m.x20 <- zoo(FW.mean.hist*exp(-20/MU.mean.hist),order.by=index(fw.oslo.hist))
+s.x20 <- zoo( 
+  sqrt( (FW.std.hist*exp(-20/MU.mean.hist)/FW.mean.hist*exp(-20/MU.mean.hist))^2 +
+          (FW.mean.hist*exp(-20/MU.mean.hist)/FW.std.hist*exp(-20/MU.mean.hist))^2 ),
+  order.by=index(fw.oslo.hist))
+plot(m.x20,main='Oslo: Fraction of days with more than 20 mm precipitation',
+     ylab=expression(Pr(X > 20*mm)),col='red',xlim=c(1940,2025),
+     ylim=c(0,max(m.x20+s.x20,na.rm=TRUE)))
+lines(m.x20+s.x20,lty=2,col='red')
+lines(m.x20-s.x20,lty=2,col='red')
+points(rainequation(y,threshold=20),pch=19)
+grid()
+```
+
+A comparison between the probability of days with more than 20 mm precipitation from the historical ensemble of downscaled $f_w$ and $\mu$ (solid curve shows ensemble mean and dashed curves indicate the ensemble mean plus/minus one standard deviation) gave a good match with the general level observed numbers (symbols). Nevertheless, the downscaled ensemble spans a wider range of fractions than the observed interannual variations in the fractions. 
+
+```{r X30}
+m.x30 <- zoo(FW.mean.hist*exp(-30/MU.mean.hist),order.by=index(fw.oslo.hist))
+s.x30 <- zoo( 
+  sqrt( (FW.std.hist*exp(-30/MU.mean.hist)/FW.mean.hist*exp(-30/MU.mean.hist))^2 +
+          (FW.mean.hist*exp(-30/MU.mean.hist)/FW.std.hist*exp(-30/MU.mean.hist))^2 ),
+  order.by=index(fw.oslo.hist))
+plot(m.x30,main='Oslo: Fraction of days with more than 30 mm precipitation',
+     ylab=expression(Pr(X > 30*mm)),col='red',xlim=c(1940,2025),
+     ylim=c(0,max(rainequation(y,threshold=30),m.x30+s.x30,na.rm=TRUE)))
+lines(m.x30+s.x30,lty=2,col='red')
+lines(m.x30-s.x30,lty=2,col='red')
+points(rainequation(y,threshold=30),pch=19)
+grid()
+```
+
+The results for days with more than 30 mm precipitation also agreed well with the observations.
+
+## Intensity-Duration-Frequency (IDF) analysis
+
+We can aggregate the ensemble and use its statistics to estimate intensity-duration-frequency (IDF) curves for selected locations according to @benestad_testing_2020: $x_\tau = \alpha \mu (L/24)^\zeta \ln(f_w \tau)$. We used data-frames and aggregation to estimate intensity-duration-frequency (IDF) curves for the ensemble mean as well as selected quantiles of the ensemble distribution. 
+
+The shape of the IDF curves are expected to reflect the presence and severity of various meteorological phenomena that generate precipitation: e.g. convection, cyclones, frontal systems, atmospheric rivers. It is not certain that all of them are skilfully reproduced by GCMs, but the information about their relative contribution to the total rainfall is embedded in the shape of these curves and derived semi-empirically. 
+
+```{r osl-IDF}
+## SSP370 assume the minima are now
+print(range(index(MU.mean.ssp370))); print(range(index(FW.mean.ssp370)))
+x1 <- list(mu=min(MU.mean.ssp370,na.rm=TRUE),fw=min(FW.mean.ssp370,na.rm=TRUE))
+idf1 <- IDF(x1,plot=FALSE)
+## SSP370 assmus the maxima are towards theend of the series
+x2 <- list(mu=max(MU.mean.ssp370,na.rm=TRUE),fw=max(FW.mean.ssp370,na.rm=TRUE))
+idf2 <- IDF(x2,plot=FALSE)
+## Plot the IDF for the future: thick curves
+plot.IDF(idf2)
+## Compare with IDF representing the present: thin curves
+lines.IDF(idf1,col='grey70')
+lines.IDF(idf1,lty=2)
+lines.IDF(idf1,lty=3,col='black')
+## Scaling fractions assuming SS370
+idf.scaling21 <- idf2/idf1
+print("SSP370 IDF scaling ratio - just ensemble mean")
+print(idf.scaling21)
+## SSP585 Beginning of the interval
+x3 <- list(mu=min(MU.mean.ssp585,na.rm=TRUE),fw=min(FW.mean.ssp585,na.rm=TRUE))
+idf3 <- IDF(x3,plot=FALSE)
+## SSP585 End of the interval
+x4 <- list(mu=max(MU.mean.ssp585,na.rm=TRUE),fw=max(FW.mean.ssp585na.rm=TRUE))
+idf4 <- IDF(x4,plot=FALSE)
+## SSP585 
+idf.scaling43 <- idf4/idf3
+print("SSP585 IDF scaling ratio - just ensemble mean")
+print(idf.scaling43)
+## SSP370 with variability
+x6 <- list(mu=min(MU.mean.ssp370,na.rm=TRUE) - mean(MU.std.ssp370,na.rm=TRUE),
+           fw=min(FW.mean.ssp370,na.rm=TRUE) - mean(FW.std.ssp370,na.rm=TRUE))
+idf6 <- IDF(x6,plot=FALSE)
+## SSP370 Beginning of the interval
+x7 <- list(mu=max(MU.mean.ssp370,na.rm=TRUE) + mean(MU.std.ssp370[1:5],na.rm=TRUE),
+           fw=max(FW.mean.ssp370,na.rm=TRUE) + mean(FW.std.ssp370[1:5],na.rm=TRUE))
+idf4 <- IDF(x7,plot=FALSE)
+## SSP370 End of the interval
+idf.scaling43 <- idf4/idf3
+print("SSP370  IDF scaling ratio - ensemble mean and -/+ standard deviation")
+print(idf.scaling43)
+## SSP585 with variability
+x6 <- list(mu=min(MU.mean.ssp585,na.rm=TRUE) - mean(MU.std.ssp585,na.rm=TRUE),
+           fw=min(FW.mean.ssp585,na.rm=TRUE) - mean(FW.std.ssp585,na.rm=TRUE))
+idf6 <- IDF(x6,plot=FALSE)
+## SSP585 Beginning of the interval
+x7 <- list(mu=max(MU.mean.ssp585,na.rm=TRUE) + mean(MU.std.ssp585,na.rm=TRUE),
+           fw=max(FW.mean.ssp585,na.rm=TRUE) + mean(FW.std.ssp585,na.rm=TRUE))
+idf4 <- IDF(x7,plot=FALSE)
+## SSP585 End of the interval
+idf.scaling43 <- idf4/idf3
+print("ssp585  IDF scaling ratio - ensemble mean and -/+ standard deviation")
+print(idf.scaling43)
+```
+
+Our comparison between IDF curves estimated from the SSP370 ensemble mean for the start and the end of the runs suggests similar scaling factors for different duration, as expected from the formulae used here ($\alpha \mu (L/24)^\zeta \ln(f_w \tau)$). The scaling factors vary with the return interval, 1.13--1.14 for downscaled results for the SSP370 ensemble mean, but these figures may be somewhat conservative since $f_w$ and $\mu$ are not entirely specified by the large-scale conditions and it doesn't include decadal variability. For SSP585, the  scaling ratios are 1.27--1.38.
+
+If we account for decadal variability, subtracting one ensemble spread standard deviation from the start and adding one standard deviation to the end, the scaling obtained for SSP370 is 1.18--1.20. 
+
+However, if the GCMs do not skillfully reproduce phenomena such as convection and frontal systems with sufficient realism, we can expect these estimates to be somewhat conservative. 
+
+### PCA-based analysis?
+
+An alternative approach is based on @parding_principal-component-based_2023 using PCA to represent the curves of the IDF curves and a regression analysis to link them to climatic parameters.
+
+## Downscaling number of wet-days directly
+
+In addition to downscaling statistical parameters such as $f_w$ and $\mu$, it may be possible to estimate other types of statistical information such as probabilities or number of events directly. 
+
+The number of days is a discrete number and doesn't follow a normal distribution. For this reason, the analysis is focused on a single station rather than a group of stations, because PCA is designed to operate on the covariance matrix of continuous and normally distributed data. Single station series have lower signal-to-noise ratio than station groups represented in terms of PCA.
+
+## Examine droughts
+
+Information about extremes such as drought can be quantified in terms of the probability of the duration of dry spells exceeding a given threshold. If the duration statistics approximately follows a geometric distribution, then a key parameter is the mean duration. Here is an example how the annual mean dry-spell duration is utilised in connection with an empirical-statistical downscaling exercise for Norway. 
+
+```{r spell-duration-statistics,fig.dim=c(7, 7)}
+## Extract the spell length statistics of daily precipitation data from Oslo 
+## with a wet-day threshold of 1 mm/day.
+s <- spell(y,threshold=1)
+plot(s,new=FALSE)
+## Compare the statistics to a geometric distribution
+par(mar=c(2,2,2,2))
+hist(s,new=FALSE)
+```
+The duration statistics of wet and dry are shown above and the histogram compares their empirical distributions (solid) with the geometric distribution (dashed lines). The geometric distribution gives an approximate representation of the statistics, but there are some deviations for the shorter spells. for the geometric distribution  $Pr(x=k) = (1-p)^{k-1} p$, the success probability $p$ is a key parameter and $k=[1, 2, 3, \dots]$ is the duration in days. The mean duration is $1/p$, and hence is the inverse of the parameter defining the shape of the distribution. Because of this, we seek the mean duration of dry spells to estimate the probability of droughts with a given number of successive number of dry days. 
+
+We can aggregate the dry spell duration statistics into the annual mean dry spell length and test whether it is related to the wet-day frequency on larger spatial scales. Below is an attempt for Oslo precipitation: 
+
+```{r droughts, fig.height=7,fig.width=7, warning=FALSE}
+mean.dry <- annual(subset(s,is=2),FUN='mean',nmin=1)
+plot(mean.dry,main='Oslo: Annual mean dry-spell duration',new=FALSE)
+FW <- retrieve('~/data/ERA5/ERA5_fw_year.nc',lon=c(5,15),lat=c(59,63))
+index(FW) <- year(FW)
+eof.fw <- EOF(FW)
+attr(eof.fw,'time') <- range(index(FW))
+ds.dry <- DS(mean.dry,eof.fw,method = 'glm')
+plot(ds.dry,new=FALSE)
+```
+
+The results from this exercise suggests that the mean duration approximately follows the large-scale wet day frequency $f_w$ from the ERA5 reanalysis, which is not unexpected. The spatial pattern with low $f_w$ for ERA5 in the vicinity of Oslo also supports this connection, although there are two local minima and none is exactly on top of Oslo. 
+
+## Examine the number of very wet-days
+
+For the number of events, we can use a framework based on a stochastic process with Poisson distribution and a rate $\lambda$ so that $Pr(X=k)= \frac{\lambda^2 e^{-\lambda}}{k!}$. We can explore the predictor $n \propto f_w e^{-x/\mu}$ for different thresholds $x = [20,21,...]$ to explore pattern and possibility for extrapolation. Test for Oslo. GLM.
+
+One way to downscale information about extremes is to estimate the number of events over a period and assume that the number would follow a Poisson distribution if it were random. Here is an example with number of 'very wet days' (more than 20 mm/day) per year. 
+
+Here, we expect that the number of wet days follows a similar pattern as shown above with `test.rainequation` and a predictor derived through a transformation of both $f_w$ and $\mu$ according to $Pr(X > x) = f_w \exp{(-x/\mu)}$:
+
+
+```{r very-wet-days-per-year, fig.height=7,fig.width=7, warning=FALSE}
+nvwet <- annual(y,FUN='count',threshold=20,nmin=1)
+plot(nvwet,main='Oslo: Annual number of days with more than 20 mm',new=FALSE)
+MU <- 1000*retrieve('~/data/ERA5/ERA5_mu_year.nc',lon=c(5,15),lat=c(59,63))
+index(MU) <- year(MU)
+attr(MU,'unit') <- 'mm/day'
+## Transform the fields into 
+fFWMU <- FW*exp(-20/MU)
+class(fFWMU) <- class(MU)
+## Copy the attributes
+fFWMU <- attrcp(MU,fFWMU)
+attr(fFWMU,'variable') <- 'probability'
+attr(fFWMU,'unit') <- 'fraction'
+print("FW*exp(-20/MU)")
+eof.ffwmu <- EOF(fFWMU)
+attr(eof.ffwmu,'time') <- range(index(FW))
+ds.nvwet1 <- DS(nvwet,eof.ffwmu,method = 'glm')
+plot(ds.nvwet1,new=FALSE)
+print("FW")
+eof.fw <- EOF(FW)
+attr(eof.fw,'time') <- range(index(FW))
+ds.nvwet2 <- DS(nvwet,eof.fw,method = 'glm',)
+plot(ds.nvwet2,new=FALSE)
+print("MU")
+eof.mu <- EOF(MU)
+attr(eof.mu,'time') <- range(index(FW))
+ds.nvwet3 <- DS(nvwet,eof.mu,method = 'glm')
+plot(ds.nvwet3,new=FALSE)
+print("FW*MU")
+PT <- 365.25*FW*MU
+class(PT) <- class(FW)
+attr(PT,'variable') <- 'precip'
+attr(PT,'unit') <- 'mm'
+PT <- attrcp(FW,PT)
+eof.fwmu <- EOF(PT)
+attr(eof.fwmu,'time') <- range(index(FW))
+ds.nvwet4 <- DS(nvwet,eof.fwmu,method = 'glm')
+plot(ds.nvwet4,new=FALSE)
+```
+
+The results from downscaling the number of wet days directly did not capture the observations well in this case. Hence, it seems better to estimate the number/probability of events through downscaling of $f_w$ and $\mu$ from their large-scale fields. However, the spatial weights in ERA5 are in the vicinity of Oslo, supporting a connection, albeit imperfect in terms of the magnitude of the number of events. 
+
+## Table of cross-validation results
+
+```{r}
+print(attr(esd.results$fw.ssp370,'model_id'))
+## fw:
+write.table(cbind(attr(esd.results$fw.ssp370,'model_id'),
+                  round(attr(esd.results$fw.ssp370,'r.xval')[,1:3],2)),
+            sep=' & ', eol = " \\\\ \n",row.names=FALSE,quote=FALSE)
+
+## mu
+write.table(cbind(attr(esd.results$mu.ssp370,'model_id'),
+                  round(attr(esd.results$mu.ssp370,'r.xval')[,1:3],2)),
+            sep=' & ', eol = " \\\\ \n",row.names=FALSE,quote=FALSE)
+
+```
+
+
+## Maps and gridded results
+
+The gridded data makes it possible to show maps for the Nordic region. Here `gridmap`involved kriging with altitude as a covariable, based on the R-package `LatticeKrig` <https://cran.r-project.org/web/packages/LatticeKrig/index.html> from UCAR. The default for `dsensemble`-objects in the `esd` package is to show the ensemble mean:
+
+We want to produce maps of change in $Pr(X > x) = f_w \exp{(-x/\mu)}$ based on the formulation suggested by @benestad_simple_2019: 
+$dPr/dt = \exp{(-x/\mu)} df_w/dt + f_wx/\mu^2 \exp{(-x/\mu)} d\mu/dt$. Hence, we require maps for $f_w$, $df_w/dt$, $\mu$, and $d\mu/dt$ for each emission scenario.
+
+### Wet-day frequency
+
+The following chunk provides maps of mean downscaled $f_w$ and its trend based on the SSP370 emission scenario. 
+```{r maps-fw}
+## function estimating proportional trend in terms of %
+ptrend <- function(x,na.rm=TRUE) {
+  mx <- map(x,FUN='mean',plot=FALSE)
+  tx <- map(x,FUN='trend',plot=FALSE)
+  y <- 100*tx/mx
+  class(y) <- class(tx)
+  y <- attrcp(tx,y)
+  attr(y,'unit') <- '"%"'
+  return(y)
+}
+
+## This function extracts the interval where all members of the ensemble are present. It differs from 'allN'
+## as it works on the PCA-based ensemble results as opposed to single stations. 
+allMs <- function(x) {
+  nt <- length(index(x))
+  cls <- class(x)
+  ## Remove members with short time span
+  nv <- unlist(lapply(x,function(x) if (length(dim(x))==2) y <-nv(x[,1]) else  
+    y <- NA))[-c(1,2,length(x))]
+  im <- nv >= quantile(nv,probs = 0.75)
+  x <- subset(x,im=im)
+  ## Select the time interval where the ensemble is complete.
+  it1 <- unlist(lapply(x,function(x) min(index(x[is.finite(x)]))))[-c(1,2,length(x))]
+  it2 <- unlist(lapply(x,function(x) max(index(x[is.finite(x)]))))[-c(1,2,length(x))]
+  it <- c(max(it1,na.rm=TRUE),min(it2,na.rm=TRUE))
+  print(it)
+  x <- subset(x,it=it)
+  ## REB Fudge - make the slightly irregular grid strictly regular for plotting
+  eof <- x[['eof']]
+  attr(eof,'longitude') <- seq(min(lon(eof)),max(lon(eof)),length=length(lon(eof)))
+  attr(eof,'latitude') <- seq(min(lat(eof)),max(lat(eof)),length=length(lat(eof)))
+  eof -> x[['eof']]
+  class(x) <- cls
+  return(x)
+}
+
+esd.results$fw.ssp370 <- allMs(esd.results$fw.ssp370)
+attr(esd.results$fw.ssp370$eof,'variable') <- 'f[w]'
+m.fw.ssp370 <- map(esd.results$fw.ssp370,FUN='mean',new=FALSE)
+d.fw.ssp370 <- ptrend(esd.results$fw.ssp370)
+map(d.fw.ssp370,colbar=list(breaks=seq(-1,1,by=0.1),pal='precip.ipcc'),new=FALSE)
+esd.results$fw.ssp126 <- allMs(esd.results$fw.ssp126)
+attr(esd.results$fw.ssp126$eof,'variable') <- 'f[w]'
+m.fw.ssp126 <- map(esd.results$fw.ssp126,FUN='mean',new=FALSE)
+d.fw.ssp126 <- ptrend(esd.results$fw.ssp126)
+map(d.fw.ssp126,colbar=list(breaks=seq(-1,1,by=0.1),pal='precip.ipcc'),new=FALSE)
+esd.results$fw.ssp245 <- allMs(esd.results$fw.ssp245)
+attr(esd.results$fw.ssp245$eof,'variable') <- 'f[w]'
+m.fw.ssp245 <- map(esd.results$fw.ssp245,FUN='mean',new=FALSE)
+d.fw.ssp245 <- ptrend(esd.results$fw.ssp245)
+map(d.fw.ssp245,colbar=list(breaks=seq(-1,1,by=0.1),pal='precip.ipcc'),new=FALSE)
+esd.results$fw.ssp585 <- allMs(esd.results$fw.ssp585)
+attr(esd.results$fw.ssp585$eof,'variable') <- 'f[w]'
+m.fw.ssp585 <- map(esd.results$fw.ssp585,FUN='mean',new=FALSE)
+d.fw.ssp585 <- ptrend(esd.results$fw.ssp585)
+map(d.fw.ssp585,colbar=list(breaks=seq(-1,1,by=0.1),pal='precip.ipcc'),new=FALSE)
+```
+
+The highest annual frequency of rainy days is near the west coast but the trends are close to zero, the proportional changes are typically less than 1% per decade. The projected proportional trends (% with respect to mean $f_w$) vary between increasing and decreasing $f_w$ over different regions, however, for SSP370 the projections indicate more reductions rather than increases in $f_w$, especially over southern Scandinavia. 
+
+The following chunk provides corresponding maps for $\mu$, also based on downscaled results for the SSP370 emission scenario.
+
+```{r maps-mu}
+esd.results$mu.ssp370 <- allMs(esd.results$mu.ssp370)
+m.mu.ssp370 <- map(esd.results$mu.ssp370,FUN='mean',new=FALSE)
+d.mu.ssp370 <- map(esd.results$mu.ssp370,FUN='trend',
+                   colbar=list(breaks=seq(-0.3,0.3,by=0.03),pal='precip.ipcc'),new=FALSE)
+## For some reason, the SSP126 caused errors
+#m.mu.ssp126 <- map(esd.results$mu.ssp126,FUN='mean',new=FALSE)
+#d.mu.ssp126 <- map(esd.results$mu.ssp126,FUN='trend',new=FALSE)
+esd.results$mu.ssp245 <- allMs(esd.results$mu.ssp245)
+m.mu.ssp245 <- map(esd.results$mu.ssp245,FUN='mean',new=FALSE)
+d.mu.ssp245 <- map(esd.results$mu.ssp245,FUN='trend',
+                   colbar=list(breaks=seq(-0.3,0.3,by=0.03),pal='precip.ipcc'),new=FALSE)
+esd.results$mu.ssp585 <- allMs(esd.results$mu.ssp585)
+m.mu.ssp585 <- map(esd.results$mu.ssp585,FUN='mean',new=FALSE)
+d.mu.ssp585 <- map(esd.results$mu.ssp585,FUN='trend',
+                   colbar=list(breaks=seq(-0.3,0.3,by=0.03),pal='precip.ipcc'),new=FALSE)
+```
+The highest intensity is seen near the west coast of Norway and most of the region is projected to see long-term increases in $\mu$. The projected trends for the future suggest increasing $\mu$ for most regions, but there are also some exceptions. 
+
+### Changes in total precipitation
+
+It is useful to analyse trends in the mean precipitation $\overline{x} = f_w \mu$, as $\delta \overline{X} = \mu \delta f_w + f_w \delta \mu$.
+
+```{r delta-tot-precip}
+## Use the trend in fraction as opposed to the proportional trend in the following 
+## calculations
+d.fw.ssp370 <- map(esd.results$fw.ssp370,FUN='trend',plot=FALSE)
+dp1 <- d.fw.ssp370*m.mu.ssp370
+attr(dp1,'variable') <- 'precip change'
+attr(dp1,'unit') <- 'mm'
+dp2 <- m.fw.ssp370*d.mu.ssp370
+## Trend in rainfall:
+map(dp1+dp2,colbar=list(breaks=seq(-0.1,0.1,by=0.01),pal='precip.ipcc'),
+    main='Trend in mean precipitation')
+attr(dp2,'variable') <- 'precip change'
+attr(dp2,'unit') <- 'mm'
+map(dp1,colbar=list(breaks=seq(-0.1,0.1,by=0.01),pal='precip.ipcc'),
+    main='Trend due to changes in number of rainy days')
+map(dp2,colbar=list(breaks=seq(-0.1,0.1,by=0.01),pal='precip.ipcc'),
+    main='Trend due to changes in rain intensity')
+```
+In some regions, the contributions to the trend in the mean (total) precipitation amounts are highest from changing number of rainy days (dark blue shades), but there are also regions where increased intensity play a bigger role (red regions). This may be a result of a general lack of trend in $f_w$ and where random fluctuations connected to internal variability swings around zero. 
+
+### Changes in $Pr(X > x)$
+
+The maps of $f_w$ and $\mu$ can also be used to calculate changes in the probability of heavy daily rainfall. We can estimate the contributions to changing probabilities for heavy rainfall from our parameterised equation $Pr(X>x) = f_w exp(-x/\mu)$ through the product rule for differentiation: $dPr(X>x)/dt = df_w/dt exp(-x/\mu) + f_w x/\mu^2 exp(-x/\mu) d \mu/dt$:
+
+```{r}
+x <- 30
+exp.x <- exp(-x/m.mu.ssp370)
+Pr.gt.x <- m.fw.ssp370*exp.x
+attr(Pr.gt.x,'variable') <- 'Pr(X>x)'
+attr(Pr.gt.x,'unit') <- 'probability'
+map(Pr.gt.x,main='Probability of more than 30 mm/day')
+dPr.dfw <- exp.x*d.fw.ssp370
+dPr.dmu <- x*m.fw.ssp370*exp.x/m.mu.ssp370^2 * d.mu.ssp370
+## Trend in probability of daily precipitation exceeding 30 mm/day
+dPr.gt.30.ssp370 <- 100*(dPr.dfw + dPr.dmu)
+map(dPr.gt.30.ssp370,colbar=list(breaks=seq(-0.2,0.2,by=0.02),pal='precip.ipcc'),
+    main='Trend in probability of more than 30 mm/day')
+## Relative change:
+ptPr <- 100*dPr.gt.30.ssp370/Pr.gt.x
+attr(ptPr,'variable') <- 'd Pr(X>x)/dt'
+attr(ptPr,'unit') <- '"%/decade"'
+map(ptPr,colbar=list(breaks=seq(-900,900,by=100),pal='precip.ipcc'),
+    main='Relative trend in probability of more than 30 mm/day')
+## Attribution of change to changing number of days or changing  
+map(100*dPr.dfw/dPr.gt.30.ssp370,colbar=list(breaks=seq(-160,160,by=20),pal='precip.ipcc'),
+    main='% trend in probability due to more wet days (%)')
+map(100*dPr.dmu/dPr.gt.30.ssp370,colbar=list(breaks=seq(-160,160,by=20),pal='precip.ipcc'),
+    main='% trend in probability due to more intensive rainfall (%)')
+```
+
+The increase in $\mu$ implies an increase in the probability of days with more than 30 mm/day by 0-20% relative to the original probability. The strongest trend was found in northern Finland.
+
+## Return values
+
+Return values refer to the typical maximum amount of precipitation that can be expected over a time interval of $\tau$ years. 
+
+Here, 1-year, 10-year and 25-year return values were calculated using the approximate expression $x_\tau = \alpha \mu \ln(f_w \tau)$, based on derivations in @benestad_simple_2019. The corresponding rate of change (trend) was calculated based on $x_\tau = \alpha \ln(f_w \tau) \delta \mu + \alpha \mu \ln(f_w \tau)$, taking $d/dt \ln(f_w \tau) = d\ln(u)/du * du/dt = 1/u  du/dt = 1/f_w * d f_w/dt$.
+
+```{r maps_return-values, fig.dim=c(7,9)}
+## The coefficient alpha is log-linear
+c.alpha = c(1.256, 0.064)
+layout(matrix(1,1,1))
+## tau is the return-interval in number of years
+for (tau  in c(1, 10, 25)) { 
+  ## Estimate the value for alpha for given return-interval
+  alpha <- c.alpha[1] + c.alpha[2] * log(tau)
+  ## Estimate the mean return-value based on the above expression:
+  x.L <- alpha * m.mu.ssp370 * log(m.fw.ssp370 * tau * 365.25)
+  attr(x.L,'variable') <- 'precip'
+  attr(x.L,'unit') <- 'mm/day'
+  map(x.L,main=paste0(tau,'-year return value (mean for SSP370)'),new=FALSE)
+  ## Estimate change
+  d.x.L <- alpha * d.mu.ssp370 * log(m.fw.ssp370 * tau * 365.25) +
+    alpha * m.mu.ssp370 * d.fw.ssp370/m.fw.ssp370
+  attr(d.x.L,'variable') <- 'precip'
+  attr(d.x.L,'unit') <- '"mm/(day*decade)"'
+  ## The Knitting doesn't get these figures quite right
+  par(new=FALSE,mfcol=c(1,1))
+  map(d.x.L,colbar=list(breaks=seq(-2,2,by=0.2),pal='precip.ipcc'),
+      main=paste0('Trend in the ',tau,'-year return value (mean for SSP370)'),new=FALSE)
+}
+```
+
+The spatial patterns of the mean 1-year, 10-year, and 25-year return values simulated for the 2015-2099 period and estimated on the basis of $f_w$ and $\mu$ (SSP370) are very similar, but their magnitudes vary between ~100 mm, ~150 mm, and ~200 mm. The greatest magnitudes are seen along the west coast of Norway and the smallest magnitudes in over Finland. 
+
+# Evalutation of GCMs ability to reproduce large-scale $f_w$ and $\mu$
+
+## Evaluation of global climate models
+
+One assumption behind downscaling is to utilise large-scale features that the  global climate models (GCMs) can skilfully reproduce and the dependency of local scale climate upon these. Hence it's crucial to evaluate the GCM output to establish whether they skillfully reproduce real features, and in particular, it is important to evaluate how well the GCMs reproduce large-scale climate change and variability before using them as a basis for climate change adaptation. ESD can include some degree of evaluation, e.g. through the use of common empirical orthogonal functions, henceforth referred to as "common EOFs" (@benestad_comparison_2001). This concept is explained more recently in @benestad_norwegian_2021. Here, the acronym 'EOF' refers to 'empirical orthogonal functions' which are similar to principal component analysis and closely connected to the mathematical concepts known as eigenfunctions and eigenvalues. 
+
+Below is an analysis that provides an objective and deep evaluation of the predictors used to represent the large-scale conditions in downscaling as they are simulated by the GCMs, focusing on the most salient information embedded in the data. It goes beyond the framework suggested in @benestad_comparison_2001 by comparing large multi-model ensembles with a focus on the the ensemble's ability to reproduce physical conditions such as the mean annual cycle, interannual variability and historical long-term trends, rather than emphasising individual members. 
+
+Another objective is to compare the evaluation of two generations of GCM simulations: CMIP5 and CMIP6. Here is a demonstration of how such a comparison can make use of the models' ability to reproduce the mean annual cycle, the interannual variability and historical trends over 1959-2021 in this case. The 63-year long period 1959-2021 is chosen because monthly ERA5 data are available in a single data set from 1950 until present time and because 2021 was the last year with complete data for all months at the time of the analysis. 
+
+More information about EOFs and common EOFs are available from <https://doi.org/10.1142/6908> and a short hands-on demonstration is available ads a YouTube <https://youtu.be/32mtHHAoq6k>.
+
+The evaluation of GCM results based on common EOFs is implemented with the help of the R-package `esd` and similar to the analysis presented in @benestad_various_2023. The following chunk activates it and sets the working environment 
+
+### Special functions
+
+The following code chunk defines a number of functions used in this analysis:
+
+```{r functions}
+## Function to split the CMIP file names into model, ssp and RIPF
+decipher <- function(x) {
+  i <- gregexpr('_',x)[[1]]
+  model <- substr(x,i[2]+1,i[3]-1)
+  ssp <- substr(x,i[3]+1,i[4]-1)
+  ripf <- substr(x,i[4]+1,i[4]+8)
+  interval <- substr(x,i[5]+1,regexpr('.nc',x)[[1]]-1)
+  return(c(model,ssp,ripf,interval))
+}
+
+## Method for calculating common EOFs of large multi-model ensembles with GCMs' 
+## mean annual cycle.  Most of its operations involve preparation of the data and 
+## collecting the right data from multiple data files. 
+EOF.GCMsAC <- function(x,masked=FALSE,lon=NULL,lat=NULL,verbose=FALSE,...) {
+  ## This function combines the annual cycles from different GCMs and performs a
+  ## common EOF on the joint data
+  print('EOF.GCMsAC')
+  runs <- names(x)
+  runs <- runs[-grep('era5',runs)]
+  #print(runs)
+  if (length(grep('era5',names(x)))>0) X <- subset(x[['era5']],is=list(lon=lon,lat=lat))
+  if (masked) X <- mask(X,land=FALSE)
+  X <- regrid(X,is=list(lon=seq(min(lon(X)),max(lon(X)),by=1),
+                        lat=seq(min(lat(X)),max(lat(X)),by=1)))
+  n <- length(runs)
+  for (i in 1:n) {
+    if (verbose) print(runs[i])
+    z <- subset(x[[runs[i]]],is=list(lon=lon,lat=lat))
+    if (verbose) map(z)
+    X <- combine(X,z)
+  }
+  ## < Debugging > 
+  #if (verbose) {print(str(X,max.lev=1)); print(names(attributes(X)))}
+  #for (j in 2:attr(X,'n.apps')) attr(X,paste0('appendix.',j)) <- NULL
+  #attr(X,'n.apps') <- 1
+  ## > Debugging <
+  eof <- EOF(X,anomaly=FALSE,verbose=verbose,...)
+  invisible(eof)
+}
+
+## Method for calculating common EOFs of the GCMs' annually aggregated data
+## Most of its operations involve preparation of the data and collecting the 
+## right data from multiple data files. 
+EOF.GCMsAM <- function(x,masked=FALSE,lon=NULL,lat=NULL,...) {
+  ## This function combines the annual means from different GCMs and performs a
+  ## common EOF on the joint data
+  #print('EOF.GCMsAM')
+  runs <- names(x)
+  era5 <- runs[grep('era5',runs)][1]
+  runs <- runs[-grep('era5',runs)]
+  #print(runs)
+  if (length(grep(era5,names(x)))>0) X <- subset(x[[era5]],is=list(lon=lon,lat=lat))
+  if (masked) X <- mask(X,land=FALSE)
+  X <- regrid(X,is=list(lon=seq(min(lon(X)),max(lon(X)),by=1),
+                        lat=seq(min(lat(X)),max(lat(X)),by=1)))
+  n <- length(runs); print(n)
+  for (i in 1:n) {
+    #print(runs[i])
+    z <- subset(x[[runs[i]]],is=list(lon=lon,lat=lat))
+    attr(z,'source') <- runs[i]
+    X <- combine(X,z)
+  }
+  #print('Calculate EOF for joint dataset')
+  eof <- EOF(X,anomaly=FALSE,...)
+  invisible(eof)
+}
+
+
+## Function for estimating root-mean-square-error (RMSE) of the common EOFs for
+## the mean annual cycle
+RMSE.AC.CEOF <- function(x,srcid="source") {
+  n <- attr(x,'n.apps')
+  d <- dim(x)
+  rmse <- rep(0,n); modelid <- rep('NA',n)
+  for (i in 1:n) {
+    y <- attr(x,paste0('appendix.',i))
+    for (j in (1:d[2])) rmse[i] <- rmse[i] + 
+        (RMSE(coredata(x[,j]),coredata(y[,j]))*attr(x,'eigenvalue'))^2
+    rmse[i] <- round(sqrt(rmse[i])/sqrt(sum(attr(x,'eigenvalue')^2)),3)
+    modelid[i] <- attr(y,srcid)
+  }
+  names(rmse) <- modelid
+  rmse <- rmse[order(rmse,decreasing=FALSE)]
+  attr(rmse,'modelid') <- modelid
+  return(rmse)
+}
+
+## Convert the list with trend maps into a field object to speed up the analysis and to 
+## enable EOFs for reducing the data volume.
+list2field <- function(x,it='annual',lon=NULL,lat=NULL,plot=FALSE,...) {
+  #print('list2field')
+  cn <- names(x)
+  if (!is.null(it)) if (is.character(it)) cn <- names(x)[grep(it,names(x))]
+  n <- length(cn)
+  #print(cn)
+  Y <- subset(x[[cn[1]]],is=list(lon=lon,lat=lat)) # GCMs
+  nxy <- length(Y)
+  X <- matrix(rep(NA,n*nxy),n,nxy)
+  for (i in 1:n) {
+    z <- regrid(subset(x[[cn[i]]],is=list(lon=lon,lat=lat)),is=Y)
+    X[i,] <- c(z)
+    #print(c(i,cn[i],round(mean(X[i,],na.rm=TRUE),2)))
+  }
+  
+  X <- as.field(zoo(X,order.by=1:n),param=param,unit=esd::unit(Y),lon=lon(Y),lat=lat(Y),
+                info='trend maps: list2field (GCMsAC.R)',longname='trend coefficients')
+  
+  if (plot) map(X,FUN='sd',
+                main='Multi-modal ensemble trend spread (CMIP6)',sub='1959-2021')
+  par(new=FALSE)
+  #par(fig=c(0,0.3,0,0.3),new=TRUE)
+  #hist(c(r),lwd=3,col=rgb(0,0,0,0.5))
+  attr(X,'ID') <- cn 
+  invisible(X)
+}
+
+## The following function evaluates given PC of the ensemble by comparing the 
+## rank of the observations. If the observations and model results belong to the 
+## same statistical population, then the rank should be random between 0 and 100%. 
+## We can use a Monte-Carlo approach to estimate confidence interval.
+## x is the common EOF-object and ip is the PC number.
+evalGCMsAM <- function(x,cmip,ip=1,N.test=300,breaks=seq(0,1,by=0.05),plot=TRUE,
+                       verbose=FALSE) {
+  d <- dim(x)
+  n <- attr(x,'n.apps')
+  cols <- rownames(table(cmip))
+  if (length(cols)==1) cols <- rep(cols,2)
+  #rank <- apply(coredata(x),2,order)
+  X <- matrix(rep(NA,d[1]*(n+1)),n+1,d[1])
+  X[1,] <- coredata(x)[,ip]
+  for (i in 1:n) {
+    if (length(X[i+1,])==length(coredata(attr(x,paste0('appendix.',i)))[,ip]))
+      X[i+1,] <- coredata(attr(x,paste0('appendix.',i)))[,ip]
+  }
+  cmip[!is.finite(apply(X[-1,],1,mean))] <- NA
+  X6 <- X[c(T,is.element(cmip,cols[1])),]; d6 <- dim(X6)
+  X5 <- X[c(T,is.element(cmip,cols[2])),]; d5 <- dim(X5)
+  eval5 <- apply(X5,2,function(x) order(x)[1]/length(x))
+  eval6 <- apply(X6,2,function(x) order(x)[1]/length(x))
+  ## Monte-Carlo null-distribution:
+  null5 <- matrix(rep(NA,d5[1]*N.test),N.test,d5[1])
+  null6 <- matrix(rep(NA,d6[1]*N.test),N.test,d6[1])
+  for (i in 1:N.test) {
+    X5[] <- rnorm(length(X5)); dim(X5) <- d5
+    X6[] <- rnorm(length(X6)); dim(X6) <- d6
+    null5[i,] <- apply(X5,1,function(x) order(x)[1]/length(x))
+    null6[i,] <- apply(X6,1,function(x) order(x)[1]/length(x))
+  }
+  z5 <- apply(null5,1,function(x) hist(x,breaks=breaks,plot=FALSE)$density)
+  z6 <- apply(null6,1,function(x) hist(x,breaks=breaks,plot=FALSE)$density)
+  h5 <- hist(eval5,breaks=breaks,plot=FALSE)
+  h6 <- hist(eval6,breaks=breaks,plot=FALSE)
+  attr(h5,'Monte-Carlo null.distribution') <- z5
+  attr(h6,'Monte-Carlo null.distribution') <- z6
+  
+  ## Plot the results
+  if (plot) {
+    plot(eval5,type='b',col='brown',lty=2,pch=19,cex=1.5,ylim=c(0,1),
+         main='Rank evaluation statistics',xlab='year',ylab='rank in ensemble')
+    lines(eval6,type='b',col='darkgreen',lty=3,pch=19)
+    grid()
+  }
+  return(list(eval.CMIP5=h5,eval.CMIP6=h6,rank.CMIP5=eval5,rank.CMIP6=eval6,
+              CMIP5=X5,CMIP6=X6))
+}
+
+# Not used...
+# hatched <- function(m,s,col='grey50') {
+#   polygon(c(1:12,rev(1:12)),c(m+s,m-1),col=col,border=col)
+# }
+
+## Replace missing data with mean values for estimating EOFs of wet-day mean 
+## precipitation (NA when there are no wet days)
+na2mean <- function(x) {
+  d <- dim(x)
+  z <- apply(x,2,'mean',na.rm=TRUE)
+  for (it in 1:d[1]) {
+    ina <- !is.finite(x[it,])
+    x[it,ina] <- z[ina]
+  }
+  return(x)
+}
+```
+
+## Calculations
+
+The following chunk of code is used for initialising the calculations. It contains some options (parameters) used for carrying out this analysis.
+
+```{r settings, warning=FALSE}
+print('---<GCMSACAM.R>---')
+par0 <- par()
+plot <- TRUE
+reprocess <- FALSE
+outpath <- '~/R/'
+
+paths <- c('~/data/CMIP5.monthly/','~/data/CMIP6.monthly/')
+run <- 'r1i1p1f1|r1i1p1'
+bad.data <- NULL 
+```
+
+### Post- and pre-processing
+
+The post-processing can be a bit time-consuming and the code therefore searches for results saved previously in the specified path. It will only carry out all the pre-processing if there is no data files with the expected file name. 
+
+```{r postprocessing, warning=FALSE, eval=TRUE}
+print('Post-processing:')
+print(regions); print(paths)
+
+for (ir in 1:length(regions)) { 
+  for (path in paths) { 
+    ssps <- list.files(path=path)
+    ssps <- ssps[grep("RCP45|ssp245|hist",ssps)]
+    for (ssp in ssps) { 
+      print(ssp)
+      for (param in c('tas', 'pr', 'psl', 'fw', 'mu')) {
+        if (param=='pr') {
+          gcmfiles <- list.files(path=paste0(path,ssp),pattern='pr_Amon',full.names = TRUE)
+          gcmfiles <- gcmfiles[grep(run,gcmfiles)]
+          gcmfiles <- gcmfiles[grep('_1850-|_1860-|_1861-',gcmfiles)]
+          reanalysis <- '~/data/ERA5/ERA5_tp_mon.nc'
+        } else if (param=='tas') {
+          gcmfiles <- list.files(path=paste0(path,ssp),pattern='tas_Amon',full.names = TRUE)
+          gcmfiles <- gcmfiles[grep(run,gcmfiles)]
+          gcmfiles <- gcmfiles[grep('_1850-|_1860-|_1861-',gcmfiles)]
+          reanalysis <- '~/data/ERA5/ERA5_t2m_mon.nc'
+        } else if (param=='psl') {
+          gcmfiles <- list.files(path=paste0(path,ssp),pattern='psl_Amon',full.names = TRUE)
+          gcmfiles <- gcmfiles[grep(run,gcmfiles)]
+          gcmfiles <- gcmfiles[grep('_1850-|_1860-|_1861-',gcmfiles)]
+          reanalysis <- '~/data/ERA5/ERA5_slp_mon.nc'
+        } else if (param=='mu') {
+          ssp <- 'hist'
+          gcmfiles <- list.files(path=paste0(path,'wet-day-intensity/',ssp),
+                                 pattern='monmean_int_of_pr_day',full.names = TRUE)
+          gcmfiles <- gcmfiles[grep(run,gcmfiles)]
+          gcmfiles <- gcmfiles[grep('_1850|_1860|_1861',gcmfiles)]
+          reanalysis <- '~/data/ERA5/monthly_wet-day-intensity/monmean_int_of_ERA5_tp_1940-2022.nc'
+          it <- c(1959,2014)
+        } else if (param=='fw') {
+          ssp <- 'hist'
+          gcmfiles <- list.files(path=paste0(path,'wet-day-frequency/',ssp),
+                                 pattern='monmean_freq_of_pr_day',full.names = TRUE)
+          gcmfiles <- gcmfiles[grep(run,gcmfiles)]
+          gcmfiles <- gcmfiles[grep('_1850|_1860|_1861',gcmfiles)]
+          reanalysis <- '~/data/ERA5/monthly_wet-day-frequency/monmean_freq_of_ERA5_tp_1940-2022.nc'
+          it <- c(1959,2014)
+        }
+        
+        output <- paste0('GCMsACAM.',param,'.',tolower(ssp),'.',regions[ir],'.rda')
+        print(output)
+        
+        if (!file.exists(output) | (reprocess)) {
+          print(gcmfiles); i <- 0
+          Y <- list(); Z <- list(); W <- list(); AM <- list()
+          
+          print(paste('Number of CMIP6 files to read=',length(gcmfiles)))
+          for (gcmfile in gcmfiles) {
+            ## Estimate the mean annual cycle
+            print(gcmfile)
+            X <- retrieve(gcmfile,it=c(1959,2021),lon=lon[,ir],lat=lat[,ir])
+            if (param=='pr') {
+              X <- X * 30 ## mm/month
+              attr(X,'unit') <- 'mm/month'
+              FUN='sum'
+            } else FUN='mean'
+            print(c(varid(X),esd::unit(X),round(range(X,na.rm=TRUE))))
+            #cim <- paste(attr(X,'model_id'),attr(X,'realization'),i,sep='.')
+            cim <- paste(decipher(gcmfile)[1:3],collapse='.')
+            ## Mean annual cycle
+            acm <- aggregate(X,month,na.rm=TRUE)
+            ## Mean annual variability
+            acs <- aggregate(X,month,FUN='sd',na.rm=TRUE)
+            ## Annual total
+            act <- annual(X,FUN=FUN)
+            djf <- annual(subset(X,it='djf'),FUN=FUN,nmin=3)
+            mam <- annual(subset(X,it='mam'),FUN=FUN,nmin=3)
+            jja <- annual(subset(X,it='jja'),FUN=FUN,nmin=3)
+            son <- annual(subset(X,it='son'),FUN=FUN,nmin=3)
+            AM[[cim]] <- act
+            AM[[paste0('djf.',cim)]] <- djf
+            AM[[paste0('mam.',cim)]] <- mam
+            AM[[paste0('jja.',cim)]] <- jja
+            AM[[paste0('son.',cim)]] <- son
+            ## Past trends
+            if (plot) par(par0)
+            act <- map(annual(X),FUN='trend',plot=plot)
+            print('Trend statistics'); print(summary(c(act)))
+            actDJF <- map(annual(subset(X,it='djf'),nmin=3),FUN='trend',plot=plot)
+            actMAM <- map(annual(subset(X,it='mam'),nmin=3),FUN='trend',plot=plot)
+            actJJA <- map(annual(subset(X,it='jja'),nmin=3),FUN='trend',plot=plot)
+            actSON <- map(annual(subset(X,it='son'),nmin=3),FUN='trend',plot=plot)
+            Y[[cim]] <- acm
+            Z[[cim]] <- acs
+            W[[paste(cim,param,'trend.annual',sep='.')]] <- act
+            W[[paste(cim,param,'trend.DJF',sep='.')]] <- actDJF
+            W[[paste(cim,param,'trend.MAM',sep='.')]] <- actMAM
+            W[[paste(cim,param,'trend.JJA',sep='.')]] <- actJJA
+            W[[paste(cim,param,'trend.SON',sep='.')]] <- actSON
+            #map(Y[[cim]])
+            i <- i + 1
+          }
+          ## Also show the era5 reanalysis
+          print('Retrieve ERA5 reanalysis also')
+          X <- retrieve(reanalysis,it=c(1959,2021),lon=lon[,ir],lat=lat[,ir]) 
+          if (param=='pr') {
+            X <- X * 30 * 1000 ## m/day -> mm/month
+            attr(X,'unit') <- 'mm/month'
+            FUN='sum'
+          } else FUN='mean'
+          acm <- aggregate(X,month,na.rm=TRUE)
+          acs <- aggregate(X,month,FUN='sd',na.rm=TRUE)
+          ## Annual total
+          act <- annual(X,FUN=FUN)
+          djf <- annual(subset(X,it='djf'),FUN=FUN,nmin=3)
+          mam <- annual(subset(X,it='mam'),FUN=FUN,nmin=3)
+          jja <- annual(subset(X,it='jja'),FUN=FUN,nmin=3)
+          son <- annual(subset(X,it='son'),FUN=FUN,nmin=3)
+          Y[['era5']] <- acm
+          Z[['era5']] <- acs
+          AM[['era5']] <- act
+          AM[['djf.era5']] <- djf
+          AM[['mam.era5']] <- mam
+          AM[['jja.era5']] <- jja
+          AM[['son.era5']] <- son
+          act <- map(annual(X),FUN='trend',plot=plot)
+          actDJF <- map(annual(subset(X,it='djf'),nmin=3),FUN='trend',plot=plot)
+          actMAM <- map(annual(subset(X,it='mam'),nmin=3),FUN='trend',plot=plot)
+          actJJA <- map(annual(subset(X,it='jja'),nmin=3),FUN='trend',plot=plot)
+          actSON <- map(annual(subset(X,it='son'),nmin=3),FUN='trend',plot=plot)
+          W[['era5.trend.annual']] <- act
+          W[['era5.trend.DJF']] <- actDJF
+          W[['era5.trend.MAM']] <- actMAM
+          W[['era5.trend.JJA']] <- actJJA
+          W[['era5.trend.SON']] <- actSON
+          GCMs.AC <- Y; GCMs.std <- Z; GCMs.trend <- W; GCMs.AM <- AM
+          save(GCMs.AC,GCMs.std,GCMs.trend,GCMs.AM,file=paste0(outpath,output))
+        } else load(output)
+      }
+    } 
+  }
+}
+```
+
+### Dignostics
+
+The diagnostics involve calculating and plotting the common EOFs of the post-processed data. The plots of the common EOFs show the spatial pattern (upper left), the variance (based on the eigenvalues) associated with each pattern and the principal components (PCs) representing each GCM (red and darkgreen curves) and the ERA5 reanalysis (black curve). The two first figures show the common EOFs for the mean annual cycle whereas the next two show common EOFs of annual mean or seasonal maps in addition to one EOF analysis applied to trend maps for the historical period 1959-2021.
+
+
+### Wet-day frequency
+
+```{r diagnostics-fw, fig.height=7,fig.width=7, warning=FALSE, dev='png', eval=TRUE}
+##--------------------------------------------------------------
+## Diagnostics
+
+seasons <- c('annual','djf','mam','jja','son')
+ssp <- 'hist'
+
+for (masked in c(FALSE)) { 
+  
+  for (region in regions) { 
+    for (param in c('tas', 'pr', 'psl','fw','mu')[4]) {
+      
+      output <- file.path('~/R',paste0('GCMsACAM.',param,'.',ssp,'.',region,'.rda'))
+      #output <- paste0('GCMsACAM.',param,'.',ssp,'.',region,'.rda')
+      load(output)
+      GCMs.AM.all <- GCMs.AM
+      names(GCMs.AM) <- sub('of.pr.day_','',names(GCMs.AM))
+      names(GCMs.AC) <- sub('of.pr.day_','',names(GCMs.AC))
+      names(GCMs.trend) <- sub('of.pr.day_','',names(GCMs.trend))
+      
+      ## Exclude known bad data 
+      if (length(bad.data) > 0) {
+        for (bad in bad.data) {GCMs.AC[[bad]] <- NULL; 
+        GCMs.AM[[bad]] <- NULL; GCMs.trend[[bad]] <- NULL}
+      }
+      
+      if (region==regions[1]) print(names(GCMs.AC))
+      
+      ## Fix problems
+      n <- length(GCMs.AC)
+      m <- length(GCMs.AM)
+      for (i in 1:n)  attr(GCMs.AC[[i]],'source') <- names(GCMs.AC)[i]
+      for (i in 1:m)  attr(GCMs.AM[[i]],'source') <- names(GCMs.AM)[i]
+      
+      ## Show the CMIP5 and CMIP56 with different colours
+      col <- names(GCMs.AC)
+      col[!is.element(col,'era5')] <- 'darkgreen'
+      #print(table(col))
+      ngcms <- length(col)
+      
+      ## Use common EOFs of mean annual cycle to compare the GCMs' ability to reproduce the
+      ## mean annual cycle with that seen in the ERA5 reanalysis
+      GCMs.AC[['era5']] <- aggregate.grid(GCMs.AC[['era5']],
+                                          is=list(lon=lon(GCMs.AC[[1]]),lat=lat(GCMs.AC[[1]])))
+      ceof.ac <- EOF.GCMsAC(GCMs.AC,masked)
+      
+      ## Scalar metric: Use variance-weighted (eigenvalues) sum of RMSE of the PCs wrt ERA5
+      w.rmse <- RMSE.AC.CEOF(ceof.ac,srcid="source_id")
+      outlier <- 5
+      print(paste('Outlier:',attr(w.rmse,'modelid')[outlier]))
+      col[outlier] <- 'darkblue'
+      
+      if (plot) { 
+        par(par0)
+        plot(ceof.ac,col=col,alpha=0.2,new=FALSE)
+        par(par0)
+        plot(ceof.ac,col=col,alpha=0.5,ip=2,new=FALSE)
+      }
+      
+      ## Table of ranking
+      ## Generate table for LaTeX document:
+      print(paste('RMSE of PCs of the annual mean cycle for',region,param))
+      write.table(w.rmse,sep='   &  ', eol = ' \\\\ \n', quote = FALSE)
+      
+      for (is in seasons[1]) { 
+        print(paste('Season',is))
+        am.names <- names(GCMs.AM.all)
+        if (is!='annual') keep <- am.names[grep(is,am.names)] else
+          keep <- am.names[-grep('djf|mam|jja|son',am.names)]
+        GCMs.AM <- GCMs.AM.all[keep]
+        names(GCMs.AM) <- sub('of.pr.day_','',names(GCMs.AM))
+        names(GCMs.trend) <- sub('of.pr.day_','',names(GCMs.trend))
+        
+        GCMs.AM[['era5']] <- aggregate.grid(GCMs.AM[['era5']],
+                                            is=list(lon=lon(GCMs.AM[[1]]),lat=lat(GCMs.AM[[1]])))
+        ceof.am <- EOF.GCMsAM(GCMs.AM,masked)
+        if (plot) {
+          par(par0)
+          plot(ceof.am,col=col,alpha=0.3,new=FALSE)
+          par(par0)
+          plot(ceof.am,col=col,alpha=0.3,ip=2,new=FALSE)
+        }
+      }
+      
+      print('Trend analysis')
+      ## Use EOFs of trend maps to assess the trends in the GCMs:
+      Z <- list2field(GCMs.trend,plot=FALSE)
+      if (masked) Z <- mask(Z,land=FALSE)
+      n <- length(attr(Z,'ID'))
+      col <- attr(Z,'ID')
+      print(col)
+      col[] <- 'brown'
+      col[grep('era5',attr(Z,'ID'))] <- 'black'
+      teof <- EOF(Z,anomaly=FALSE)
+      n <- dim(teof)[1]
+      if (plot) {
+        par(par0)
+        plot(teof,new=FALSE)
+        ## Add a point indicating the ERA5 trends
+        par(fig=c(0.05,1,0.025,0.475),mar=c(3,3,2,2),new=TRUE)
+        lines((1:n)[is.element(col,'brown')],teof[is.element(col,'brown'),1],
+              col='brown',lty=2,lwd=1)
+        lines((1:n)[is.element(col,'darkgreen')],teof[is.element(col,'darkgreen'),1],
+              col='darkgreen',lwd=1)
+        points((1:n)[is.element(col,'black')],teof[(1:n)[is.element(col,'black')],1],
+               col='black',cex=1.5,pch=19)
+        par(par0)
+        plot(teof,ip=2,new=FALSE)
+        ## Add a point indicating the ERA5 trends
+        par(fig=c(0.05,1,0.025,0.475),mar=c(3,3,2,2),new=TRUE)
+        lines((1:n)[is.element(col,'brown')],teof[is.element(col,'brown'),2],
+              col='brown',lty=2,lwd=1)
+        lines((1:n)[is.element(col,'darkgreen')],teof[is.element(col,'darkgreen'),2],
+              col='darkgreen',lwd=1)
+        points((1:n)[is.element(col,'black')],teof[(1:n)[is.element(col,'black')],2],
+               col='black',cex=1.5,pch=19)
+      }
+      
+      ## Another way to evaluate is with a scatterplot of the PCs of the two leading modes:
+      tnms <- names(GCMs.trend); tnms <- tnms[grep('annual',tnms)]
+      print(tnms)
+      icmip5 <- grep('rcp',tnms)
+      icmip6 <- grep('ssp',tnms)
+      if (plot) {
+        par(par0)
+        plot(teof[,1],teof[,2],xlab='Mode 1',ylab='Mode2'); 
+        points(teof[n,1],teof[n,2],pch=19,col='black',cex=1.5);
+        points(teof[icmip5,1],teof[icmip5,2],col='red',lwd=2)
+        points(teof[icmip6,1],teof[icmip6,2],col='blue',lwd=2)
+        text(teof[-n,1],teof[-n,2],1:(n-1),cex=0.6,col='grey40',pos=1)
+      }
+    }
+  }
+}
+```
+
+When it comes to the wet-day frequency $f_w$ the evaluations gave different results depending on the exact region. PC1 of the common EOFs for the mean annual cycle was surprisingly sensitive to modest variations in the selected geographical domain, especially for regions that included a large fraction of ocean it seems. A domain covering most of Europa gave a similar mean annual structure in PC1 for most CMIP6 models and ERA5, except for one GCM. The analysis indicates that one GCM is an outlier (CESM2-WACCM-FV2) and produced a mean annual shape distinct from the rest of the CMIP6 ensemble.
+
+A smaller regional domain seemed to give a poorer match in the mean annual cycle covariance structure of $f_w$ in the CMIP6 ensemble and ERA5. A mismatch in the mean annual cycle in $f_w$ may be interpreted as a limitation of the models' ability to simulate changes. But the mean annual cycle was not resolved in the downscaling of annual $f_w$ in the section above, although a limited representation of the mean annual cycle should underscore that the downscaled results have some caveats.
+
+The common EOF evaluation suggested that the CMIP6 representation of interannual variations in annual $f_w$ in general matched that of ERA5. 
+
+The common EOF of maps with trend coefficients for $f_w$ (one map for each model run) suggested that the CMIP6 matched the long-term trends in $f_w$ found in ERA5, albeit with a substantial scatter within the model ensemble. 
+
+## Wet-day mean $\mu$
+
+```{r diagnostics-mu, fig.height=7,fig.width=7, warning=FALSE, dev='png', eval=TRUE}
+##--------------------------------------------------------------
+## Diagnostics
+
+for (masked in c(FALSE)) { 
+  
+  for (region in regions) { 
+    for (param in c('tas', 'pr', 'psl','fw','mu')[5]) {
+      output <- file.path('~/R',paste0('GCMsACAM.',param,'.',ssp,'.',region,'.rda'))
+      #output <- paste0('GCMsACAM.',param,'.',ssp,'.',region,'.rda')
+      load(output)
+      GCMs.AM.all <- GCMs.AM
+      names(GCMs.AM) <- sub('of.pr.day_','',names(GCMs.AM))
+      names(GCMs.AC) <- sub('of.pr.day_','',names(GCMs.AC))
+      
+      ## Exclude known bad data 
+      if (length(bad.data) > 0) {
+        for (bad in bad.data) {GCMs.AC[[bad]] <- NULL; GCMs.AM[[bad]] <- NULL; 
+        GCMs.trend[[bad]] <- NULL}
+      }
+      
+      if (region==regions[1]) print(names(GCMs.AC))
+      
+      ## Fix problems
+      n <- length(GCMs.AC)
+      m <- length(GCMs.AM)
+      for (i in 1:n)  attr(GCMs.AC[[i]],'source') <- names(GCMs.AC)[i]
+      for (i in 1:m)  attr(GCMs.AM[[i]],'source') <- names(GCMs.AM)[i]
+      
+      ## CIESM_ssp245_r1i1p1f1 seems to have units of m rather than mm
+      if (param=='mu') {
+        for (i in 1:n) { 
+          if (max(GCMs.AC[[i]],na.rm=TRUE) < 1) GCMs.AC[[i]] <- 1000*GCMs.AC[[i]]
+          attr(GCMs.AC[[i]],'units') <- 'mm/day'
+        }
+      }
+      
+      ## Show the CMIP5 and CMIP56 with different colours
+      col <- names(GCMs.AC)
+      col[!is.element(col,'era5')] <- 'darkgreen'
+      print(table(col))
+      ngcms <- length(col) -1
+      
+      ## Use common EOFs of mean annual cycle to compare the GCMs' ability to reproduce the
+      ## mean annual cycle with that seen in the ERA5 reanalysis
+      GCMs.AC[['era5']] <- aggregate.grid(GCMs.AC[['era5']],
+                                          is=list(lon=lon(GCMs.AC[[1]]),lat=lat(GCMs.AC[[1]])))
+      ## Some model results cause the code to crash for some reason 
+      ## - remove them from the analysis
+      
+      for (bad in bad.runs) GCMs.AC[[bad]] <- NULL
+      print(names(GCMs.AC)); ngcms <- length(GCMs.AC)-1
+      
+      ceof.ac <- EOF.GCMsAC(GCMs.AC,masked)
+      
+      ## Estimate ensemble mean and standard deviation for plotting
+      pc1.ac <- matrix(rep(NA,12*ngcms),12,ngcms); pc2.ac <- pc1.ac
+      for (i in 1:ngcms) {
+        pc1.ac[,i] <- attr(ceof.ac,paste0('appendix.',i))[,1]
+        pc2.ac[,i] <- attr(ceof.ac,paste0('appendix.',i))[,2]
+      }
+      
+      ## Scalar metric: Use variance-weighted (eigenvalues) sum of RMSE of the PCs wrt ERA5
+      w.rmse <- RMSE.AC.CEOF(ceof.ac,srcid="source_id")
+      outlier <- 5
+      print(paste('Outlier:',attr(w.rmse,'modelid')[outlier]))
+      col[outlier] <- 'darkblue'
+      
+      if (plot) { 
+        par(par0)
+        plot(ceof.ac,col=col,alpha=0.2,new=FALSE)
+        par(par0)
+        plot(ceof.ac,col=col,alpha=0.5,ip=2,new=FALSE)
+      }
+      
+      ## Table of ranking
+      ## Generate table for LaTeX document:
+      write.table(w.rmse,sep='   &  ', eol = ' \\\\ \n', quote = FALSE)
+      
+      ## Use common EOFs of annually aggregated data to compare the interannual 
+      ## variability simulated by GCMs with the ERA5 reanalysis
+      
+      for (is in seasons[1]) { 
+        print(paste('Season',is))
+        am.names <- names(GCMs.AM.all)
+        if (is!='annual') keep <- am.names[grep(is,am.names)] else
+          keep <- am.names[-grep('djf|mam|jja|son',am.names)]
+        GCMs.AM <- GCMs.AM.all[keep]
+        names(GCMs.AM) <- sub('of.pr.day_','',names(GCMs.AM))
+        
+        if (param=='mu') {
+          for (i in 1:n) { 
+            if (max(GCMs.AM[[i]],na.rm=TRUE) < 1) GCMs.AM[[i]] <- 1000*GCMs.AM[[i]]
+            attr(GCMs.AM[[i]],'units') <- 'mm/day'
+          }
+        }
+        
+        GCMs.AM[['era5']] <- aggregate.grid(GCMs.AM[['era5']],
+                                            is=list(lon=lon(GCMs.AM[[1]]),lat=lat(GCMs.AM[[1]])))
+        GCMsAM <- lapply(GCMs.AM,'na2mean')
+        ceof.am <- EOF.GCMsAM(GCMsAM,masked)
+        if (plot) {
+          par(par0)
+          plot(ceof.am,col=col,alpha=0.3,new=FALSE)
+          par(par0)
+          plot(ceof.am,col=col,alpha=0.3,ip=2,new=FALSE)
+        }
+      }
+      
+      ## Fix a bug: ERA5 units was in m rather than mm
+      GCMs.trend$era5.trend.annual <- 1000*GCMs.trend$era5.trend.annual
+      ## Use EOFs of trend maps to assess the trends in the GCMs:
+      Z <- list2field(GCMs.trend,plot=FALSE)
+      if (masked) Z <- mask(Z,land=FALSE)
+      n <- length(attr(Z,'ID'))
+      col <- attr(Z,'ID')
+      print(col)
+      col[] <- 'brown'
+      col[grep('era5',attr(Z,'ID'))] <- 'black'
+      teof <- EOF(Z,anomaly=FALSE)
+      n <- dim(teof)[1]
+      if (plot) {
+        par(par0)
+        plot(teof,type='fill',colbar=list(show=FALSE,pal='t2m'),new=FALSE)
+        ## Add a point indicating the ERA5 trends
+        par(fig=c(0.05,1,0.025,0.475),mar=c(3,3,2,2),new=TRUE)
+        lines((1:n)[is.element(col,'brown')],teof[is.element(col,'brown'),1],
+              col='brown',lty=2,lwd=1)
+        lines((1:n)[is.element(col,'darkgreen')],teof[is.element(col,'darkgreen'),1],
+              col='darkgreen',lwd=1)
+        points((1:n)[is.element(col,'black')],teof[(1:n)[is.element(col,'black')],1],
+               col='black',cex=1.5,pch=19)
+        par(par0)
+        plot(teof,ip=2,type='fill',colbar=list(show=FALSE,pal='t2m'),new=FALSE)
+        ## Add a point indicating the ERA5 trends
+        par(fig=c(0.05,1,0.025,0.475),mar=c(3,3,2,2),new=TRUE)
+        lines((1:n)[is.element(col,'brown')],teof[is.element(col,'brown'),2],
+              col='brown',lty=2,lwd=1)
+        lines((1:n)[is.element(col,'darkgreen')],teof[is.element(col,'darkgreen'),2],
+              col='darkgreen',lwd=1)
+        points((1:n)[is.element(col,'black')],teof[(1:n)[is.element(col,'black')],2],
+               col='black',cex=1.5,pch=19)
+      }
+      
+      ## Another way to evaluate is with a scatterplot of the PCs of the two leading modes:
+      tnms <- names(GCMs.trend); tnms <- tnms[grep('annual',tnms)]
+      print(tnms)
+      icmip5 <- grep('rcp',tnms)
+      icmip6 <- grep('ssp',tnms)
+      if (plot) {
+        par(par0)
+        plot(teof[,1],teof[,2],xlab='Mode 1',ylab='Mode2'); 
+        points(teof[n,1],teof[n,2],pch=19,col='black',cex=1.5);
+        points(teof[icmip5,1],teof[icmip5,2],col='red',lwd=2)
+        points(teof[icmip6,1],teof[icmip6,2],col='blue',lwd=2)
+        text(teof[-n,1],teof[-n,2],1:(n-1),cex=0.6,col='grey40',pos=1)
+      }
+    }
+  }
+}
+```
+
+Some of the grids in ERA5 and GCMs did not produce a single rainy day (threshold 1 mm/day) in some months and caused missing values (NA). This was a problem for dry regions, but when it happened for a rare occasion, the NA could be replaced with the mean value (`na2mean()`) to allow the EOF calculation to proceed. 
+
+The PCs for the seasonal cycle in $\mu$ had one outlier (CESM2-WACCM-FV2) compared to the rest of the ensemble for the chosen domain with large fraction of maritime environment. The analysis of the mean seasonal cycle and match between ERA5 and CMIP6 were sensitive to the geographical region selected for the common EOFs, but the interannual variability represented by the CMIP6 ensemble was generally consistent with that of ERA5. 
+
+A smaller geographical region suggested more similar mean annual cycle than a larger spatial domain, as well as a better match of the trend coefficients for $\mu$. The analysis also indicated quite good match in the mean annual cycle over the Barents Sea and Arctic Norwegian Sea. 
+
+When the mean annual cycle in $\mu$ from the CMIP6 ensemble doesn't correspond to that in ERA5 it may suggest that the models have a limited ability to simulate changes. The mean annual cycle was not resolved in the downscaling of annual $\mu$ in the section above, but a limited representation of the mean annual cycle should underscore that the downscaled results probably have some caveats.
+
+The evaluation of trend coefficient maps suggested that ERA5 was mostly within the CMIP6 ensemble spread, and sometimes near the limits of the CMIP6 ensemble range. 
+
+These results suggest that it's important to use a suitable domain choice when using $\mu$ as predictor for empirical-statistical downscaling (ESD).
+
+### Figures for the manuscript
+
+The following chunk shows how the figures in the manuscript were generated: 
+Fig. 1. Station map
+Fig. 2. $f_w$ and $\mu$ for Oslo. (1x2)
+Fig. 3. Maps of mean and tends in $f_w$ and $\mu$ (2x2)
+Fig. 4. Precipitation trends and contribution from wet-days and intensity (3x)
+Fig. 5. Number of days with 30 mm (1). 
+Fig. 6. Maps of Pr(X>30mm): mean, trend and relative trend (3x1).
+Fig. 7. Maps of mean and trend in 10-year and 25-year return values (2x2).
+Fig. 8. IDF curves.
+
+```{r, eval=FALSE}
+## Fig.1
+map(annual(Y,FUN='sum'),FUN='mean',cex=1,colbar=list(breaks=seq(0,4000,by=250),
+                                                     pal='precip.ipcc',show=TRUE))
+## Fig.2
+layout(matrix(c(1,2),1,2))
+plot(allN(fw.oslo.ssp370),ylim=c(0,1),
+     main='Oslo: wet-day frequency: SSP370',set2par0=FALSE)
+plot(allN(mu.oslo.ssp370),
+     main='Oslo: mean precipitation intensity: SSP370',set2par0=FALSE)
+
+## Fig.3
+attr(d.fw.ssp370,'unit') <- "'%'/decade"
+attr(d.mu.ssp370,'unit') <- "mm/day/decade"
+layout(matrix(c(1,2,3,4),2,2))
+par(mar=c(2,0.5,1.5,0.5))
+map(m.fw.ssp370,FUN='mean',type='fill',showaxis=FALSE,main=expression(paste('Mean ',f[w],' (SSP370)')))
+map(d.fw.ssp370,colbar=list(breaks=seq(-0.5,0.5,by=0.05),pal='precip.ipcc'),type='fill',
+    ,main=expression(paste('Trend ',f[w],' (SSP370)')),showaxis=FALSE)
+map(m.mu.ssp370,FUN='mean',type='fill',showaxis=FALSE,main=expression(paste('Mean ',mu,' (SSP370)')))
+map(d.mu.ssp370,colbar=list(breaks=seq(-0.2,0.2,by=0.02),pal='precip.ipcc'),type='fill',
+    main=expression(paste('Trend ',mu,' (mm/decade; SSP370)')),showaxis=FALSE)
+
+## Fig.4
+layout(matrix(c(0,2,1,2,1,3,0,3),2,4))
+par(mar=c(2,0.5,1.5,0.5))
+map(dp1+dp2,colbar=list(breaks=seq(-0.1,0.1,by=0.01),pal='precip.ipcc'),
+    main='Trend in mean precipitation',type='fill',showaxis=FALSE)
+map(dp1,colbar=list(breaks=seq(-0.1,0.1,by=0.01),pal='precip.ipcc'),
+    main='Trend due to changes in number of rainy days',type='fill',showaxis=FALSE)
+map(dp2,colbar=list(breaks=seq(-0.1,0.1,by=0.01),pal='precip.ipcc'),
+    main='Trend due to changes in rain intensity',type='fill',showaxis=FALSE)
+
+# Fig.5
+plot(m.x30,main='Oslo: Fraction of days with more than 30 mm precipitation',
+     ylab=expression(Pr(X > 30*mm)),col='red',xlim=c(1940,2025),
+     ylim=c(0,max(rainequation(y,threshold=30),m.x30+s.x30,na.rm=TRUE)))
+lines(m.x30+s.x30,lty=2,col='red')
+lines(m.x30-s.x30,lty=2,col='red')
+points(rainequation(y,threshold=30),pch=19)
+grid()
+
+# Fig.6
+layout(matrix(c(1,2),1,2))
+par(mar=c(2,0.5,1.5,0.5))
+map(Pr.gt.x,main='Probability of more than 30 mm/day',type='fill',showaxis=FALSE)
+map(ptPr,colbar=list(breaks=seq(-900,900,by=100),pal='precip.ipcc'),
+    main='Relative trend in Pr(X>30mm)',type='fill',showaxis=FALSE)
+
+## Fig.7
+layout(matrix(c(1,2,3,4),2,2))
+par(mar=c(2,0.5,1.5,0.5))
+for (tau  in c(10, 25)) { 
+  ## Estimate the value for alpha for given return-interval
+  alpha <- c.alpha[1] + c.alpha[2] * log(tau)
+  ## Estimate the mean return-value based on the above expression:
+  x.L <- alpha * m.mu.ssp370 * log(m.fw.ssp370 * tau * 365.25)
+  attr(x.L,'variable') <- 'precip'
+  attr(x.L,'unit') <- 'mm/day'
+  map(x.L,main=paste0(tau,'-year return value (mean for SSP370)'),
+      type='fill',showaxis=FALSE)
+  ## Estimate change
+  d.x.L <- alpha * d.mu.ssp370 * log(m.fw.ssp370 * tau * 365.25) +
+    alpha * m.mu.ssp370 * d.fw.ssp370/m.fw.ssp370
+  attr(d.x.L,'variable') <- 'precip'
+  attr(d.x.L,'unit') <- '"%/decade"'
+  ## The Knitting doesn't get these figures quite right
+  map(d.x.L,colbar=list(breaks=seq(-2,2,by=0.2),pal='precip.ipcc'),
+      main=paste0('Trend in the ',tau,'-year return value'),
+      type='fill',showaxis=FALSE)
+}
+
+## Fig.8
+## Plot the IDF for the future: thick curves
+plot.IDF(idf2)
+## Compare with IDF representing the present: thin curves
+lines.IDF(idf1,col='grey70')
+lines.IDF(idf1,lty=2)
+lines.IDF(idf1,lty=3,col='black')
+```
+
+## Summary of the CMIP6 models
+
+```{r}
+data("IPCC.AR6.Table.AII.5")
+cbind(IPCC.AR6.Table.AII.5$Model,IPCC.AR6.Table.AII.5$Atmosphere.resolution)
+
+```
+
+## References:
