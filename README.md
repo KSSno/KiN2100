@@ -19,7 +19,7 @@ Perioder:
 - Midten av århundret: 2041–2070
 - Slutten av århundret: 2071–2100
 
-Modellene hadgem-r1i1p1-rca og hadgem-r1i1p1-remo mangler årene 2099–2100. Analysene for slutten av århundret gjøres derfor for 2069–2098. Analysene for slutten av århundret gjøres for 2039–2068. Tidsserier håndteres ved å putte inn 2021 og 2022 i starten av framskrivningsperioden.
+Modellene hadgem-r1i1p1-rca og hadgem-r1i1p1-remo mangler årene 2099–2100. For disse to modellene gjøres analysene for slutten av århundret derfor for  2069–2098. Analysene for midten av århundret gjøres for 2039–2068. Tidsserier håndteres ved å putte inn 2021 og 2022 rett etter referanseperioden (rekkefølgen blir: 2020, 2021, 2022, 2021, 2022, 2023).
 
 
 Utslippsscenario:
@@ -27,20 +27,23 @@ Utslippsscenario:
 - rcp4.5 fra CMIP5
 - SSP-3 7.0 fra CMIP6 (ikke tilgjengelig ennå)
 
-CMIP5-hist går fram til og med 2006. Bruk data fra rcp45 fram til 2020 fordi det er nærmest de faktiske utslippene.
+CMIP5-hist går fram til og med 2006. Ved biasjustering er referanseperioden («hist») forlenget med data fra rcp45 fram til 2020 fordi det er nærmest de faktiske utslippene. Dette valget er allerede gjort ved biasjustering, men greit å være oppmerksom på at filene «hist» for perioden 2006-2020 er hentet fra rcp4.5. 
 
 
 Modeller, CMIP5 (rcp2.6 og rcp4.5): 
-- cnrm-r1i1p1-aladin
-- ecearth-r12i1p1-rca
-- ecearth-r12i1p1-cclm
-- ecearth-r3i1p1-hirham
-- hadgem-r1i1p1-rca
-- hadgem-r1i1p1-remo
-- mpi-r1i1p1-cclm
-- mpi-r2i1p1-remo
-- noresm-r1i1p1-rca
-- noresm-r1i1p1-remo
+- cnrm-r1i1p1-aladin    (1960 -  2100)
+- ecearth-r12i1p1-rca     (1970-2100)
+- ecearth-r12i1p1-cclm  (1960 -  2100)
+- ecearth-r3i1p1-hirham (1960 -  2100)
+- hadgem-r1i1p1-rca       (1970-2098)
+- hadgem-r1i1p1-remo    (1960 - 2098)
+- mpi-r1i1p1-cclm       (1960 -  2100)
+- mpi-r2i1p1-remo       (1960 -  2100)
+- noresm-r1i1p1-rca     (1970- 2100)
+- noresm-r1i1p1-remo    (1960 -  2100)
+
+De ulike modellene har litt forskjellig tidsperiode også etter biasjustering. Start derfor tidsserier i 1971.
+HadGEM-modellene mangler 12 eller 13 måneder i slutten av perioden. HadGEM-modellene håndteres ved å putte inn 2021 og 2022 (se beskrivelse over).
 
 
 Mye informasjon er også nedfelt i modelleringsprotokollen [https://docs.google.com/document/d/1hoZLle4HIcaEWp4OatRD7pxGqy1CkESc/]

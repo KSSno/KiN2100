@@ -19,8 +19,8 @@ library(RColorBrewer)
 library(plotrix)
 library(raster)
 
-sti <- c("/lustre/storeB/project/KSS/HelgaTherese/KiN2100/temperaturindikatorer/")
-plotpath <- c("/lustre/storeB/project/KSS/kin2100_2024/Indicators/Temperature/Figs/")
+sti <- c("/../storeB/project/KSS/HelgaTherese/KiN2100/temperaturindikatorer/")
+plotpath <- c("/../storeB/project/KSS/kin2100_2024/Indicators/Temperature/Figs/")
 
 plot.tempindex <- function(fra_aar = 1991, til_aar = 2020, aarstid = "annual", variabel = "heatwave") {
 
@@ -103,7 +103,7 @@ lon <- ncvar_get(nc, "lon")
 nc_close(nc) 
 
 # Norge 
-nc <- nc_open("/lustre/storeB/users/andreasd/PUB/Masks/NorwayMaskOnSeNorgeGrid.nc")
+nc <- nc_open("/../storeB/users/andreasd/PUB/Masks/NorwayMaskOnSeNorgeGrid.nc")
 Norge_mask <- ncvar_get(nc,"mask")
 nc_close(nc)
 Norge_mask[is.na(Norge_mask)]=0 # setter alle NA til 0

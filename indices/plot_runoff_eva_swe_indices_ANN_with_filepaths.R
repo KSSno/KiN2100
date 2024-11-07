@@ -3,15 +3,21 @@
 # Helga Therese Tilley Tajet, Irene Brox Nilsen og Anita Verpe Dyrrdal
 # 2022-2023
 #
-# Kartplotting for nedbørindekser i KiN2100
+# Kartplotting for hydrologiske indekser i KiN2100
 #
-# Modifisert av IBN 2023-01-23 for å plotte snow, avrenning og fordampning
+# Modifisert av IBN 2023-06-05 for å plotte tørke
+# Modifisert av IBN 2023-01-23 for å plotte avrenning, fordampning og SWE
 
 # Call:
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "runoff", TRUE)
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "swemax", TRUE)
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "swedogn", TRUE)
-# source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "eva", TRUE)
+# Run from app02 (it has ncdf4 installed)
+# cd /felles/ibni/KiN/IHA-analyser/hist
+# R
+# source("plot_runoff_eva_swe_indices_ANN_with_filepaths.R"); plotting_inds(1961, 2020, "droughtDurTrend", TRUE)
+# source("plot_runoff_eva_swe_indices_ANN_with_filepaths.R"); plotting_inds(1991, 2020, "droughtDurTrend", TRUE)
+## source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "runoff", TRUE)
+## source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1961, 1990, "swemax", TRUE)
+## source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "swedogn", TRUE)
+## source("plot_runoff_evapo_swe_indices_annual.R"); plotting_inds(1991, 2020, "eva", TRUE)
 #################################################################
 
 # rm(list=ls())
@@ -27,16 +33,20 @@ library(rgdal)
 #setEPS()
 
 
-#input <- "/../storeB/project/KSS/kin2100_2024/Indices/Precipitation/1991-2020/"
+#input <- "/lustre/storeB/project/KSS/kin2100_2024/Indices/Precipitation/1991-2020/"
 #output <- "~/Documents/results/KIN_indicators/"
 
-input <- c("/felles/ibni/KiN/IHA-analyser/hist/")    # fra app05 heter denne /app02-felles/, men bruk 02.
-# Kopiert til app-02 fra /KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/runoff_1991-2020.nc
-# Kopiert til app-02 fra /KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/evapo_1991-2020.nc
-# Kopiert til app-02 fra /KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/swedogn_1991-2020.nc
+input <- c("/felles/ibni/KiN/IHA-analyser/hist/")    # fra app05 heter denne /app02-felles/, men bruk app02
 
-#output  <- input
-maskpath  <- c("/felles/ibni/KiN/temperature_indices/senorge/")
+# Kopiert til app-02 fra /hdata/hmdata/KiN2100/analyses/indicators/hyd/   # kun tørke,
+#   # renamed DrgtDurTrend_1991_2020_WKW.nc into droughtDurTrend_1991-2020.nc
+# Kopiert til app-02 fra /hdata/hmdata/KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/runoff_1991-2020.nc
+# Kopiert til app-02 fra /hdata/hmdata/KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/evapo_1991-2020.nc
+# Kopiert til app-02 fra /hdata/hmdata/KiN2100/HydMod/DistHBV/SimDistHBV/sn2018v2005/raw/pm/hist/results/swedogn_1991-2020.nc
+
+output  <- input
+#maskpath  <- c("/app02-felles/ibni/KiN/temperature_indices/senorge/")
+ maskpath  <- c("/felles/ibni/KiN/temperature_indices/senorge/") # fra app-02
 
 #plotpath <- input
 
@@ -46,15 +56,15 @@ maskpath  <- c("/felles/ibni/KiN/temperature_indices/senorge/")
 ############################## Plotting function ####################################
   #################################################################################
 
-plotting_inds  <- function(fra_aar, til_aar, variabel, show_upper_and_lower_limit=FALSE){
+plotting_inds  <- function(fra_aar, til_aar, variabel_inn, show_upper_and_lower_limit=FALSE){
 
 
    # fra_aar <- 1991; til_aar <- 2020
    # fra_aar <- 1961; til_aar <- 1990
-   # variabel <- "runoff"                # "evapo"  # "swe" # "swedogn"
+   # variabel_inn <- "runoff"                # "evapo"  # "swe" # "swedogn"
    
 
-print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endyear (til_aar, 1991 or 2020), variable (variabel, 'runoff', 'eva', 'swemax', 'swedogn') and show_upper_and_lower_limit. If you set argument 4 to FALSE, you will not plot the upper and lower numbers on the legend.")
+print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endyear (til_aar, 1991 or 2020), variable (variabel_inn, 'droughtDurTrend', 'runoff', 'eva', 'swemax', 'swedogn') and show_upper_and_lower_limit. If you set argument 4 to FALSE, you will not plot the upper and lower numbers on the legend.")
 
 
    if (length(args)==0) {             
@@ -70,7 +80,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
     # Norge
     stiogNorgefil <- paste(maskpath, "NorwayMaskOnSeNorgeGrid.nc", sep="")
     nc  <- nc_open(stiogNorgefil)
-    #nc <- nc_open("/../storeB/project/KSS/kin2100_2024/geoinfo/NorwayMaskOnSeNorgeGrid.nc")
+    #nc <- nc_open("/lustre/storeB/project/KSS/kin2100_2024/geoinfo/NorwayMaskOnSeNorgeGrid.nc")
     Norge_mask <- ncvar_get(nc,"mask")
     nc_close(nc)
     Norge_mask[is.na(Norge_mask)]=0 # setter alle NA til 0
@@ -82,15 +92,20 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
     # raster_indeks <- raster(indeks) # for å se dimensjoner, brukes ikke videre - IBN
 
-   if (variabel!="eva"){
+   if (variabel_inn!="eva"){
 
-       fil=paste0(variabel, "_", fra_aar, "-", til_aar, ".nc") # runoff_1991-2020.nc
+       fil=paste0(variabel_inn, "_", fra_aar, "-", til_aar, ".nc") # runoff_1991-2020.nc
        # print(fil)
        stiogfil <- paste(input,fil,sep="")
        print(paste0("Input file (stiogfil) = ", input,fil))
 
        nc <- nc_open(stiogfil)
        #  indeks <- ncvar_get(nc, "tas")      # variabel
+       if(variabel_inn=="droughtDurTrend"){
+             variabel="trend"
+       } else {
+             variabel=variabel_inn	     
+       }   # change the variable name into what is in the nc file, if they differ from the filename
        indeks <- ncvar_get(nc, variabel)
        lat <- ncvar_get(nc, "Yc") # "lat")
        lon <- ncvar_get(nc, "Xc") # "lon")
@@ -132,9 +147,9 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 	
         kart_til_plot <- kart_til_plot/Norge_mask 
         kart_til_plot <- kart_til_plot[,1550:1]
-      
 
-    }   # end if variabel!="eva", fordi fordampningen er lagret som .txt, ikke .nc
+
+    }   # end if variabel_inn!="eva", fordi fordampningen er lagret som .txt, ikke .nc
    
 
    # Fargepalett, nedbør
@@ -145,7 +160,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
 
    ################################# Runoff/avrenning
-   if(variabel=="runoff"){ 
+   if(variabel_inn=="runoff"){ 
 
          # These data are skewed, so instead of trying to force the  legend  to cover c(0,100,1000,3000,5000), I plot all values larger than 2500 at 2501.
          kart_til_plot[kart_til_plot>2500] <- 2500
@@ -156,18 +171,30 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 	 legendunit <- "mm/år"
 
 
+   ################################# Tørkevarighet, DrtDurTrend_1991_2020.nc
+     } else if(variabel_inn=="droughtDurTrend"){ # trend_in_drought_duration
+
+         rand <- c(-25,25) # -20=strong negative trend, -10=weak negative trend, 0=no trend, 10=weak positive trend, 20=strong positive trend
+         legend_interval <- 10
+         legendunit <- "trend i tørkevarighet"
+	 rand_text <- c("signifikant færre dager","færre dager","ingen trend","flere dager","signifikant flere dager")
+	 #rand_text <- c("strong negative","weak negative","no trend","weak positive","strong positive")	 
+
+         base_col <- rev(c("#8C510A","#BF812D","#D7D7D7","#80CDC1","#018571")) #5 colours from brown (left/up) to green
+	 # Use these colours to display change and trends. 
+
    ################################# Actual evapotranspiration/fordampning
    # Finner ikke nc-filer med denne variabelen!
 
-     } else if(variabel=="eva"){
+     } else if(variabel_inn=="eva"){
 
     
          rand <- c(0,500) # c(65,225)
          legend_interval <- 100
          legendunit <- "mm/år"
 
-################################# Potential evapotranspiration/ potensiell fordampning
-     } else if(variabel=="evapo"){
+   ################################# Potential evapotranspiration/ potensiell fordampning
+     } else if(variabel_inn=="evapo"){
 
     	 rand <- c(0,500) # c(65,225)
          legend_interval <- 100
@@ -176,7 +203,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 	 print("Note that this option plots the POTENTIAL Evapotranspiration, not the actual EVA.")
 
    ################################# Snowdays/antall snødager (SD> 1 cm ?)
-     } else if(variabel=="swedogn"){
+     } else if(variabel_inn=="swedogn"){
 
     	 rand <- c(0,360)
 	 legend_interval <- 60
@@ -187,7 +214,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
          cols <- colorRampPalette(col_senorge)
 
  ################################# Skiing days / antall dager med skiføre (SD>25 cm ?)
-     } else if(variabel=="swelangrenn"){
+     } else if(variabel_inn=="swelangrenn"){
 
      print("entering swelangrenn")
 
@@ -199,7 +226,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
          cols <- colorRampPalette(col_senorge)
 
  ################################# Mountain skiing days /toppturskidager (SD > 50 cm?)
-     } else if(variabel=="swetopptur"){
+     } else if(variabel_inn=="swetopptur"){
 
      print("entering swetopptur")
 
@@ -212,7 +239,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
 
    ################################# Maksimal årlig SWE
-     } else if(variabel=="swemax"){
+     } else if(variabel_inn=="swemax"){
 
      print("entering swemax")
 
@@ -231,7 +258,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
          cols <- colorRampPalette(col_senorge)
 
  ################################# SWE/snøens vannekvivalent
-     } else if(variabel=="swe"){
+     } else if(variabel_inn=="swe"){
 
      print("entering swe")
 
@@ -246,7 +273,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
 
  ################################# SWE/snøens vannekvivalent
-     } else if(variabel=="swe"){
+     } else if(variabel_inn=="swe"){
 
      print("entering swe")
 
@@ -262,7 +289,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
 
 ################################# SWE/snøens vannekvivalent
-     } else if(variabel=="swe"){
+     } else if(variabel_inn=="swe"){
 
      print("entering swe")
      
@@ -278,7 +305,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 	 print("exiting swe")
 	 
  ################################# HSM/HSD
-     } else if(variabel=="hsm"){
+     } else if(variabel_inn=="hsm"){
 
      print("entering hsm")
 
@@ -291,7 +318,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
 
 ################################# Wet days
-     } else if(variabel=="wet_days"){
+     } else if(variabel_inn=="wet_days"){
 
     	 rand <-  c(65,225)
 #	 legend_tics <- c(85,105,125,145,165,185,205)
@@ -301,7 +328,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
 
    ################################# simple_daily_intensity_index, sdii
-     } else if(variabel=="simple_daily_intensity_index"){
+     } else if(variabel_inn=="simple_daily_intensity_index"){
 
     	 rand <-  c(0,30)
 #	 legend_tics <- c(5,10,15,20,25)
@@ -311,7 +338,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
 
    ################################# 99.7 percentile 
-     } else if(variabel=="perc997"){
+     } else if(variabel_inn=="perc997"){
 
     	 rand <-  c(0,200)
 #	 legend_tics <- c(20,40,60,80,100,120,140,160,180)
@@ -320,7 +347,7 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
          cols <- colorRampPalette(col_new)
 
    ############################### Days with prec > 20 mm 
-     } else if(variabel=="days_gt_20mm"){
+     } else if(variabel_inn=="days_gt_20mm"){
 
     	 rand <-  c(0,100)
 	 legend_tics <- c(10,20,30,40,50,60,70,80,90)
@@ -330,14 +357,14 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
 
 
    ############################ Consecutive precipitation sum 
-     } else if(variabel=="rr_max5day"){
+     } else if(variabel_inn=="rr_max5day"){
 
     	 rand <-  c(0,450)
 	 legend_tics <- seq(50,400,50)
 	 legendunit <- "mm/5 dager"
 
 
-   }   # end if(variabel)
+   }   # end if(variabel_inn)
 
 
    if(show_upper_and_lower_limit==TRUE){
@@ -349,6 +376,13 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
       print("Set argument 4 to FALSE if you want to change it.")
       print(paste(rand[1], " ", rand[2]))
       
+       if(variabel_inn=="droughtDurTrend"){
+            legend_tics=c(-20,-10,0,10,20)   # Force the text to be plotted on the mid-point of colours         
+   # Ah, klarer ikke å erstatte tallene med tekst i legend. TODO. Kan evt fjerne tallene og bruke text() til å legge inn ny tekst?
+            # funker ikke: legend_labels=rand_text
+            variabel_cols=base_col
+       }   # keep the specified colours. 
+
    } else {
    
       legend_tics <- seq((rand[1]+legend_interval), (rand[2]-legend_interval), legend_interval)
@@ -358,6 +392,12 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
       print(paste(rand[1]+legend_interval, " ", rand[2]-legend_interval))
       print("You have chosen to HIDE the upper and lower limit on the legend (argument 4 = FALSE by default).")
       print("")
+      
+       if(variabel_inn=="droughtDurTrend"){
+             legend_tics=c(-20,-10,0,10,20)   # Force the text to be plotted on the mid-point of colours
+             variabel_cols=base_col
+       }   # keep the specified colours. 
+
    }
 
    print(paste("Legend tics = ", legend_tics))
@@ -366,15 +406,20 @@ print("This function takes 4 arguments: startyear (fra_aar, 1961 or 1991), endye
    print(zlimval[1])
    print(zlimval[2])
 
+   # Ah, klarer ikke å erstatte tallene med tekst i legend. TODO. Kan evt fjerne tallene og bruke text() til å legge inn ny tekst?
+   #if(variabel_inn=="droughtDurTrend"){
+   #    zlimtext=rand_text
+   #}   # keep the specified legend names/labels. 
+   # print(paste("zlimtext =", zlimtext))
 
-   png(paste0(output,"map_30yr_mean_", variabel, "_", fra_aar, "-", til_aar, "_ANN.png"), width=2000, height=2500, pointsize=20,res=300)
+   png(paste0(output,"map_30yr_mean_", variabel_inn, "_", fra_aar, "-", til_aar, "_ANN.png"), width=2000, height=2500, pointsize=20,res=300)
 	par(mar=c(0.5,0.2,0,0.3))
 
 
 	image(kart_til_plot, xlab="",ylab="",xaxt="n",yaxt="n",zlim=rand,col=variabel_cols,bty="n", main="")
 	contour(lf[,1550:1],add=T,levels = 0.5,drawlabels = FALSE,lwd=1,col="grey20")
-	image.plot(kart_til_plot, legend.lab="",legend.line=2.7 ,axis.args=list(tick=FALSE,at=legend_tics),  
-           legend.shrink=0.6,legend.only = TRUE,zlim=zlimval,col=variabel_cols,smallplot=c(0.7,0.75,0.1,0.6))
+	image.plot(kart_til_plot, legend.lab="",legend.line=2.7 ,axis.args=list(tick=FALSE,at=legend_tics),
+           legend.shrink=0.6,legend.only=TRUE, zlim=zlimval, col=variabel_cols, smallplot=c(0.7,0.75,0.1,0.6))
 	text(0.77,0.63, legendunit, font=1)
         
 
